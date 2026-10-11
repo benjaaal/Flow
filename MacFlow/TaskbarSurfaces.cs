@@ -23,6 +23,7 @@ namespace MacFlow
         private readonly Dictionary<IntPtr,Entry> entries=new Dictionary<IntPtr,Entry>();
         private readonly EventCallback callback;
         private IntPtr hook;
+        private IntPtr locationHook;
         private bool active;
         private DateTime enumerated=DateTime.MinValue;
         public TaskbarSurfaces(string path):this(path,Discover,IsShell,true){}
@@ -31,13 +32,14 @@ namespace MacFlow
         internal static bool TaskbarClass(string name){return name=="Shell_TrayWnd"||name=="Shell_SecondaryTrayWnd";}
         private static string Class(IntPtr h){var name=new StringBuilder(100);GetClassName(h,name,name.Capacity);return name.ToString();}
         private static bool IsShell(IntPtr h)
-        {if(!Native.IsWindow(h)||!TaskbarClass(Class(h)))return false;uint pid;Native.GetWindowThreadProcessId(h,out pid);var path=Native.ProcessPath(pid);return String.Equals(path,Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows),"explorer.exe"),StringComparison.OrdinalIgnoreCase);}
+        {if(!Native.IsWindow(h)||!TaskbarClass(Class(h)))return false;uint pid;Native.GetWindowThreadProcessId(h,out pid);uint shellPid;Native.GetWindowThreadProcessId(Native.GetShellWindow(),out shellPid);if(pid!=0&&pid==shellPid)return true;var path=Native.ProcessPath(pid);return String.Equals(path,Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows),"explorer.exe"),StringComparison.OrdinalIgnoreCase);}
         private static IEnumerable<IntPtr> Discover()
         {var windows=new List<IntPtr>();Native.EnumWindows(delegate(IntPtr h,IntPtr arg){if(IsShell(h))windows.Add(h);return true;},IntPtr.Zero);return windows;}
         public void Acquire()
         {
             if(active){Maintain();return;}active=true;enumerated=DateTime.MinValue;
             if(events)hook=SetWinEventHook(0x8002,0x8002,IntPtr.Zero,callback,0,0,2);
+            if(events)locationHook=SetWinEventHook(0x800B,0x800B,IntPtr.Zero,callback,0,0,2);
             try{Maintain();}catch{Restore();throw;}
         }
         public void Maintain()
@@ -64,7 +66,7 @@ namespace MacFlow
             if(File.Exists(file))File.Replace(temporary,file,null);else File.Move(temporary,file);
         }
         public void Restore()
-        {active=false;if(hook!=IntPtr.Zero){UnhookWinEvent(hook);hook=IntPtr.Zero;}RestoreRecorded(file,valid,discover);entries.Clear();}
+        {active=false;if(hook!=IntPtr.Zero){UnhookWinEvent(hook);hook=IntPtr.Zero;}if(locationHook!=IntPtr.Zero){UnhookWinEvent(locationHook);locationHook=IntPtr.Zero;}RestoreRecorded(file,valid,discover);entries.Clear();}
         public static void RestoreFile(string path){RestoreRecorded(path,IsShell,Discover);}
         public static void RecoverVisible()
         {foreach(var h in Discover())if(IsShell(h)&&!Native.IsWindowVisible(h))Native.ShowWindowAsync(h,4);}

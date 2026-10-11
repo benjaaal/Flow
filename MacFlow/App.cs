@@ -37,6 +37,8 @@ namespace MacFlow
             if (args.Length == 2 && args[0] == "--self-test") return SelfTests.Run(args[1]);
             if (args.Length == 2 && args[0] == "--media-smoke") return MediaRegression.Probe(args[1]);
             if (args.Length == 2 && args[0] == "--connections-smoke") return ConnectivityVisual.Run(args[1]);
+            if (args.Length == 2 && args[0] == "--public-update-test") return PublicUpdateProbe.Run(args[1]);
+            if (args.Length == 2 && args[0] == "--features-smoke") return NewFeaturesVisual.Run(args[1]);
             if (args.Length == 2 && args[0] == "--glass-smoke") return GlassVisual.Run(args[1]);
             if (args.Length == 2 && args[0] == "--welcome-smoke") return WelcomeVisual.Run(args[1]);
             if (args.Length == 2 && args[0] == "--fold-smoke") return FoldVisual.Run(args[1]);
@@ -160,6 +162,7 @@ namespace MacFlow
                 File.WriteAllText(store.PathName, "{invalid json"); Assert(store.Load().IconSize == 32, "Recuperación de JSON corrupto", results);
                 File.WriteAllText(store.PathName,"{\"IconSize\":36,\"Animations\":true}");Assert(store.Load().NeedsUpdateWelcome(Product.Version),"Bienvenida: perfiles anteriores detectan el cambio de versión",results);restored.WelcomeAfterUpdate=false;store.Save(restored);Assert(!store.Load().NeedsUpdateWelcome(Product.Version),"Bienvenida: se conserva la elección de desactivarla",results);restored.WelcomeAfterUpdate=true;restored.LastWelcomedVersion=Product.VersionText;store.Save(restored);Assert(!store.Load().NeedsUpdateWelcome(Product.Version),"Bienvenida: reiniciar la misma versión no repite Hola",results);Assert(restored.NeedsUpdateWelcome(new Version(Product.Version.Major,Product.Version.Minor,Product.Version.Build+1)),"Bienvenida: una nueva versión vuelve a mostrar Hola",results);
                 UpdateRegression.Run(Path.Combine(directory,"updates"),results);
+                NewFeaturesRegression.Run(Path.Combine(directory,"features"),results);
                 Assert(LiquidMaterial.LightInkForLuminance(.2,false,false)&&!LiquidMaterial.LightInkForLuminance(.8,false,true),"Cristal: tinta legible sobre material oscuro y claro",results);
                 Assert(LiquidMaterial.LightInkForLuminance(.55,true,true)&&!LiquidMaterial.LightInkForLuminance(.48,true,false),"Cristal: histéresis evita parpadeos de texto cerca del umbral",results);
                 double maxSpring=0;bool finiteSpring=true;for(int sample=0;sample<=200;sample++){double position=SpringEase.Progress(sample/200.0);finiteSpring&=!Double.IsNaN(position)&&!Double.IsInfinity(position);maxSpring=Math.Max(maxSpring,position);}

@@ -134,6 +134,7 @@ namespace MacFlow
         }
         public static UIElement AppIcon(AppEntry app, int size)
         {
+            if(System.IO.Directory.Exists(app.Target))return new Image{Source=FeatureIcons.Get("folder"),Width=size,Height=size,Stretch=Stretch.Uniform};
             var system=SystemAppIcon(app);if(system!=null)return new Image{Source=system,Width=size,Height=size,Stretch=Stretch.Uniform};
             var iconPath=!String.IsNullOrEmpty(app.IconPath)?app.IconPath:!String.IsNullOrEmpty(app.Target)&&app.Target.StartsWith("shell:AppsFolder\\",StringComparison.OrdinalIgnoreCase)?app.Target:!String.IsNullOrEmpty(app.Executable)?app.Executable:app.Target;
             var source = Icons.Get(iconPath);
@@ -148,6 +149,7 @@ namespace MacFlow
             if(String.Equals(file,"explorer.exe",StringComparison.OrdinalIgnoreCase))kind="files";
             else if(String.Equals(file,"SystemSettings.exe",StringComparison.OrdinalIgnoreCase)||String.Equals(target,"ms-settings:",StringComparison.OrdinalIgnoreCase))kind="settings";
             else if(String.Equals(file,"MacFlow.exe",StringComparison.OrdinalIgnoreCase))kind="macflow";
+            if(kind=="macflow")return FeatureIcons.Get("macflow");
             if(kind==null)return null;ImageSource cached;if(systemIcons.TryGetValue(kind,out cached))return cached;
             var drawing=new DrawingGroup();
             using(var dc=drawing.Open())

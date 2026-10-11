@@ -8,6 +8,7 @@ namespace MacFlow
     public sealed class SearchAction
     {
         public string Name,Detail;
+        public string FilePath;
         public AppEntry App;
         public Action Execute;
     }

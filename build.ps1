@@ -18,10 +18,9 @@ $graphics.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
 $graphics.Clear([System.Drawing.Color]::FromArgb(255,23,32,48))
 $points = [System.Drawing.PointF[]]@([System.Drawing.PointF]::new(32,6),[System.Drawing.PointF]::new(58,32),[System.Drawing.PointF]::new(32,58),[System.Drawing.PointF]::new(6,32))
 $pen = New-Object System.Drawing.Pen([System.Drawing.Color]::FromArgb(255,141,174,255),5)
-$graphics.DrawPolygon($pen,$points)
-$graphics.DrawLine($pen,17,39,26,24)
-$graphics.DrawLine($pen,26,24,33,36)
-$graphics.DrawLine($pen,33,36,44,21)
+$pen.StartCap=$pen.EndCap=[Drawing.Drawing2D.LineCap]::Round
+$graphics.DrawBezier($pen,13,44,20,13,27,10,33,32)
+$graphics.DrawBezier($pen,33,32,40,55,47,49,52,19)
 $icon = [System.Drawing.Icon]::FromHandle($bitmap.GetHicon())
 $iconPath = Join-Path $bin 'MacFlow.ico'
 $stream = [System.IO.File]::Create($iconPath)
@@ -54,7 +53,7 @@ Copy-Item -LiteralPath (Join-Path $root 'THIRD-PARTY-NOTICES.md') -Destination (
 $payload = Join-Path $build 'payload.zip'
 if (Test-Path -LiteralPath $payload) { Remove-Item -LiteralPath $payload }
 Compress-Archive -LiteralPath @((Join-Path $bin 'MacFlow.exe'),(Join-Path $bin 'MacFlow.exe.config'),$iconPath,(Join-Path $bin 'README.txt'),(Join-Path $bin 'LICENSE.txt'),(Join-Path $bin 'THIRD-PARTY-NOTICES.md')) -DestinationPath $payload
-$shared = @('Models.cs','Native.cs','Services.cs','TaskbarSurfaces.cs','Design.cs','PanelMotion.cs','GlassPiece.cs','LiquidMaterial.cs','CrystalLight.cs','WallpaperLibrary.cs','SystemFeatures.cs','UpdateService.cs','AssemblyInfo.cs','WindowsMenuKey.cs') | ForEach-Object { Join-Path $root ('MacFlow\' + $_) }
+$shared = @('Models.cs','Native.cs','Services.cs','TaskbarSurfaces.cs','Design.cs','FeatureIcons.cs','PanelMotion.cs','GlassPiece.cs','LiquidMaterial.cs','CrystalLight.cs','WallpaperLibrary.cs','SystemFeatures.cs','UpdateService.cs','AssemblyInfo.cs','WindowsMenuKey.cs') | ForEach-Object { Join-Path $root ('MacFlow\' + $_) }
 $versionSource=[System.IO.File]::ReadAllText((Join-Path $root 'MacFlow/AssemblyInfo.cs'))
 $versionMatch=[regex]::Match($versionSource,'AssemblyFileVersion\("(\d+\.\d+\.\d+)\.0"\)')
 if(!$versionMatch.Success){throw 'La versión del producto no es válida.'}
@@ -64,7 +63,7 @@ $setup = Join-Path $deliverables ('MacFlow-Setup-'+$packageVersion+'.exe')
 if ($LASTEXITCODE -ne 0) { throw 'Falló la compilación del instalador.' }
 Copy-Item -LiteralPath (Join-Path $root 'MacFlow\App.config') -Destination ($setup + '.config') -Force
 $packageInfo=Get-Item -LiteralPath $setup
-$packageJson=@{Product='MacFlow';Architecture='x64';Version=$packageVersion;Installer=$packageInfo.Name;Sha256=(Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash;Size=$packageInfo.Length;FeedUrl=$UpdateFeedUrl;Notes='Actualización desde un instalador .exe recibido, incluso renombrado; conservación del canal al configurar; soporte de canal HTTPS compartible; zonas de clic fijas y Dock protegido durante pulsación; Hola a pantalla completa.'} | ConvertTo-Json
+$packageJson=@{Product='MacFlow';Architecture='x64';Version=$packageVersion;Installer=$packageInfo.Name;Sha256=(Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash;Size=$packageInfo.Length;FeedUrl=$UpdateFeedUrl;Notes='Pilas de carpetas fijables en el Dock; vista rápida de imágenes y texto; Concentración persistente con pausa; menú de escritorio de cristal propio; Dock autooculto en todas las aplicaciones y recuperación reforzada de la barra de Windows.'} | ConvertTo-Json
 [System.IO.File]::WriteAllText((Join-Path $deliverables 'MacFlow-update.json'),$packageJson,[System.Text.UTF8Encoding]::new($false))
 if ($RunTests) {
     $tests = Join-Path $deliverables 'verification'

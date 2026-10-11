@@ -114,6 +114,7 @@ namespace MacFlow
             var name=new StringBuilder(100);GetClassName(window,name,name.Capacity);
             if(name.ToString()!="WorkerW"&&name.ToString()!="Progman")return false;
             uint pid;GetWindowThreadProcessId(window,out pid);
+            uint shellPid;GetWindowThreadProcessId(GetShellWindow(),out shellPid);if(pid!=0&&pid==shellPid)return true;
             return String.Equals(ProcessPath(pid),System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows),"explorer.exe"),StringComparison.OrdinalIgnoreCase);
         }
         public static bool IsDesktopContext(IntPtr window)

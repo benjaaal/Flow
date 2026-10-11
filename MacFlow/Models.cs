@@ -37,6 +37,7 @@ namespace MacFlow
         [DataMember] public double GlassOpacity = .09;
         [DataMember] public bool LiveGlass = true;
         [DataMember] public bool DockAutoHide = false;
+        [DataMember] public bool HideDockInApps = true;
         [DataMember] public string DockPosition = "Bottom";
         [DataMember] public bool ShowNetwork = true;
         [DataMember] public bool ShowBattery = true;
@@ -58,7 +59,7 @@ namespace MacFlow
         [DataMember] public string LocalUpdateFolder = "";
         [DataMember] public string UpdateFeedUrl = Product.DefaultFeedUrl;
         [DataMember] public List<AppEntry> Pins = new List<AppEntry>();
-        [OnDeserializing] private void Defaults(StreamingContext context) { LiveGlass=true;GlassOpacity=.18; DockPosition="Bottom"; ShowNetwork=ShowBattery=ShowVolume=true;WindowsMenu=ProtectDockEdge=HideDockInCodex=LidAnimation=WelcomeAfterUpdate=CheckUpdatesAutomatically=true;LastWelcomedVersion="1.0.0";AppleWindowControls=false;WallpaperPath=""; Hotkey="AltSpace"; UpdateRepository="";LocalUpdateFolder="";UpdateFeedUrl=""; }
+        [OnDeserializing] private void Defaults(StreamingContext context) { HideDockInApps=true;LiveGlass=true;GlassOpacity=.18; DockPosition="Bottom"; ShowNetwork=ShowBattery=ShowVolume=true;WindowsMenu=ProtectDockEdge=HideDockInCodex=LidAnimation=WelcomeAfterUpdate=CheckUpdatesAutomatically=true;LastWelcomedVersion="1.0.0";AppleWindowControls=false;WallpaperPath=""; Hotkey="AltSpace"; UpdateRepository="";LocalUpdateFolder="";UpdateFeedUrl=""; }
         public bool MovePin(string source,string target)
         {
             int from=Pins.FindIndex(p=>p.Key==source),to=Pins.FindIndex(p=>p.Key==target);
@@ -110,7 +111,13 @@ namespace MacFlow
                 using (var stream = File.OpenRead(PathName))
                 {
                     var result = (Preferences)new DataContractJsonSerializer(typeof(Preferences)).ReadObject(stream);
-                    result.Validate();if(String.IsNullOrWhiteSpace(result.UpdateFeedUrl)&&String.IsNullOrWhiteSpace(result.UpdateRepository))result.UpdateFeedUrl=Product.DefaultFeedUrl;return result;
+                    result.Validate();
+                    if(Product.DefaultFeedUrl=="https://github.com/benjaaal/Flow/releases/latest/download/MacFlow-update.json")
+                    {
+                        if(String.Equals(result.UpdateRepository,"colanabenjamin-spec/Flow",StringComparison.OrdinalIgnoreCase))result.UpdateRepository="benjaaal/Flow";
+                        if(String.Equals(result.UpdateFeedUrl,"https://github.com/colanabenjamin-spec/Flow/releases/latest/download/MacFlow-update.json",StringComparison.OrdinalIgnoreCase))result.UpdateFeedUrl=Product.DefaultFeedUrl;
+                    }
+                    if(String.IsNullOrWhiteSpace(result.UpdateFeedUrl)&&String.IsNullOrWhiteSpace(result.UpdateRepository))result.UpdateFeedUrl=Product.DefaultFeedUrl;return result;
                 }
             }
             catch (Exception ex) { Log.Write("Lectura de preferencias: " + ex.Message); return new Preferences(); }

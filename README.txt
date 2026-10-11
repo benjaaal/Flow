@@ -1,7 +1,7 @@
-MacFlow 1.0.5 — Windows 11 de 64 bits
+MacFlow 1.1.5 — Windows 11 de 64 bits
 
 INSTALAR Y PROBAR
-Ejecutá MacFlow-Setup-1.0.5.exe. El asistente instala por usuario en
+Ejecutá MacFlow-Setup-1.1.5.exe. El asistente instala por usuario en
 %LOCALAPPDATA%\Programs\MacFlow, crea el desinstalador y permite elegir
 inicio con Windows y acceso directo. Usa .NET Framework 4.8, incluido en
 Windows 11. No requiere administrador. El instalador no tiene firma comercial.
@@ -344,3 +344,31 @@ desactivarse. El workflow configura el enlace estable de Releases del repositori
 real; los instaladores se resuelven desde ese enlace aunque GitHub redirija la
 descarga del manifiesto a un archivo temporal. Falta conectar un repositorio
 accesible y publicar la primera versión. No hay una URL ficticia de producción.
+NOVEDADES 1.1.5
+Pilas de carpetas: botón azul del Dock, Descargas/Documentos/Escritorio o
+Elegir carpeta. Fijar carpeta la agrega al Dock; clic abre la pila. Se muestran
+hasta 200 entradas, sin recorrer subcarpetas. Enter/doble clic abre; Espacio
+previsualiza imágenes y texto. Desde Spotlight > Archivos, Ctrl+P previsualiza.
+Vista rápida: imágenes a resolución limitada, texto de hasta 32768 caracteres,
+metadatos para otros formatos. No ejecuta contenido ni instala extensiones.
+Concentración: botón de luna en la barra o Centro de control. 25/45/60 minutos,
+pausa, continuar, finalizar, título opcional y reloj en la barra. La sesión se
+guarda y continúa aunque cierres el panel; recupera el tiempo tras suspensión.
+No activa ni desactiva el modo No molestar de Windows.
+Tu escritorio: menú propio de cristal con accesos reales. Manzana > Tu
+escritorio o Ctrl+Alt+D (si el atajo está disponible). El menú contextual
+original de Explorer no se modifica ni se intercepta.
+Iconos vectoriales originales para MacFlow, carpetas, Aplicaciones y Ventanas.
+Autoocultado general: Configuración > Dock > Apartar en todas las aplicaciones.
+Activado al migrar a esta versión. El Dock permanece visible en el escritorio.
+Se puede desactivar. Monitores externos no activan el borde de la pantalla principal.
+La barra de Windows, si elegiste reemplazarla, se mantiene oculta mediante
+avisos de aparición/posición y una comprobación de respaldo; al salir se restaura.
+
+PUBLICACIÓN OFICIAL
+Las notas históricas anteriores sobre publicación pendiente quedan superadas:
+https://github.com/benjaaal/Flow/releases
+Canal: https://github.com/benjaaal/Flow/releases/latest/download/MacFlow-update.json
+Las instalaciones nuevas reciben este canal integrado. Se migra el nombre
+anterior de la cuenta al nuevo canal, respetando otros servidores configurados.
+Buscar, preparar y confirmar instala una actualización; no se instala a escondidas.

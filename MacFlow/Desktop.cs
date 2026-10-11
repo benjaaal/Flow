@@ -28,6 +28,11 @@ namespace MacFlow
         public List<string> Files = new List<string>();
         public Window Dock, TopBar, Search, Control, Settings;
         public Window Launcher, Overview;
+        private FolderStack stacks;
+        private FilePreviewWindow filePreview;
+        private FocusWindow focusWindow;
+        public readonly FocusController Focus;
+        private Button focusIndicator;
         private ConnectivityPanel connections;
         private WelcomeWindow welcome;
         private UpdateWindow updates;
@@ -88,6 +93,8 @@ namespace MacFlow
         public Desktop(string directory, bool smokeMode,bool nonInteractive=false,bool backgroundStart=false)
         {
             smoke = smokeMode;nonInteractiveTest=nonInteractive;Store = new SettingsStore(directory); Preferences = Store.Load(); lease = new TaskbarLease(directory);
+            Focus = new FocusController(directory); Focus.Changed += UpdateFocusIndicator;
+            Focus.Completed += delegate { if (!smoke) Notify("Terminaste tu sesión de concentración. Tomate un descanso."); };
             startupDockUntil=backgroundStart?DateTime.UtcNow.AddSeconds(1):DateTime.MinValue;
             bool dockUpgraded=Preferences.UpgradeContainedDock();
             if (Preferences.Pins.Count == 0)
@@ -149,7 +156,7 @@ namespace MacFlow
             else { ResumeWallpaper();dockHidden=false;dockVisibility.Show(); if(widget!=null)widget.Show(); if (Preferences.ShowTopBar) { TopBar.Show(); RegisterAppbar(); } if (Preferences.AutoHideTaskbar) TryAcquire(); Position(); }
             ConfigureWindowsKey();
         }
-        private void ClosePanels() { if(updates!=null)updates.Close();if(welcome!=null)welcome.Close();if(connections!=null)connections.Close();if(GlassMenu.Current!=null)GlassMenu.Current.Close(); if(PowerConfirmation!=null)PowerConfirmation.Close();if (Search != null) Search.Close(); if (Control != null) Control.Close(); if (Settings != null) Settings.Close();if(Launcher!=null)Launcher.Close();if(Overview!=null)Overview.Close(); }
+        private void ClosePanels() { if(stacks!=null)stacks.Close();if(filePreview!=null)filePreview.Close();if(focusWindow!=null)focusWindow.Close();if(updates!=null)updates.Close();if(welcome!=null)welcome.Close();if(connections!=null)connections.Close();if(GlassMenu.Current!=null)GlassMenu.Current.Close(); if(PowerConfirmation!=null)PowerConfirmation.Close();if (Search != null) Search.Close(); if (Control != null) Control.Close(); if (Settings != null) Settings.Close();if(Launcher!=null)Launcher.Close();if(Overview!=null)Overview.Close(); }
         private void CreateDock()
         {
             Dock = Design.Panel("MacFlow Dock", 420, 100); Dock.ShowActivated = false;
@@ -167,6 +174,7 @@ namespace MacFlow
             if(taskbarCreated!=0&&message==taskbarCreated)Application.Current.Dispatcher.BeginInvoke(new Action(delegate{if(disposed)return;appbarRegistered=false;shellRecovery.Reset(lease.Restore);startupDockUntil=DateTime.UtcNow.AddSeconds(3);Position();RegisterAppbar();TryAcquire();Refresh();}));
             if (message == 0x312 && w.ToInt32() == 1) { OpenSearch(); handled = true; }
             if (message == 0x312 && w.ToInt32() == 2) { OpenWindowsMenu(); handled = true; }
+            if (message == 0x312 && w.ToInt32() == 3) { OpenDesktopMenu(); handled = true; }
             if (message == 0x7E || message == 0x2E0 || (message == 0x8001 && w.ToInt32() == 1)) Application.Current.Dispatcher.BeginInvoke(new Action(Position));
             return IntPtr.Zero;
         }
@@ -187,6 +195,7 @@ namespace MacFlow
             activeControls.PreviewMouseLeftButtonDown+=delegate{pressedTarget=activeTarget;};left.Children.Add(activeControls);
             active = Design.Text("Escritorio", 11, true); active.Margin = new Thickness(9, 0, 9, 0);active.TextTrimming=TextTrimming.CharacterEllipsis;active.VerticalAlignment=VerticalAlignment.Center;
             var right = new StackPanel { Orientation = Orientation.Horizontal };
+            focusIndicator = Design.Button("", OpenFocus, false); focusIndicator.ToolTip = "Concentración"; right.Children.Add(focusIndicator); UpdateFocusIndicator();
             network = Design.Button("Red", OpenWifi, false); network.ToolTip = "Redes Wi-Fi"; network.Visibility=Preferences.ShowNetwork?Visibility.Visible:Visibility.Collapsed;
             battery = Design.Button("Batería", delegate { OpenUri("ms-settings:batterysaver"); }, false);
             batteryIcon=new BatteryGlyph {VerticalAlignment=VerticalAlignment.Center,Margin=new Thickness(0,0,5,0)};batteryText=Design.Text("—",11,false);batteryText.VerticalAlignment=VerticalAlignment.Center;var batteryRow=new StackPanel {Orientation=Orientation.Horizontal};batteryRow.Children.Add(batteryIcon);batteryRow.Children.Add(batteryText);battery.Content=batteryRow;
@@ -219,7 +228,7 @@ namespace MacFlow
         private void OpenMenu()
         {
             GlassMenu.Open(TopBar,"MacFlow",new List<GlassCommand> {
-                new GlassCommand("Buscar aplicaciones",OpenSearch),new GlassCommand("Aplicaciones",OpenLaunchpad),new GlassCommand("Ventanas abiertas",OpenOverview),new GlassCommand("Carpetas",OpenPlaces),new GlassCommand("Centro de control",OpenControl),new GlassCommand("Configurar MacFlow",OpenSettings),new GlassCommand("Actualizaciones",delegate{OpenUpdates(Preferences.UpdateRepository);}),new GlassCommand("Energía · Apagar, reiniciar…",OpenPowerMenu),new GlassCommand("Pausar y restaurar Windows",ToggleSuspend),new GlassCommand("Salir",delegate {Application.Current.Shutdown();})
+                new GlassCommand("Buscar aplicaciones",OpenSearch),new GlassCommand("Aplicaciones",OpenLaunchpad),new GlassCommand("Ventanas abiertas",OpenOverview),new GlassCommand("Carpetas",OpenPlaces),new GlassCommand("Tu escritorio · Ctrl+Alt+D",OpenDesktopMenu),new GlassCommand("Concentración",OpenFocus),new GlassCommand("Centro de control",OpenControl),new GlassCommand("Configurar MacFlow",OpenSettings),new GlassCommand("Actualizaciones",delegate{OpenUpdates(Preferences.UpdateRepository);}),new GlassCommand("Energía · Apagar, reiniciar…",OpenPowerMenu),new GlassCommand("Pausar y restaurar Windows",ToggleSuspend),new GlassCommand("Salir",delegate {Application.Current.Shutdown();})
             });
         }
         public void DrawDock()
@@ -237,21 +246,22 @@ namespace MacFlow
                 if (!entries.Any(p => p.Key == w.Key)) entries.Add(new AppEntry { Name = System.IO.Path.GetFileNameWithoutExtension(w.Executable), Target = w.Executable, Executable = w.Executable });
             }
             // Keep the Dock usable on small screens; overflow is exposed through a real window menu.
-            int max = Math.Max(3, (int)((vertical?ScreenSize().Height:ScreenSize().Width) / (Preferences.IconSize + 20)) - 5);
+            int max = Math.Max(3, (int)((vertical?ScreenSize().Height:ScreenSize().Width) / (Preferences.IconSize + 20)) - 6);
             foreach (var entry in entries.Take(max)) items.Children.Add(DockItem(entry));
             if (entries.Count > max) items.Children.Add(DockUtility("windows", "Más aplicaciones y ventanas", OpenWindowMenu));
             items.Children.Add(new Border { Width = vertical?Preferences.IconSize*.65:1, Height = vertical?1:Preferences.IconSize * .65, Background = Design.Brush("#45BACAE3"), Margin = vertical?new Thickness(9,6,9,8):new Thickness(6,0,9,6), VerticalAlignment = VerticalAlignment.Center });
             items.Children.Add(DockUtility("grid", "Aplicaciones · Alt+Espacio para buscar", OpenLaunchpad));
+            items.Children.Add(DockUtility("folder", "Pilas de carpetas", delegate { OpenStack(FolderStack.Downloads()); }));
             var glass = Design.Glass(items, 18, true, true); glass.VerticalAlignment = VerticalAlignment.Stretch;
             DockItems=items;DockGlass=glass;
             var movement=new DockMotion(items,vertical,Preferences.IconSize);dockMotion=movement;
             items.MouseMove+=delegate(object sender,MouseEventArgs e){movement.Move(e.GetPosition(items));};items.MouseLeave+=delegate{movement.Leave();};
-            double length=(Math.Min(entries.Count,max)+1+(entries.Count>max?1:0))*(Preferences.IconSize+12)+40+(vertical?Math.Ceiling(Preferences.IconSize*.242+4):0),thickness=Preferences.IconSize+32+Math.Ceiling(Preferences.IconSize*.242+4);
+            double length=(Math.Min(entries.Count,max)+2+(entries.Count>max?1:0))*(Preferences.IconSize+12)+40+(vertical?Math.Ceiling(Preferences.IconSize*.242+4):0),thickness=Preferences.IconSize+32+Math.Ceiling(Preferences.IconSize*.242+4);
             Dock.Content = glass; Dock.Width = vertical?thickness:Math.Min(ScreenSize().Width-20,length); Dock.Height=vertical?Math.Min(ScreenSize().Height-65,length):thickness; Position();
         }
         private UIElement DockUtility(string symbol, string tooltip, Action action)
         {
-            var button = Design.Button("", action, false); button.Content=Design.Symbol(symbol,Preferences.IconSize*.47,Design.Ink);button.Width = Preferences.IconSize + 10; button.Height = Preferences.IconSize + 4; button.Padding = new Thickness(0); button.Margin = new Thickness(2, 0, 2, 7); button.ToolTip = tooltip; button.VerticalAlignment = VerticalAlignment.Bottom; button.Background=Brushes.Transparent;button.BorderThickness=new Thickness(0);return button;
+            var button = Design.Button("", action, false); button.Content=new Image{Source=FeatureIcons.Get(symbol),Width=Preferences.IconSize*.75,Height=Preferences.IconSize*.75,Stretch=Stretch.Uniform};button.Width = Preferences.IconSize + 10; button.Height = Preferences.IconSize + 4; button.Padding = new Thickness(0); button.Margin = new Thickness(2, 0, 2, 7); button.ToolTip = tooltip; button.VerticalAlignment = VerticalAlignment.Bottom; button.Background=Brushes.Transparent;button.BorderThickness=new Thickness(0);return button;
         }
         private UIElement DockItem(AppEntry entry)
         {
@@ -260,7 +270,7 @@ namespace MacFlow
             var transform = new ScaleTransform(1, 1);
             var motion=new TransformGroup();motion.Children.Add(transform);motion.Children.Add(new TranslateTransform());
             var icon = new Border { Child = DockAppMotion.Host(Design.AppIcon(entry, Preferences.IconSize)), Width = Preferences.IconSize, Height = Preferences.IconSize, RenderTransformOrigin = new Point(.5, 1), RenderTransform = motion,CacheMode=new BitmapCache(1.5) };dockIcons[entry.Key]=icon;
-            var button = Design.Button("", delegate {if(String.Equals(entry.Executable??entry.Target,System.Reflection.Assembly.GetExecutingAssembly().Location,StringComparison.OrdinalIgnoreCase)){OpenSettings();return;}var current=Windows.Where(w=>w.Key==entry.Key&&Native.Matches(w)).ToList();if(current.Count==1){if(!Native.Activate(current[0]))Notify("Windows no permitió activar esta ventana. Podés usar Alt+Tab.");}else if(current.Count>1)WindowMenu(entry,current);else Launch(entry);}, false);
+            var button = Design.Button("", delegate {if(Directory.Exists(entry.Target)){OpenStack(entry.Target);return;}if(String.Equals(entry.Executable??entry.Target,System.Reflection.Assembly.GetExecutingAssembly().Location,StringComparison.OrdinalIgnoreCase)){OpenSettings();return;}var current=Windows.Where(w=>w.Key==entry.Key&&Native.Matches(w)).ToList();if(current.Count==1){if(!Native.Activate(current[0]))Notify("Windows no permitió activar esta ventana. Podés usar Alt+Tab.");}else if(current.Count>1)WindowMenu(entry,current);else Launch(entry);}, false);
             button.Content = icon; button.Background = Brushes.Transparent; button.BorderThickness=new Thickness(0); button.RenderTransform=null; button.Padding = new Thickness(0); button.Margin = new Thickness(0); button.Width = Preferences.IconSize + 12; button.Height = Preferences.IconSize + 4; button.ToolTip = entry.Name + (matching.Count > 0 ? " · " + matching.Count + " ventana(s)" : "");
             cell.Tag=icon;
             Point dragStart=new Point(); bool canDrag=false;
@@ -463,6 +473,31 @@ namespace MacFlow
             Control=new ControlCenter(this);PrepareTestWindow(Control);var size=ScreenSize();Control.Height=Math.Min(Control.Height,size.Height-65);Control.Left=size.Width-Control.Width-16;Control.Top=46;Control.Closed+=delegate {Control=null;};Control.Show();Design.Reveal(Control);
         }
         public void OpenWifi(){OpenConnections(true);}
+        private void UpdateFocusIndicator()
+        {
+            if (focusIndicator == null || Focus == null) return;
+            if (Focus.Session.State == "Running" || Focus.Session.State == "Paused") focusIndicator.Content = "◷ " + Focus.TimeText;
+            else focusIndicator.Content = new Image { Source = FeatureIcons.Get("focus"), Width = 20, Height = 20 };
+            System.Windows.Automation.AutomationProperties.SetName(focusIndicator, "Concentración · " + Focus.TimeText);
+        }
+        private void ShowFeature(FeaturePanel window, double y)
+        { PrepareTestWindow(window); var size = ScreenSize(); window.Width = Math.Min(window.Width, size.Width - 32); window.Height = Math.Min(window.Height, size.Height - 70); PlaceCenter(window, y); window.Show(); Design.Reveal(window); }
+        private void RestoreFeature(Window window)
+        { if (window.WindowState == WindowState.Minimized) window.WindowState = WindowState.Normal; if (!window.IsVisible) window.Show(); if (!nonInteractiveTest) window.Activate(); }
+        public void OpenFocus()
+        { if (focusWindow != null) { RestoreFeature(focusWindow); return; } focusWindow = new FocusWindow(Focus); focusWindow.Closed += delegate { focusWindow = null; }; ShowFeature(focusWindow, .12); }
+        public void OpenStack(string path)
+        { if (stacks != null) { stacks.Navigate(path); RestoreFeature(stacks); return; } stacks = new FolderStack(this, path); stacks.Closed += delegate { stacks = null; }; ShowFeature(stacks, .12); }
+        public void OpenPreview(string file)
+        { if (filePreview != null) filePreview.Close(); filePreview = new FilePreviewWindow(file); filePreview.Closed += delegate { filePreview = null; }; ShowFeature(filePreview, .12); }
+        public void OpenDesktopMenu()
+        {
+            GlassMenu.Open(TopBar, "Tu escritorio", new List<GlassCommand> {
+                new GlassCommand("Pilas de carpetas", delegate { OpenStack(FolderStack.Downloads()); }, "folder"), new GlassCommand("Concentración", OpenFocus, "moon"),
+                new GlassCommand("Ventanas abiertas", OpenOverview, "windows"), new GlassCommand("Fondos de escritorio", delegate { OpenSettings(); ((SettingsWindow)Settings).SelectPage(1); }, "display"),
+                new GlassCommand("Configuración de pantalla", delegate { OpenUri("ms-settings:display"); }, "display"), new GlassCommand("Personalizar MacFlow", OpenSettings, "settings")
+            }, nonInteractiveTest);
+        }
         public void OpenBluetooth(){OpenConnections(false);}
         private void OpenConnections(bool wifi)
         {
@@ -576,7 +611,7 @@ namespace MacFlow
         {
             if(dockRebuildPending&&!disposed&&Mouse.LeftButton==MouseButtonState.Released)DrawDock();
             if(!smoke&&!disposed&&!suspended&&Preferences.AutoHideTaskbar){if(!shellRecovery.Acquired){TryAcquire();if(shellRecovery.Acquired)Position();}if(shellRecovery.Acquired)lease.Maintain();}
-            var foreground=Native.GetForegroundWindow();desktopForeground=Native.IsDesktopContext(foreground);if(foreground!=materialForeground){materialForeground=foreground;LiquidMaterial.DesktopChanged();}
+            var foreground=Native.GetForegroundWindow();desktopForeground=DesktopContextForForeground(foreground);if(foreground!=materialForeground){materialForeground=foreground;LiquidMaterial.DesktopChanged();}
             UpdateActiveWindow(foreground);
             // External caption overlays were removed: never cover another app's
             // native controls. Traffic lights belong only to MacFlow windows.
@@ -585,10 +620,11 @@ namespace MacFlow
             if(disposed||suspended||fullscreenNow&&!desktopForeground)return;
             if(desktopForeground){fullscreenNow=false;dockLeaveAt=DateTime.UtcNow;dockVisibility.ShowImmediately();dockHidden=false;if(Preferences.ShowTopBar&&!TopBar.IsVisible)TopBar.Show();if(widget!=null&&!widget.IsVisible)widget.Show();return;}
             if(DateTime.UtcNow<startupDockUntil){dockVisibility.ShowImmediately();dockHidden=false;return;}
-            bool automatic=Preferences.DockAutoHide||(!smoke&&Preferences.HideDockInCodex&&codexForeground);
+            bool automatic=AutomaticDockPolicy(Preferences.DockAutoHide,Preferences.HideDockInApps,Preferences.HideDockInCodex,codexForeground,smoke);
             if(!automatic){dockVisibility.Show();dockHidden=false;return;}
             var cursor=Forms.Cursor.Position;var bounds=Forms.Screen.PrimaryScreen.Bounds;
-            bool edge=Preferences.DockPosition=="Left"?cursor.X<=bounds.Left+8:Preferences.DockPosition=="Right"?cursor.X>=bounds.Right-8:cursor.Y>=bounds.Bottom-8;
+            bool withinX=cursor.X>=bounds.Left&&cursor.X<bounds.Right,withinY=cursor.Y>=bounds.Top&&cursor.Y<bounds.Bottom;
+            bool edge=Preferences.DockPosition=="Left"?withinY&&cursor.X>=bounds.Left&&cursor.X<=bounds.Left+8:Preferences.DockPosition=="Right"?withinY&&cursor.X<bounds.Right&&cursor.X>=bounds.Right-8:withinX&&cursor.Y<bounds.Bottom&&cursor.Y>=bounds.Bottom-8;
             bool inside=Dock.IsVisible&&Dock.IsMouseOver,menu=GlassMenu.Current!=null&&GlassMenu.Current.Anchor==Dock;
             if(!ShouldAutoHide(desktopForeground,automatic,inside||edge,menu)){dockLeaveAt=DateTime.UtcNow;dockVisibility.Show();dockHidden=false;return;}
             if(DateTime.UtcNow-dockLeaveAt>TimeSpan.FromMilliseconds(codexForeground?1200:650)){dockVisibility.Hide();dockHidden=true;}
@@ -599,10 +635,19 @@ namespace MacFlow
         }
         internal static bool ShouldAutoHide(bool desktop,bool automatic,bool interacting,bool dockMenu)
         {return automatic&&!desktop&&!interacting&&!dockMenu;}
+        internal static bool AutomaticDockPolicy(bool explicitAutoHide,bool allApps,bool codexOnly,bool codex,bool testing)
+        { return explicitAutoHide || (!testing && (allApps || codexOnly && codex)); }
+        private bool DesktopContextForForeground(IntPtr foreground)
+        {
+            if (foreground == IntPtr.Zero || !Native.IsWindow(foreground) || Native.IsIconic(foreground) || !Native.IsWindowVisible(foreground))
+                return !Windows.Any(w => Native.IsWindow(w.Handle) && Native.IsWindowVisible(w.Handle) && !Native.IsIconic(w.Handle));
+            return Native.IsDesktopContext(foreground);
+        }
         private void RegisterHotkey()
         {
             if(smoke)return;var h=new WindowInteropHelper(Dock).Handle;Native.UnregisterHotKey(h,1);uint mods=Preferences.Hotkey=="CtrlAltSpace"?3u:Preferences.Hotkey=="CtrlSpace"?2u:1u;HotkeyAvailable=Native.RegisterHotKey(h,1,0x4000|mods,0x20);
             Native.UnregisterHotKey(h,2);Native.RegisterHotKey(h,2,0x4003,0x4D);
+            Native.UnregisterHotKey(h,3);Native.RegisterHotKey(h,3,0x4003,0x44);
         }
         private void PlaceCenter(Window window, double y)
         {
@@ -613,11 +658,13 @@ namespace MacFlow
         {
             if(updatesTimer!=null)updatesTimer.Stop();if(updateDebounce!=null)updateDebounce.Stop();if(updatesWatcher!=null)updatesWatcher.Dispose();updatesStop.Cancel();
             if(lidTransition!=null)lidTransition.Dispose();
+            Focus.Dispose();
             if(foregroundEvents!=null)foregroundEvents.Dispose();
             if (disposed) return; disposed = true;if(dockRedraw!=null)dockRedraw.Stop();if(captionButtons!=null)captionButtons.Dispose();if(dockEdge!=null)dockEdge.Close();if(windowsKey!=null)windowsKey.Dispose();if(dockMotion!=null)dockMotion.Dispose();if (timer != null) timer.Stop();if(edgeTimer!=null)edgeTimer.Stop();if(widget!=null)widget.Close();
             UnregisterAppbar(); if (!smoke) {lease.Restore();try{Wallpapers.Restore(Store.DirectoryPath);}catch(Exception ex){Log.Write(ex.Message);}}
             if (Dock != null) Native.UnregisterHotKey(new WindowInteropHelper(Dock).Handle, 1);
             if (Dock != null) Native.UnregisterHotKey(new WindowInteropHelper(Dock).Handle, 2);
+            if (Dock != null) Native.UnregisterHotKey(new WindowInteropHelper(Dock).Handle, 3);
             if (tray != null) { tray.Visible = false; tray.Dispose(); } ClosePanels(); if (Dock != null) Dock.Close(); if (TopBar != null) TopBar.Close();
         }
     }

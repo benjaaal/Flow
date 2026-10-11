@@ -28,8 +28,18 @@ También se puede usar un servidor HTTPS propio:
 
 El manifiesto y su instalador deben estar en la misma carpeta pública. La descarga valida tamaño, SHA-256, versión, producto y contenido del instalador. La instalación requiere la acción del usuario. SHA-256 comprueba integridad; no equivale a una firma comercial.
 
-Descargas oficiales: https://github.com/colanabenjamin-spec/Flow/releases. El canal se genera después de una compilación y pruebas exitosas en GitHub Actions.
+Descargas oficiales: https://github.com/benjaaal/Flow/releases. El canal se genera después de una compilación y pruebas exitosas en GitHub Actions.
 
 ## Licencia
 
 Código bajo MIT: [LICENSE.txt](LICENSE.txt). Atribuciones en [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md). Las capacidades y limitaciones de Windows se explican en [README.txt](README.txt).
+
+## MacFlow 1.1.5
+
+- Pilas de carpetas fijables en el Dock, con accesos a Descargas, Documentos y Escritorio.
+- Vista rápida de imágenes y texto: Espacio en una pila o Ctrl+P en Spotlight > Archivos.
+- Concentración con 25/45/60 minutos, pausa, persistencia y contador en la barra superior.
+- Menú propio de escritorio en cristal: manzana > Tu escritorio o Ctrl+Alt+D.
+- Iconos vectoriales originales y autoocultado general del Dock, configurable.
+
+El menú de Explorer conserva su apariencia. Concentración no cambia No molestar de Windows. La vista rápida no ejecuta archivos ni usa extensiones externas. Las lecturas de carpetas y vistas previas se hacen en segundo plano y tienen límites de tamaño.

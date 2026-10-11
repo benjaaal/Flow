@@ -3,5 +3,5 @@ using System.Reflection;
 [assembly: AssemblyDescription("Desktop glass experience for Windows 11")]
 [assembly: AssemblyCompany("MacFlow")]
 [assembly: AssemblyProduct("MacFlow")]
-[assembly: AssemblyVersion("1.0.5.0")]
-[assembly: AssemblyFileVersion("1.0.5.0")]
+[assembly: AssemblyVersion("1.1.5.0")]
+[assembly: AssemblyFileVersion("1.1.5.0")]
