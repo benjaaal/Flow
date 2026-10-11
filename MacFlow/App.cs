@@ -39,6 +39,7 @@ namespace MacFlow
             if (args.Length == 2 && args[0] == "--connections-smoke") return ConnectivityVisual.Run(args[1]);
             if (args.Length == 2 && args[0] == "--public-update-test") return PublicUpdateProbe.Run(args[1]);
             if (args.Length == 2 && args[0] == "--features-smoke") return NewFeaturesVisual.Run(args[1]);
+            if (args.Length == 2 && args[0] == "--panel-dock-smoke") return PanelDockVisual.Run(args[1]);
             if (args.Length == 2 && args[0] == "--glass-smoke") return GlassVisual.Run(args[1]);
             if (args.Length == 2 && args[0] == "--welcome-smoke") return WelcomeVisual.Run(args[1]);
             if (args.Length == 2 && args[0] == "--fold-smoke") return FoldVisual.Run(args[1]);
@@ -71,7 +72,9 @@ namespace MacFlow
                     app.Startup += delegate
                     {
                         if(smoke&&!preview){var fixture=new VisualTestBackground {WindowState=WindowState.Normal,Width=SystemParameters.PrimaryScreenWidth,Height=SystemParameters.PrimaryScreenHeight,Left=0,Top=0,ShowActivated=false,IsHitTestVisible=false};fixture.SourceInitialized+=delegate {Native.NoActivate(fixture);};fixture.Show();}
+                        if(!smoke)Log.Write((args.Length>0&&args[0]=="--background"?"Inicio automático solicitado: ":"Inicio manual solicitado: ")+Product.VersionText);
                         desktop = new Desktop(smoke ? Path.Combine(Path.GetFullPath(args[1]), "profile") : data, smoke,smoke&&!preview,args.Length>0&&args[0]=="--background");
+                        if(!smoke)Log.Write("MacFlow listo: "+Product.VersionText);
                         if (preview) desktop.OpenSettings();
                         else if (smoke)
                         {
@@ -163,6 +166,7 @@ namespace MacFlow
                 File.WriteAllText(store.PathName,"{\"IconSize\":36,\"Animations\":true}");Assert(store.Load().NeedsUpdateWelcome(Product.Version),"Bienvenida: perfiles anteriores detectan el cambio de versión",results);restored.WelcomeAfterUpdate=false;store.Save(restored);Assert(!store.Load().NeedsUpdateWelcome(Product.Version),"Bienvenida: se conserva la elección de desactivarla",results);restored.WelcomeAfterUpdate=true;restored.LastWelcomedVersion=Product.VersionText;store.Save(restored);Assert(!store.Load().NeedsUpdateWelcome(Product.Version),"Bienvenida: reiniciar la misma versión no repite Hola",results);Assert(restored.NeedsUpdateWelcome(new Version(Product.Version.Major,Product.Version.Minor,Product.Version.Build+1)),"Bienvenida: una nueva versión vuelve a mostrar Hola",results);
                 UpdateRegression.Run(Path.Combine(directory,"updates"),results);
                 NewFeaturesRegression.Run(Path.Combine(directory,"features"),results);
+                StartupRegression.Run(Path.Combine(directory,"startup"),results);
                 Assert(LiquidMaterial.LightInkForLuminance(.2,false,false)&&!LiquidMaterial.LightInkForLuminance(.8,false,true),"Cristal: tinta legible sobre material oscuro y claro",results);
                 Assert(LiquidMaterial.LightInkForLuminance(.55,true,true)&&!LiquidMaterial.LightInkForLuminance(.48,true,false),"Cristal: histéresis evita parpadeos de texto cerca del umbral",results);
                 double maxSpring=0;bool finiteSpring=true;for(int sample=0;sample<=200;sample++){double position=SpringEase.Progress(sample/200.0);finiteSpring&=!Double.IsNaN(position)&&!Double.IsInfinity(position);maxSpring=Math.Max(maxSpring,position);}
@@ -254,7 +258,11 @@ namespace MacFlow
                 Assert(dock.IsVisible&&dock.IsHitTestVisible&&((FrameworkElement)dock.Content).Opacity>.99,"Dock: invertir la animación no oculta el Dock al reaparecer",results);
                 visibility.Hide();Pump(70);visibility.ShowImmediately();Pump(400);Assert(dock.IsVisible&&dock.IsHitTestVisible&&((FrameworkElement)dock.Content).Opacity==1,"Dock: escritorio interrumpe ocultación y lo muestra sin espera ni rebote",results);visibility.Hide();Pump(400);Assert(!dock.IsVisible,"Dock: finaliza el descenso y libera la zona de clics",results);dock.Close();
                 var wholeDock=Design.Panel("MacFlow Dock · Prueba",100,70);wholeDock.Left=wholeDock.Top=-2000;wholeDock.ShowActivated=false;wholeDock.Content=Design.Glass(new System.Windows.Controls.Border(),18,true,true);wholeDock.Show();Pump(600);var wholeVisibility=new DockVisibility(wholeDock);Native.RECT initial,middle;Native.GetWindowRect(new System.Windows.Interop.WindowInteropHelper(wholeDock).Handle,out initial);
-                wholeVisibility.Hide();Pump(145);Native.GetWindowRect(new System.Windows.Interop.WindowInteropHelper(wholeDock).Handle,out middle);Assert(wholeDock.IsVisible&&middle.Top!=initial.Top&&Math.Abs(wholeVisibility.RestingBounds().Top-initial.Top)<=1,"Dock: el descenso mueve también el cristal nativo; oclusión usa la posición de reposo",results);Pump(300);Assert(!wholeDock.IsVisible,"Dock: descenso nativo termina sin dejar una burbuja inmóvil",results);
+                wholeVisibility.Hide();bool descended=false;
+                // Observe native movement rather than one rounded pixel at a
+                // fixed instant. Offscreen composition can defer early ticks.
+                for(int sample=0;sample<30&&!descended;sample++){Pump(10);Native.GetWindowRect(new System.Windows.Interop.WindowInteropHelper(wholeDock).Handle,out middle);descended=wholeDock.IsVisible&&middle.Top>initial.Top&&Math.Abs(wholeVisibility.RestingBounds().Top-initial.Top)<=1;}
+                Assert(descended,"Dock: el descenso mueve también el cristal nativo; oclusión usa la posición de reposo",results);Pump(400);Assert(!wholeDock.IsVisible,"Dock: descenso nativo termina sin dejar una burbuja inmóvil",results);
                 wholeVisibility.Show();Pump(90);Native.GetWindowRect(new System.Windows.Interop.WindowInteropHelper(wholeDock).Handle,out middle);Assert(wholeDock.IsVisible&&middle.Top>initial.Top,"Dock: reaparece desde abajo con toda la superficie",results);Pump(360);Native.GetWindowRect(new System.Windows.Interop.WindowInteropHelper(wholeDock).Handle,out middle);Assert(middle.Top==initial.Top&&!wholeDock.HasAnimatedProperties,"Dock: rebote termina exactamente en su posición, sin reloj activo",results);
                 wholeVisibility.Hide();Pump(100);wholeVisibility.ShowImmediately();Pump(450);Native.GetWindowRect(new System.Windows.Interop.WindowInteropHelper(wholeDock).Handle,out middle);Assert(wholeDock.IsVisible&&middle.Top==initial.Top,"Dock: volver al escritorio cancela el descenso nativo inmediatamente",results);wholeDock.Close();
                 var closePanel=Design.Panel("MacFlow · Prueba de cierre",100,80);closePanel.Left=closePanel.Top=-2000;closePanel.ShowActivated=false;closePanel.Content=Design.Glass(new System.Windows.Controls.Border(),22,false);closePanel.Show();int nativeClosed=0;closePanel.Closed+=delegate{nativeClosed++;};Design.Reveal(closePanel);Pump(60);Design.Dismiss(closePanel);

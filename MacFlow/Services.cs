@@ -53,25 +53,6 @@ namespace MacFlow
         }
     }
 
-    public static class Startup
-    {
-        public static bool Enabled
-        {
-            get { bool enabled; TryRead(out enabled); return enabled; }
-            set
-            {
-                using (var key = Registry.CurrentUser.CreateSubKey("Software\\Microsoft\\Windows\\CurrentVersion\\Run"))
-                { if (value) key.SetValue("MacFlow", "\"" + Assembly.GetExecutingAssembly().Location + "\" --background"); else key.DeleteValue("MacFlow", false); }
-            }
-        }
-        public static bool TryRead(out bool enabled)
-        {
-            enabled = false;
-            try { using (var key = Registry.CurrentUser.OpenSubKey("Software\\Microsoft\\Windows\\CurrentVersion\\Run")) enabled = key != null && key.GetValue("MacFlow") != null; return true; }
-            catch (Exception ex) { Log.Write("Inicio automático no disponible: " + ex.Message); return false; }
-        }
-    }
-
     public static class Catalog
     {
         public static List<AppEntry> Scan()

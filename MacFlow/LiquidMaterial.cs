@@ -90,7 +90,7 @@ namespace MacFlow
                 surface=new Grid {Background=Brushes.Transparent};var shadow=new Border {Margin=new Thickness(Inset,TopInset,Inset,Inset),Child=lensLayer,CacheMode=new BitmapCache(.75)};
                 if(Inset>0)shadow.Effect=new DropShadowEffect {BlurRadius=10,ShadowDepth=2,Opacity=.10,Color=Color.FromRgb(19,35,56),RenderingBias=RenderingBias.Performance};
                 surface.Children.Add(shadow);readabilityLayer=new Border{Margin=new Thickness(Inset,TopInset,Inset,Inset),CornerRadius=new CornerRadius(Radius),IsHitTestVisible=false};surface.Children.Add(readabilityLayer);if(content!=null)surface.Children.Add(new Border {Margin=new Thickness(Inset,TopInset,Inset,Inset),Child=content});
-                light=new CrystalLight(Radius,window.Title.Contains("barra superior")?.4:window.Title.Contains("Dock")?.8:1){Margin=new Thickness(Inset,TopInset,Inset,Inset)};surface.Children.Add(light);window.Content=surface;Resize();
+                light=new CrystalLight(Radius,window.Title.Contains("barra superior")?.4:window.Title.Contains("Dock")?.95:1){Margin=new Thickness(Inset,TopInset,Inset,Inset)};surface.Children.Add(light);window.Content=surface;Resize();
             }
             finally{wrapping=false;}
         }
@@ -177,6 +177,18 @@ namespace MacFlow
         }
         internal static bool LightInkForLuminance(double average,bool known,bool wasLight)
         {return !known?average<.52:wasLight?average<.62:average<.42;}
+        internal static async System.Threading.Tasks.Task<bool?> WelcomeTone(Window window)
+        {
+            var handle=new WindowInteropHelper(window).Handle;Native.RECT rect;if(!Native.GetWindowRect(handle,out rect))return null;
+            // One read of five unused pixels in our own welcome window. No image
+            // is stored; the readback runs off the UI thread and never polls.
+            return await System.Threading.Tasks.Task.Run<bool?>(delegate
+            {
+                double total=0;int count=0;var dc=GetDC(IntPtr.Zero);if(dc==IntPtr.Zero)return null;
+                try{for(int i=0;i<5;i++){int x=rect.Left+(int)((rect.Right-rect.Left)*(.18+i*.16)),y=rect.Top+(int)((rect.Bottom-rect.Top)*(i%2==0?.12:.88));var under=WindowFromPoint(new SamplePoint{X=x,Y=y});if(under!=handle&&GetAncestor(under,2)!=handle)continue;uint color=GetPixel(dc,x,y);if(color==0xFFFFFFFF)continue;total+=((color&255)*.2126+((color>>8)&255)*.7152+((color>>16)&255)*.0722)/255;count++;}}finally{ReleaseDC(IntPtr.Zero,dc);}
+                return count<3?(bool?)null:total/count<.55;
+            });
+        }
         private async void RefreshContrast()
         {
             if(disposed||toneBusy||!window.IsVisible||window.WindowState==WindowState.Minimized||SystemParameters.HighContrast)return;

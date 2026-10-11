@@ -81,7 +81,7 @@ namespace MacFlowSetup
             }
             var intro = Design.Text("Dock animado, barra superior, buscador y centro de control.\nAplicación nativa para Windows 11 de 64 bits.", 15, false); intro.TextWrapping = TextWrapping.Wrap; body.Children.Add(intro);
             var location = Design.Text("Se instalará para tu usuario en:\n" + Program.Target, 12, false); location.TextWrapping = TextWrapping.Wrap; location.Foreground = Design.Muted; location.Margin = new Thickness(0, 16, 0, 12); body.Children.Add(location);
-            body.Children.Add(Design.Check("Iniciar MacFlow automáticamente con Windows", Startup.Enabled, delegate(bool value) { startup = value; })); startup = Startup.Enabled;
+            body.Children.Add(Design.Check("Iniciar MacFlow automáticamente con Windows", Startup.Requested, delegate(bool value) { startup = value; })); startup = Startup.Requested;
             body.Children.Add(Design.Check("Crear acceso directo en el escritorio", true, delegate(bool value) { desktopShortcut = value; }));
             var note = Design.Text(updating?"Pantalla negra en todos los monitores y preparación de 2 minutos.\nWindows × 3 o Esc cancela antes de guardar los cambios.":"El ocultamiento de la barra de tareas se activa desde MacFlow.\nNo se necesitan permisos de administrador.", 12, false); note.Foreground = Design.Muted; note.Margin = new Thickness(0, 8, 0, 10); body.Children.Add(note);
             var row = new StackPanel { Orientation = Orientation.Horizontal }; row.Children.Add(Design.Button(updating?"Actualizar":"Instalar", Install, true)); row.Children.Add(Design.Button("Cancelar", Close, false)); body.Children.Add(row);
@@ -198,7 +198,7 @@ namespace MacFlowSetup
             {
                 key.SetValue("DisplayName", "MacFlow"); key.SetValue("DisplayVersion", Product.VersionText); key.SetValue("Publisher", "MacFlow"); key.SetValue("InstallLocation", target); key.SetValue("DisplayIcon", Path.Combine(target, "MacFlow.exe")); key.SetValue("UninstallString", "\"" + Path.Combine(target, "Uninstall.exe") + "\""); key.SetValue("NoModify", 1, RegistryValueKind.DWord); key.SetValue("NoRepair", 1, RegistryValueKind.DWord); key.SetValue("EstimatedSize", (int)(Owned.Where(n => File.Exists(Path.Combine(target, n))).Sum(n => new FileInfo(Path.Combine(target, n)).Length) / 1024), RegistryValueKind.DWord);
             }
-            using (var key = Registry.CurrentUser.CreateSubKey("Software\\Microsoft\\Windows\\CurrentVersion\\Run")) { if (startup) key.SetValue("MacFlow", "\"" + Path.Combine(target, "MacFlow.exe") + "\" --background"); else key.DeleteValue("MacFlow", false); }
+            Startup.Configure(startup,Path.Combine(target,"MacFlow.exe"));
             var menu = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Programs), "MacFlow"); Directory.CreateDirectory(menu);
             Shortcut(Path.Combine(menu, "MacFlow.lnk"), Path.Combine(target, "MacFlow.exe")); Shortcut(Path.Combine(menu, "Desinstalar MacFlow.lnk"), Path.Combine(target, "Uninstall.exe"));
             if (desktop) Shortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "MacFlow.lnk"), Path.Combine(target, "MacFlow.exe"));
@@ -224,7 +224,7 @@ namespace MacFlowSetup
             if (!Directory.EnumerateFileSystemEntries(target).Any()) Directory.Delete(target);
             if (unregister)
             {
-                using (var key = Registry.CurrentUser.CreateSubKey("Software\\Microsoft\\Windows\\CurrentVersion\\Run")) key.DeleteValue("MacFlow", false);
+                Startup.Configure(false,Path.Combine(target,"MacFlow.exe"));
                 Registry.CurrentUser.DeleteSubKeyTree(RegistryPath, false);
                 var menu = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Programs), "MacFlow"); CheckDirectory(menu);
                 foreach (var name in new[] { "MacFlow.lnk", "Desinstalar MacFlow.lnk" }) if (File.Exists(Path.Combine(menu, name))) File.Delete(Path.Combine(menu, name));

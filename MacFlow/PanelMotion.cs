@@ -25,12 +25,18 @@ namespace MacFlow
     internal static class PanelMotion
     {
         private static readonly DependencyProperty BaseTop=DependencyProperty.RegisterAttached("BaseTop",typeof(double),typeof(PanelMotion),new PropertyMetadata(Double.NaN));
+        private static readonly DependencyProperty BaseLeft=DependencyProperty.RegisterAttached("BaseLeft",typeof(double),typeof(PanelMotion),new PropertyMetadata(Double.NaN));
         private static readonly DependencyProperty Closing=DependencyProperty.RegisterAttached("Closing",typeof(bool),typeof(PanelMotion),new PropertyMetadata(false));
         private static readonly DependencyProperty OriginalTransform=DependencyProperty.RegisterAttached("OriginalTransform",typeof(Transform),typeof(PanelMotion),new PropertyMetadata(null));
         private static readonly DependencyProperty OriginalOrigin=DependencyProperty.RegisterAttached("OriginalOrigin",typeof(Point),typeof(PanelMotion),new PropertyMetadata(new Point()));
         private static readonly DependencyProperty ClipPending=DependencyProperty.RegisterAttached("ClipPending",typeof(bool),typeof(PanelMotion),new PropertyMetadata(false));
         private static readonly DependencyProperty ExitProgress=DependencyProperty.RegisterAttached("ExitProgress",typeof(double),typeof(PanelMotion),new PropertyMetadata(0.0,ExitChanged));
+        private static readonly DependencyProperty ExitStart=DependencyProperty.RegisterAttached("ExitStart",typeof(Native.RECT),typeof(PanelMotion),new PropertyMetadata(new Native.RECT()));
+        private static readonly DependencyProperty ExitTarget=DependencyProperty.RegisterAttached("ExitTarget",typeof(Point),typeof(PanelMotion),new PropertyMetadata(new Point()));
+        private static readonly DependencyProperty HasTarget=DependencyProperty.RegisterAttached("HasTarget",typeof(bool),typeof(PanelMotion),new PropertyMetadata(false));
+        private static readonly DependencyProperty ExitState=DependencyProperty.RegisterAttached("ExitState",typeof(WindowState),typeof(PanelMotion),new PropertyMetadata(WindowState.Normal));
         internal static event Action<Window> Frame;
+        internal static Func<Window,Point?> DockDestination;
         internal static bool IsClosing(Window window){return (bool)window.GetValue(Closing);}
         private static void ExitChanged(DependencyObject target,DependencyPropertyChangedEventArgs args)
         {
@@ -41,27 +47,49 @@ namespace MacFlow
             // content. Cropping first reveals an unscaled, cut-off text frame.
             if((bool)window.GetValue(ClipPending))return;window.SetValue(ClipPending,true);
             window.Dispatcher.BeginInvoke(DispatcherPriority.Loaded,new Action(delegate
-            {window.SetValue(ClipPending,false);if(!IsClosing(window)||!window.IsVisible)return;Native.SetGlassClip(window,Math.Max(.001,1-(double)window.GetValue(ExitProgress)));var changed=Frame;if(changed!=null)changed(window);}));
+            {
+                window.SetValue(ClipPending,false);if(!IsClosing(window)||!window.IsVisible)return;
+                double progress=(double)window.GetValue(ExitProgress);Native.SetGlassClip(window,Math.Max(.001,1-progress));
+                if((bool)window.GetValue(HasTarget))
+                {
+                    var start=(Native.RECT)window.GetValue(ExitStart);var targetPoint=(Point)window.GetValue(ExitTarget);
+                    double x=start.Left+(targetPoint.X-(start.Left+start.Right)/2.0)*progress,y=start.Top+(targetPoint.Y-(start.Top+start.Bottom)/2.0)*progress;
+                    // Move only our HWND. One clock drives movement, material
+                    // clipping and content scale, including maximized panels.
+                    Native.SetWindowPos(new System.Windows.Interop.WindowInteropHelper(window).Handle,IntPtr.Zero,(int)Math.Round(x),(int)Math.Round(y),0,0,0x15);
+                }
+                var changed=Frame;if(changed!=null)changed(window);
+            }));
         }
         internal static void Open(Window window)
         {
             if(window.WindowState!=WindowState.Normal||Double.IsNaN(window.Top))return;
-            Reset(window);double top=window.Top;window.SetValue(BaseTop,top);
+            Reset(window);double top=window.Top;window.SetValue(BaseTop,top);window.SetValue(BaseLeft,window.Left);
             var motion=new DoubleAnimation(top+14,top,TimeSpan.FromMilliseconds(320)){EasingFunction=new SpringEase{EasingMode=EasingMode.EaseIn}};
             Timeline.SetDesiredFrameRate(motion,60);motion.Completed+=delegate{if(window.IsVisible&&Math.Abs(window.Top-top)<.1)Reset(window);};window.BeginAnimation(Window.TopProperty,motion);
         }
         internal static void Close(Window window)
         {
-            if(window.WindowState!=WindowState.Normal||Double.IsNaN(window.Top))return;
+            if(window.WindowState==WindowState.Minimized)return;
             double start=window.Top;if(Double.IsNaN((double)window.GetValue(BaseTop)))window.SetValue(BaseTop,start);
+            double left=window.Left;if(Double.IsNaN((double)window.GetValue(BaseLeft)))window.SetValue(BaseLeft,left);
+            window.SetValue(ExitState,window.WindowState);
+            // Freeze any unfinished entry before capturing the actual native
+            // coordinates. Windows preserves normal/maximized placement.
+            window.BeginAnimation(Window.TopProperty,null);window.BeginAnimation(Window.LeftProperty,null);
+            if(window.WindowState==WindowState.Normal){window.Top=start;window.Left=left;}
             if(!IsClosing(window)){var content=window.Content as FrameworkElement;if(content!=null){window.SetValue(OriginalTransform,content.RenderTransform);window.SetValue(OriginalOrigin,content.RenderTransformOrigin);content.RenderTransformOrigin=new Point(.5,.5);content.RenderTransform=new ScaleTransform(1,1);}window.SetValue(Closing,true);}
-            var collapse=new DoubleAnimation((double)window.GetValue(ExitProgress),.999,TimeSpan.FromMilliseconds(250)){EasingFunction=new CubicEase{EasingMode=EasingMode.EaseInOut}};Timeline.SetDesiredFrameRate(collapse,60);window.BeginAnimation(ExitProgress,collapse);
-            var motion=new DoubleAnimation(start,start+12,TimeSpan.FromMilliseconds(240)){EasingFunction=new CubicEase{EasingMode=EasingMode.EaseInOut}};Timeline.SetDesiredFrameRate(motion,60);window.BeginAnimation(Window.TopProperty,motion);
+            Native.RECT bounds;Native.GetWindowRect(new System.Windows.Interop.WindowInteropHelper(window).Handle,out bounds);window.SetValue(ExitStart,bounds);
+            var destination=DockDestination==null?null:DockDestination(window);window.SetValue(HasTarget,destination.HasValue);if(destination.HasValue)window.SetValue(ExitTarget,destination.Value);
+            var collapse=new DoubleAnimation((double)window.GetValue(ExitProgress),.999,TimeSpan.FromMilliseconds(300)){EasingFunction=new CubicEase{EasingMode=EasingMode.EaseInOut}};Timeline.SetDesiredFrameRate(collapse,60);window.BeginAnimation(ExitProgress,collapse);
         }
         internal static void Reset(Window window)
         {
             window.SetValue(Closing,false);window.BeginAnimation(ExitProgress,null);window.SetValue(ExitProgress,0.0);var content=window.Content as FrameworkElement;var previous=window.GetValue(OriginalTransform) as Transform;if(content!=null&&previous!=null){content.RenderTransform=previous;content.RenderTransformOrigin=(Point)window.GetValue(OriginalOrigin);window.ClearValue(OriginalTransform);window.ClearValue(OriginalOrigin);}Native.SetGlassClip(window,1);
-            double top=(double)window.GetValue(BaseTop);window.BeginAnimation(Window.TopProperty,null);if(!Double.IsNaN(top))window.Top=top;window.SetValue(BaseTop,Double.NaN);
+            bool maximized=(WindowState)window.GetValue(ExitState)==WindowState.Maximized;
+            if(maximized&&(bool)window.GetValue(HasTarget)){var bounds=(Native.RECT)window.GetValue(ExitStart);Native.SetWindowPos(new System.Windows.Interop.WindowInteropHelper(window).Handle,IntPtr.Zero,bounds.Left,bounds.Top,0,0,0x15);}
+            double top=(double)window.GetValue(BaseTop);window.BeginAnimation(Window.TopProperty,null);if(!maximized&&!Double.IsNaN(top))window.Top=top;window.SetValue(BaseTop,Double.NaN);
+            double left=(double)window.GetValue(BaseLeft);window.BeginAnimation(Window.LeftProperty,null);if(!maximized&&!Double.IsNaN(left))window.Left=left;window.SetValue(BaseLeft,Double.NaN);window.SetValue(HasTarget,false);window.SetValue(ExitState,WindowState.Normal);
         }
     }
 }

@@ -86,6 +86,13 @@ namespace MacFlow
         public bool HotkeyAvailable;
         public int AppCount { get { return Apps.Count; } }
         public bool IsTesting {get{return nonInteractiveTest;}}
+        private readonly Func<Window,Point?> panelDestination;
+        private Point? PanelDestination(Window window)
+        {
+            if(disposed||suspended||Dock==null||dockVisibility==null)return null;
+            var rect=dockVisibility.RestingBounds();if(rect.Right<=rect.Left||rect.Bottom<=rect.Top)return null;
+            return new Point((rect.Left+rect.Right)/2.0,(rect.Top+rect.Bottom)/2.0);
+        }
         private void PrepareTestWindow(Window window)
         {
             if(!nonInteractiveTest)return;window.ShowActivated=false;window.IsHitTestVisible=false;window.SourceInitialized+=delegate {Native.NoActivate(window);};
@@ -102,7 +109,7 @@ namespace MacFlow
                 Preferences.Pins.Add(new AppEntry { Name = "Explorador", Target = "explorer.exe", Executable = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "explorer.exe") });
                 Preferences.Pins.Add(new AppEntry { Name = "Configuración", Target = "ms-settings:", Executable=System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows),"ImmersiveControlPanel","SystemSettings.exe") });
             }
-            ApplyDesign(); CreateDock();dockVisibility=new DockVisibility(Dock); CreateTopBar();
+            ApplyDesign(); CreateDock();dockVisibility=new DockVisibility(Dock);panelDestination=PanelDestination;PanelMotion.DockDestination=panelDestination;CreateTopBar();
             if(dockUpgraded&&!smoke)Save();
             if (!smoke) { CreateTray(); lease.Restore(); if (Preferences.AutoHideTaskbar) TryAcquire(); ResumeWallpaper();lidTransition=new LidTransition(Dock,delegate{return !suspended&&Preferences.LidAnimation&&Preferences.Animations;}); }
             timer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromSeconds(Preferences.LowPower?2:1) };
@@ -656,6 +663,7 @@ namespace MacFlow
         private void OpenUri(string target) { try { Process.Start(new ProcessStartInfo(target) { UseShellExecute = true }); } catch (Exception ex) { Notify(ex.Message); } }
         public void Dispose()
         {
+            if(PanelMotion.DockDestination==panelDestination)PanelMotion.DockDestination=null;
             if(updatesTimer!=null)updatesTimer.Stop();if(updateDebounce!=null)updateDebounce.Stop();if(updatesWatcher!=null)updatesWatcher.Dispose();updatesStop.Cancel();
             if(lidTransition!=null)lidTransition.Dispose();
             Focus.Dispose();

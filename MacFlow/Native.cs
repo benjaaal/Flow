@@ -223,6 +223,21 @@ namespace MacFlow
             else {value=1;DwmSetWindowAttribute(h,38,ref value,4);var empty=new MARGINS();DwmExtendFrameIntoClientArea(h,ref empty);window.Background=Design.Brush(dark?"#28282A":"#F5F5F7");window.Tag="Solid fallback";}
             LiquidMaterial.Apply(window,dark);RoundGlass(window);
         }
+        internal static void WelcomeBackdrop(Window window)
+        {
+            // A full-screen scene has no rounded frame, rim or per-frame screen copy.
+            var h=new WindowInteropHelper(window).Handle;bool composition;
+            DwmIsCompositionEnabled(out composition);
+            if(!composition||SystemParameters.HighContrast){window.Background=SystemColors.WindowBrush;window.Tag="Accessible welcome fallback";return;}
+            System.Windows.Shell.WindowChrome.SetWindowChrome(window,new System.Windows.Shell.WindowChrome{CaptionHeight=0,ResizeBorderThickness=new Thickness(0),GlassFrameThickness=new Thickness(0),UseAeroCaptionButtons=false});
+            var margins=new MARGINS{Left=-1,Right=-1,Top=-1,Bottom=-1};
+            if(DwmExtendFrameIntoClientArea(h,ref margins)!=0){window.Background=Design.Brush("#172131");window.Tag="Welcome fallback";return;}
+            window.Background=Brushes.Transparent;var source=HwndSource.FromHwnd(h);
+            if(source!=null&&source.CompositionTarget!=null)source.CompositionTarget.BackgroundColor=Colors.Transparent;
+            ClearCompositorGlass(h,true);int square=1;DwmSetWindowAttribute(h,33,ref square,4);
+            int noBorder=unchecked((int)0xFFFFFFFE);DwmSetWindowAttribute(h,34,ref noBorder,4);
+            window.Tag="Welcome live compositor · recordable";
+        }
         public static void NoActivate(Window window)
         {
             var h = new WindowInteropHelper(window).Handle; SetWindowLong(h, -20, GetWindowLong(h, -20) | 0x08000000 | 0x80);

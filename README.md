@@ -34,7 +34,24 @@ Descargas oficiales: https://github.com/benjaaal/Flow/releases. El canal se gene
 
 Código bajo MIT: [LICENSE.txt](LICENSE.txt). Atribuciones en [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md). Las capacidades y limitaciones de Windows se explican en [README.txt](README.txt).
 
-## MacFlow 1.1.5
+## MacFlow 26.0.1
+
+- Bienvenida sobre el fondo vivo del compositor: manzanita de cristal → Hola manuscrito → Iniciar.
+- Silueta proporcionada de Simple Icons, iluminada con un shader original de máscara.
+- 30 saludos locales: trazos manuscritos latinos y fuentes nativas para otros sistemas de escritura; transiciones suaves y dirección derecha a izquierda cuando corresponde.
+- Escape funciona durante la entrada; cerrar detiene el ciclo de idiomas. Con animaciones desactivadas, la bienvenida es inmediata.
+- Un poco más de luz y transparencia en el Dock, sin cambiar sus dimensiones ni la contención de los iconos.
+- Cerrar o minimizar los paneles de MacFlow recoge material y contenido hacia el centro del Dock, incluso si éste está oculto. Restaurar recupera la posición y el tamaño originales. Las ventanas de otros programas mantienen las animaciones de Windows.
+- Nuevo icono vectorial original inspirado en Ajustes de iOS, en Configuración y los accesos de configuración del Dock.
+- Inicio automático por acceso nativo en la carpeta de inicio del usuario, con destino verificado a la instalación fija. Reparar inicio automático corrige rutas viejas; actualizar conserva una solicitud de inicio aunque su ruta estuviera rota. Windows mantiene el control para deshabilitarlo desde Aplicaciones de inicio.
+
+El material aproxima el cristal mediante desenfoque del compositor y reflejos. El shader de la manzanita muestrea su propia máscara vectorial, sin refracción óptica del escritorio. No requiere un navegador, captura continua de pantalla ni servicios de traducción.
+
+Prueba visual aislada: `MacFlow.exe --welcome-smoke RUTA`. Comprueba secuencia, idiomas, cierre, movimiento desactivado y geometría; las capturas corresponden a ventanas propias de prueba.
+
+Prueba del recorrido nativo y restauración: `MacFlow.exe --panel-dock-smoke RUTA`. Comprueba destino físico, disminución de distancia y recorte, Dock inferior/lateral, cierre durante la entrada y posición restaurada. No altera ventanas de otros programas.
+
+## Funciones incluidas desde 1.1.5
 
 - Pilas de carpetas fijables en el Dock, con accesos a Descargas, Documentos y Escritorio.
 - Vista rápida de imágenes y texto: Espacio en una pila o Ctrl+P en Spotlight > Archivos.

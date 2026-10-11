@@ -56,7 +56,7 @@ namespace MacFlow
         }
         internal static LinearGradientBrush MaterialTint(bool dock,bool dark)
         {
-            var colors=dock?dark?new[]{"#081E2630","#071A222C","#0C18202A"}:new[]{"#22FFFFFF","#12FFFFFF","#1AFFFFFF"}
+            var colors=dock?dark?new[]{"#142B3B4C","#0C91AED0","#1025364B"}:new[]{"#30FFFFFF","#16D3E8FF","#28FFFFFF"}
                 :dark?new[]{"#38232B38","#34202735","#38202835"}:new[]{"#60FFFFFF","#50F7FAFF","#55FFFFFF"};
             var brush=new LinearGradientBrush{StartPoint=new Point(0,0),EndPoint=new Point(.8,1)};
             for(int i=0;i<3;i++){var color=(Color)ColorConverter.ConvertFromString(colors[i]);color.A=(byte)Math.Min(220,color.A*Math.Max(.75,GlassOpacity/.18));brush.GradientStops.Add(new GradientStop(color,i==0?0:i==1?.48:1));}brush.Freeze();return brush;
@@ -110,11 +110,11 @@ namespace MacFlow
         {
             if((bool)window.GetValue(DismissingProperty))return;window.SetValue(DismissingProperty,true);window.IsHitTestVisible=false;
             if(!Animations){window.Close();if(after!=null)after();return;}
-            bool finished=false;var fallback=new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Background){Interval=TimeSpan.FromMilliseconds(320)};
+            bool finished=false;var fallback=new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Background){Interval=TimeSpan.FromMilliseconds(390)};
             Action finish=delegate{if(finished)return;finished=true;fallback.Stop();window.Close();if(after!=null)after();};
             fallback.Tick+=delegate{finish();};window.Closed+=delegate{finished=true;fallback.Stop();};fallback.Start();
             PanelMotion.Close(window);
-            var animation=new DoubleAnimation(0,TimeSpan.FromMilliseconds(250)){EasingFunction=new CubicEase{EasingMode=EasingMode.EaseInOut}};Timeline.SetDesiredFrameRate(animation,60);animation.Completed+=delegate{finish();};window.BeginAnimation(UIElement.OpacityProperty,animation);
+            var animation=new DoubleAnimation(0,TimeSpan.FromMilliseconds(310)){EasingFunction=new CubicEase{EasingMode=EasingMode.EaseIn}};Timeline.SetDesiredFrameRate(animation,60);animation.Completed+=delegate{finish();};window.BeginAnimation(UIElement.OpacityProperty,animation);
         }
         public static void Minimize(Window window)
         {
@@ -122,8 +122,8 @@ namespace MacFlow
             if(!(bool)window.GetValue(RestoreHookProperty)){window.SetValue(RestoreHookProperty,true);bool minimized=false;window.StateChanged+=delegate{if(window.WindowState==WindowState.Minimized)minimized=true;else if(minimized){minimized=false;Reveal(window);}};}
             if(!Animations){window.WindowState=WindowState.Minimized;return;}window.SetValue(MinimizingProperty,true);window.IsHitTestVisible=false;
             PanelMotion.Close(window);
-            bool finished=false;var fallback=new System.Windows.Threading.DispatcherTimer{Interval=TimeSpan.FromMilliseconds(280)};EventHandler closed=null;closed=delegate{finished=true;fallback.Stop();window.Closed-=closed;};Action finish=delegate{if(finished)return;finished=true;fallback.Stop();window.Closed-=closed;PanelMotion.Reset(window);window.BeginAnimation(UIElement.OpacityProperty,null);window.Opacity=1;window.IsHitTestVisible=true;window.SetValue(MinimizingProperty,false);if(window.IsVisible)window.WindowState=WindowState.Minimized;};fallback.Tick+=delegate{finish();};window.Closed+=closed;fallback.Start();
-            var fade=new DoubleAnimation(0,TimeSpan.FromMilliseconds(180)){EasingFunction=new CubicEase{EasingMode=EasingMode.EaseIn}};fade.Completed+=delegate{finish();};window.BeginAnimation(UIElement.OpacityProperty,fade);
+            bool finished=false;var fallback=new System.Windows.Threading.DispatcherTimer{Interval=TimeSpan.FromMilliseconds(390)};EventHandler closed=null;closed=delegate{finished=true;fallback.Stop();window.Closed-=closed;};Action finish=delegate{if(finished)return;finished=true;fallback.Stop();window.Closed-=closed;PanelMotion.Reset(window);window.BeginAnimation(UIElement.OpacityProperty,null);window.Opacity=1;window.IsHitTestVisible=true;window.SetValue(MinimizingProperty,false);if(window.IsVisible)window.WindowState=WindowState.Minimized;};fallback.Tick+=delegate{finish();};window.Closed+=closed;fallback.Start();
+            var fade=new DoubleAnimation(0,TimeSpan.FromMilliseconds(310)){EasingFunction=new CubicEase{EasingMode=EasingMode.EaseIn}};fade.Completed+=delegate{finish();};window.BeginAnimation(UIElement.OpacityProperty,fade);
         }
         public static Window Panel(string title, double width, double height)
         {
@@ -150,6 +150,7 @@ namespace MacFlow
             else if(String.Equals(file,"SystemSettings.exe",StringComparison.OrdinalIgnoreCase)||String.Equals(target,"ms-settings:",StringComparison.OrdinalIgnoreCase))kind="settings";
             else if(String.Equals(file,"MacFlow.exe",StringComparison.OrdinalIgnoreCase))kind="macflow";
             if(kind=="macflow")return FeatureIcons.Get("macflow");
+            if(kind=="settings")return FeatureIcons.Get("settings");
             if(kind==null)return null;ImageSource cached;if(systemIcons.TryGetValue(kind,out cached))return cached;
             var drawing=new DrawingGroup();
             using(var dc=drawing.Open())
@@ -184,7 +185,7 @@ namespace MacFlow
             // F8FF is a private-use glyph, absent from normal Windows fonts.
             // Draw a vector fallback so this menu never becomes a missing box.
             var mark=new System.Windows.Shapes.Path{Width=size,Height=size,Stretch=Stretch.Uniform,
-                Data=Geometry.Parse("M15.3,1 C15.4,3.1 14,4.9 12,5.3 C11.8,3.6 13.2,1.5 15.3,1 Z M12,7 C13.5,7 14.6,5.8 16.3,6 C18,6.1 19.3,7 20,8.1 C16.5,10.1 16.7,14.5 20.6,16.1 C20,17.9 18.6,20.1 17.2,21.2 C15.8,22.4 14.4,21 12.6,21 C10.9,21 9.8,22.3 8.4,21.6 C5.2,20 2.4,14.7 3.3,10.5 C3.9,7.6 6.2,5.8 8.6,6 C10.1,6.1 10.9,7 12,7 Z")};
+                Data=Geometry.Parse("M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701")};
             mark.SetResourceReference(System.Windows.Shapes.Path.FillProperty,"GlassInk");return mark;
         }
         public static UIElement Symbol(string key, double size, Brush color)

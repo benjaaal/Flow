@@ -36,6 +36,33 @@ namespace MacFlow
                     dc.DrawRoundedRectangle(Brush("#6F91AD"), null, new Rect(25, 31, 24, 17), 2, 2);
                     dc.DrawEllipse(Brush("#F27E8B"), null, new Point(26, 27), 1.5, 1.5); dc.DrawEllipse(Brush("#F3CB77"), null, new Point(31, 27), 1.5, 1.5); dc.DrawEllipse(Brush("#72C9A9"), null, new Point(36, 27), 1.5, 1.5);
                 }
+                else if (kind == "settings")
+                {
+                    // Original iOS-inspired Settings artwork, rendered as a
+                    // vector at every size, with quiet machined-metal lighting.
+                    dc.DrawRoundedRectangle(Gradient("#C6CBD2", "#9198A3"), null, new Rect(3, 3, 58, 58), 14, 14);
+                    dc.DrawRoundedRectangle(null, new Pen(Brush("#50FFFFFF"), .65), new Rect(3.6, 3.6, 56.8, 56.8), 13.4, 13.4);
+                    var teeth = new StreamGeometry(); using (var path = teeth.Open())
+                    {
+                        for (int i = 0; i < 96; i++)
+                        {
+                            double angle = i * Math.PI / 48 - Math.PI / 2;
+                            double radius = i % 6 == 1 || i % 6 == 2 || i % 6 == 3 ? 23 : 20;
+                            var point = new Point(32 + radius * Math.Cos(angle), 32 + radius * Math.Sin(angle));
+                            if (i == 0) path.BeginFigure(point, true, true); else path.LineTo(point, true, false);
+                        }
+                    }
+                    teeth.Freeze(); dc.DrawGeometry(Gradient("#575D65", "#272C33"), new Pen(Brush("#8BDDE2E8"), .8), teeth);
+                    dc.DrawEllipse(null, new Pen(Gradient("#F0F2F4", "#ABB2BC"), 2.2), new Point(32, 32), 17, 17);
+                    dc.DrawEllipse(null, new Pen(Brush("#343A43"), 1.3), new Point(32, 32), 14.6, 14.6);
+                    for (int i = 0; i < 10; i++)
+                    {
+                        double angle = i * Math.PI / 5;
+                        dc.DrawLine(Line("#9FA7B2", 1.6), new Point(32 + 9.5 * Math.Cos(angle), 32 + 9.5 * Math.Sin(angle)), new Point(32 + 12.6 * Math.Cos(angle), 32 + 12.6 * Math.Sin(angle)));
+                    }
+                    dc.DrawEllipse(Gradient("#7B838E", "#333A44"), new Pen(Gradient("#E6EBF0", "#A0AAB7"), 2), new Point(32, 32), 7.6, 7.6);
+                    dc.DrawEllipse(Brush("#303741"), new Pen(Brush("#89939F"), .7), new Point(32, 32), 4.8, 4.8);
+                }
                 else if (kind == "focus")
                 {
                     dc.DrawRoundedRectangle(Gradient("#AE98ED", "#5C55AF"), null, new Rect(3, 3, 58, 58), 14, 14);

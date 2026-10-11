@@ -38,8 +38,11 @@ namespace MacFlow
             var side=new DockPanel{Margin=new Thickness(12,12,12,15)};
             var top=new StackPanel();
             var lights=new WindowControls(this,delegate{Design.Dismiss(this);}){Margin=new Thickness(0,0,0,22)};top.Children.Add(lights);
-            var brand=Design.Text("MacFlow",18,true);brand.Margin=new Thickness(7,0,0,3);top.Children.Add(brand);
-            var caption=Design.Text("Configuración",11,false);caption.SetResourceReference(TextBlock.ForegroundProperty,"GlassMuted");caption.Margin=new Thickness(7,3,0,24);top.Children.Add(caption);
+            Icon=FeatureIcons.Get("settings");
+            var identity=new StackPanel{Orientation=Orientation.Horizontal,Margin=new Thickness(7,0,0,22)};
+            identity.Children.Add(new Image{Source=Icon,Width=36,Height=36,Margin=new Thickness(0,0,9,0),VerticalAlignment=VerticalAlignment.Center});
+            var labels=new StackPanel{VerticalAlignment=VerticalAlignment.Center};var brand=Design.Text("MacFlow",18,true);labels.Children.Add(brand);
+            var caption=Design.Text("Configuración",11,false);caption.SetResourceReference(TextBlock.ForegroundProperty,"GlassMuted");caption.Margin=new Thickness(0,3,0,0);labels.Children.Add(caption);identity.Children.Add(labels);top.Children.Add(identity);
             string[] names={"Apariencia","Fondos","Dock","Barra superior","Rendimiento","Sistema"}; string[] symbols={"sun","display","grid","control","display","settings"};
             for(int i=0;i<names.Length;i++)
             {
@@ -160,7 +163,9 @@ namespace MacFlow
         }
         private void SystemPage()
         {
-            Heading("Sistema","MacFlow se adapta a tu Windows.");var section=Section("Inicio y accesos");var start=Design.Check("",startupValue,delegate(bool v){startupValue=v;});start.Width=45;start.IsEnabled=startupAvailable;section.Children.Add(Row("Iniciar con Windows",startupAvailable?"Solo para tu usuario":"No disponible en este modo o entorno",start));
+            Heading("Sistema","MacFlow se adapta a tu Windows.");var section=Section("Inicio y accesos");var start=Design.Check("",startupValue,delegate(bool v){startupValue=v;});start.Width=45;start.IsEnabled=startupAvailable;var startupInfo=desktop.IsTesting?null:Startup.Inspect();section.Children.Add(Row("Iniciar con Windows",startupInfo==null?"No disponible en este modo de prueba":startupInfo.Description,start));
+            var repair=Design.Button("Reparar inicio automático",delegate{try{Startup.Enabled=true;startupValue=true;ShowPage(5);status.Text="Acceso de inicio reparado. Windows puede deshabilitarlo desde Aplicaciones de inicio.";}catch(Exception ex){status.Text=ex.Message;}},false);repair.IsEnabled=startupAvailable;section.Children.Add(repair);
+            section.Children.Add(Design.Button("Revisar aplicaciones de inicio en Windows",delegate{Process.Start(new ProcessStartInfo("ms-settings:startupapps"){UseShellExecute=true});},false));
             Toggle(section,"Saludo después de actualizar","Hola aparece una vez por versión nueva.",draft.WelcomeAfterUpdate,delegate(bool v){draft.WelcomeAfterUpdate=v;});section.Children.Add(Design.Button("Ver bienvenida · Hola",desktop.OpenWelcome,false));
             Toggle(section,"Menú con la tecla Windows","Una pulsación abre MacFlow. Win+E y otros atajos siguen en Windows.",draft.WindowsMenu,delegate(bool v){draft.WindowsMenu=v;});section.Children.Add(Design.Button("Tus ventanas · minimizar, ampliar y cerrar",desktop.OpenOverview,false));section.Children.Add(Design.Button("Abrir menú de energía",desktop.OpenPowerMenu,false));
             var lid=Section("Tapa de la notebook");Toggle(lid,"Transición al abrir y cerrar la tapa","Pliegue con desenfoque y movimiento suave.",draft.LidAnimation,delegate(bool v){draft.LidAnimation=v;});lid.Children.Add(Design.Button("Probar pliegue del escritorio",desktop.PreviewLidAnimation,false));var lidNote=Design.Text(desktop.LidStatus+"\nSin sensor, el efecto responde al aviso de apertura/cierre. La suspensión puede interrumpirlo.",11,false);lidNote.TextWrapping=TextWrapping.Wrap;lidNote.Margin=new Thickness(0,8,0,0);lid.Children.Add(lidNote);
