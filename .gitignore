@@ -1,0 +1,8 @@
+build/
+artifacts/
+.vs/
+*.user
+*.suo
+*.tmp
+settings.json
+*.log

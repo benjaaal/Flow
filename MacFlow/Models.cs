@@ -1,0 +1,139 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Runtime.Serialization;
+using System.Runtime.Serialization.Json;
+using System.Text;
+
+namespace MacFlow
+{
+    internal static class Product
+    {
+        internal static Version Version {get{var v=typeof(Product).Assembly.GetName().Version;return new Version(v.Major,v.Minor,v.Build);}}
+        internal static string VersionText {get{return Version.ToString();}}
+        internal static readonly string DefaultFeedUrl=ReadChannel();
+        private static string ReadChannel()
+        {
+            try{using(var stream=typeof(Product).Assembly.GetManifestResourceStream("MacFlow.Channel.json")){if(stream==null)return "";var channel=(DefaultUpdateChannel)new DataContractJsonSerializer(typeof(DefaultUpdateChannel)).ReadObject(stream);return UpdateService.ValidFeed(channel.FeedUrl)?channel.FeedUrl:"";}}catch{return "";}
+        }
+    }
+    [DataContract] internal sealed class DefaultUpdateChannel{[DataMember]public string FeedUrl;}
+    [DataContract]
+    public sealed class Preferences
+    {
+        [DataMember] public string Theme = "Light";
+        [DataMember] public string Accent = "#8DAEFF";
+        [DataMember] public int IconSize = 32;
+        [DataMember] public bool ContainedDockApplied;
+        public bool UpgradeContainedDock()
+        {
+            if(ContainedDockApplied)return false;
+            IconSize=Math.Min(72,Math.Max(32,IconSize)+4);ContainedDockApplied=true;return true;
+        }
+        [DataMember] public bool Animations = true;
+        [DataMember] public bool AutoHideTaskbar = false;
+        [DataMember] public bool ShowTopBar = true;
+        [DataMember] public bool HideInFullscreen = true;
+        [DataMember] public double GlassOpacity = .09;
+        [DataMember] public bool LiveGlass = true;
+        [DataMember] public bool DockAutoHide = false;
+        [DataMember] public string DockPosition = "Bottom";
+        [DataMember] public bool ShowNetwork = true;
+        [DataMember] public bool ShowBattery = true;
+        [DataMember] public bool ShowVolume = true;
+        [DataMember] public bool LowPower = true;
+        [DataMember] public bool WindowsMenu = true;
+        [DataMember] public bool ProtectDockEdge = true;
+        [DataMember] public bool HideDockInCodex = true;
+        [DataMember] public bool AppleWindowControls = false;
+        [DataMember] public bool LidAnimation = true;
+        [DataMember] public bool WelcomeAfterUpdate = true;
+        [DataMember] public string LastWelcomedVersion = "1.0.0";
+        [DataMember] public bool CheckUpdatesAutomatically = true;
+        internal bool NeedsUpdateWelcome(Version current){Version previous;return WelcomeAfterUpdate&&(!Version.TryParse(LastWelcomedVersion,out previous)||current>previous);}
+        [DataMember] public string WallpaperPath = "";
+        [DataMember] public string Hotkey = "AltSpace";
+        [DataMember] public bool ShowWidget = false;
+        [DataMember] public string UpdateRepository = "";
+        [DataMember] public string LocalUpdateFolder = "";
+        [DataMember] public string UpdateFeedUrl = Product.DefaultFeedUrl;
+        [DataMember] public List<AppEntry> Pins = new List<AppEntry>();
+        [OnDeserializing] private void Defaults(StreamingContext context) { LiveGlass=true;GlassOpacity=.18; DockPosition="Bottom"; ShowNetwork=ShowBattery=ShowVolume=true;WindowsMenu=ProtectDockEdge=HideDockInCodex=LidAnimation=WelcomeAfterUpdate=CheckUpdatesAutomatically=true;LastWelcomedVersion="1.0.0";AppleWindowControls=false;WallpaperPath=""; Hotkey="AltSpace"; UpdateRepository="";LocalUpdateFolder="";UpdateFeedUrl=""; }
+        public bool MovePin(string source,string target)
+        {
+            int from=Pins.FindIndex(p=>p.Key==source),to=Pins.FindIndex(p=>p.Key==target);
+            if(from<0||to<0||from==to)return false;var item=Pins[from];Pins.RemoveAt(from);Pins.Insert(to,item);return true;
+        }
+        public void Validate()
+        {
+            if (Theme != "Dark" && Theme != "Light") Theme = "Dark";
+            IconSize = Math.Max(32, Math.Min(72, IconSize));
+            GlassOpacity = Math.Max(.06, Math.Min(.65, GlassOpacity));
+            if (DockPosition != "Bottom" && DockPosition != "Left" && DockPosition != "Right") DockPosition = "Bottom";
+            if (Hotkey != "AltSpace" && Hotkey != "CtrlAltSpace" && Hotkey != "CtrlSpace") Hotkey = "AltSpace";
+            if (Accent == null || !System.Text.RegularExpressions.Regex.IsMatch(Accent, "^#[0-9A-Fa-f]{6}$")) Accent = "#8DAEFF";
+            if (Pins == null) Pins = new List<AppEntry>();
+            Pins.RemoveAll(delegate(AppEntry p) { return p == null || String.IsNullOrWhiteSpace(p.Target) || String.IsNullOrWhiteSpace(p.Name); });
+            if (Pins.Count > 24) Pins.RemoveRange(24, Pins.Count - 24);
+        }
+    }
+
+    [DataContract]
+    public sealed class AppEntry
+    {
+        [DataMember] public string Name;
+        [DataMember] public string Target;
+        [DataMember] public string Executable;
+        [DataMember] public string IconPath;
+        public string Key { get { return String.IsNullOrEmpty(Executable) ? (Target ?? "").ToLowerInvariant() : Executable.ToLowerInvariant(); } }
+        public override string ToString() { return Name; }
+    }
+
+    public sealed class WindowEntry
+    {
+        public IntPtr Handle;
+        public uint ProcessId;
+        public string Title;
+        public string Executable;
+        public string Key { get { return (Executable ?? "").ToLowerInvariant(); } }
+    }
+
+    public sealed class SettingsStore
+    {
+        public readonly string DirectoryPath;
+        public string PathName { get { return Path.Combine(DirectoryPath, "settings.json"); } }
+        public SettingsStore(string path) { DirectoryPath = path; }
+        public Preferences Load()
+        {
+            try
+            {
+                using (var stream = File.OpenRead(PathName))
+                {
+                    var result = (Preferences)new DataContractJsonSerializer(typeof(Preferences)).ReadObject(stream);
+                    result.Validate();if(String.IsNullOrWhiteSpace(result.UpdateFeedUrl)&&String.IsNullOrWhiteSpace(result.UpdateRepository))result.UpdateFeedUrl=Product.DefaultFeedUrl;return result;
+                }
+            }
+            catch (Exception ex) { Log.Write("Lectura de preferencias: " + ex.Message); return new Preferences(); }
+        }
+        public void Save(Preferences value)
+        {
+            value.Validate(); Directory.CreateDirectory(DirectoryPath);
+            var temp = PathName + ".tmp";
+            using (var stream = new FileStream(temp, FileMode.Create, FileAccess.Write, FileShare.None))
+            {
+                new DataContractJsonSerializer(typeof(Preferences)).WriteObject(stream, value); stream.Flush(true);
+            }
+            if (File.Exists(PathName)) File.Replace(temp, PathName, null); else File.Move(temp, PathName);
+        }
+    }
+
+    public static class Log
+    {
+        public static string DirectoryPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MacFlow");
+        private static readonly object Gate = new object();
+        public static void Write(string message)
+        {
+            try { lock (Gate) { Directory.CreateDirectory(DirectoryPath); var p = Path.Combine(DirectoryPath, "MacFlow.log"); if (File.Exists(p) && new FileInfo(p).Length > 512000) File.Delete(p); File.AppendAllText(p, DateTime.Now.ToString("s") + " " + message + Environment.NewLine, Encoding.UTF8); } } catch { }
+        }
+    }
+}
