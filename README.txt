@@ -1,44 +1,74 @@
-MacFlow 26.0.3 — Windows 11 x64
+MacFlow 26.1.0 — Windows 11 x64
 
-Instalador oficial: https://github.com/benjaaal/Flow/releases
-Abrí MacFlow-Setup-26.0.3.exe; elegí Actualizar si ya está instalado.
-Las preferencias se conservan. Instalación por usuario, sin administrador.
-Buscar versiones: Configuración → Sistema → Actualizaciones.
+Descarga oficial: https://github.com/benjaaal/Flow/releases/tag/v26.1.0
+Ejecutá MacFlow-Setup-26.1.0.exe. Si MacFlow ya está instalado, elegí Actualizar.
+Conserva tus preferencias y vuelve a abrir la aplicación automáticamente.
+También podés buscarla en Configuración → Sistema → Actualizaciones.
 
-BIENVENIDA
-Manzanita de cristal → Hola manuscrito → Iniciar.
-30 saludos locales con transiciones suaves. Los idiomas en alfabeto latino
-usan trazos manuscritos; otros sistemas de escritura usan fuentes de Windows.
-Después de actualizar, Iniciar abre las novedades y Comenzar entra al escritorio.
-Escape permite salir. Cerrar detiene el ciclo de idiomas.
-La bienvenida muestra la imagen de tu fondo de Windows cuando está disponible.
-Manzanita y saludos tienen reflejos y desplazamiento de esa imagen propia.
-Sin imagen, conserva el fondo vivo del compositor.
-Se muestra una vez tras actualizar; puede desactivarse.
-Sin animaciones, Hola e Iniciar aparecen inmediatamente.
-El cristal usa desenfoque y reflejos; no refracción óptica real del escritorio.
+BIENVENIDA DESPUÉS DE ACTUALIZAR
+Manzanita y Hola de cristal → demostración guiada → Bienvenido → Iniciar.
+La demostración usa el Dock real y un cursor ilustrado: no mueve tu mouse.
+Muestra Widgets, Centro de control y Stage Manager sin cambiar preferencias.
+Podés avanzar u omitirla. Iniciar en Bienvenido deja el escritorio listo.
+Se muestra una vez por versión nueva y respeta desactivar la bienvenida.
+El saludo manual conserva 30 idiomas. Escape permite salir.
+Usa el fondo de Windows; si no puede leerlo, intenta tu fondo de MacFlow.
 
-FUNCIONES
-Dock con aplicaciones fijadas: abrir, minimizar y cerrar ventanas.
-Los paneles propios se recogen hacia el Dock al cerrar o minimizar.
-Restaurar recupera tamaño y posición. Las otras apps usan la animación de Windows.
-Configuración incorpora un icono vectorial inspirado en Ajustes de iOS.
-Pilas de carpetas: Descargas, Documentos, Escritorio o una carpeta elegida.
-Vista rápida: Espacio en una pila, Ctrl+P en archivos del buscador.
-Concentración: pausa, sesión persistente y contador en la barra.
-Buscador, vista de ventanas, centro de control, Wi-Fi, Bluetooth y fondos.
-Menú propio de escritorio: Ctrl+Alt+D o manzana → Tu escritorio.
-El menú original de clic derecho y las barras de título de Windows se conservan.
+WIDGETS
+Manzana → Tu escritorio → Widgets, o Configuración → Apariencia.
+Relojes digital/analógico, calendario interactivo, clima y pronóstico,
+batería, CPU/RAM/disco, música, notas, tareas, temporizador, cronómetro,
+accesos a aplicaciones y estado de red/Wi-Fi.
+Tamaños S/M/L; arrastrá el título para acomodar a la cuadrícula.
+El menú de cada widget permite configurar, redimensionar y quitar.
+Posiciones, texto y tareas se guardan. Los temporizadores conservan la hora
+final al reiniciar. El cronómetro conserva el tiempo transcurrido.
+Máximo 16 widgets según el espacio disponible de la pantalla principal.
+Se muestran en el escritorio; se apartan al trabajar en otras aplicaciones.
+No consultan datos periódicamente cuando están ocultos, salvo temporizadores.
+El clima pide seleccionar una ciudad y usa Open-Meteo/GeoNames con atribución.
+Actualiza cada 30 minutos mientras se muestra; el servicio puede fallar.
+El servicio gratuito es para uso no comercial.
 
-En Configuración → Dock, Apartar en todas las aplicaciones deja visible
-el Dock en el escritorio. Iniciar con Windows es opcional.
-La barra original se restaura al desactivar o cerrar MacFlow.
-Si no inicia al encender: Sistema → Reparar inicio automático.
-El acceso apunta a la instalación fija y se verifica después de guardarlo.
-Sistema → Revisar aplicaciones de inicio en Windows permite comprobar
-si Windows lo deshabilitó. MacFlow no altera esas decisiones del sistema.
-No se modifican archivos críticos ni se inyecta código en Explorer.
-El desinstalador elimina archivos propios.
+CENTRO DE CONTROL
+Barra superior → Centro de control. Wi-Fi y Bluetooth tienen estados reales.
+Volumen, silencio y brillo reflejan cambios externos mientras el panel está abierto.
+Brillo directo depende del soporte WMI del monitor; puede no estar disponible.
+La salida de audio, ahorro de energía, luz nocturna y No molestar se configuran
+en Windows mediante sus accesos compatibles. No son interruptores simulados.
+Incluye música, captura, proyección y acceso a las nuevas funciones.
+Música depende de que el reproductor publique controles multimedia en Windows.
 
-Proyecto independiente de Apple. Código MIT; atribuciones de los trazos
-manuscritos y la silueta de Simple Icons en THIRD-PARTY-NOTICES.md.
+STAGE MANAGER
+Manzana → Tu escritorio → Stage Manager, o Centro de control.
+Elegí activar, lado, tamaño, etiquetas y miniaturas en vivo o sólo iconos.
+La activación automática muestra la barra al trabajar con otras aplicaciones.
+En modo manual, usá Mostrar / ocultar desde su configuración.
+Podés guardar hasta 16 grupos con hasta 8 ventanas y recuperar su distribución.
+Los grupos usan las ventanas disponibles y avisan si alguna falta o Windows
+no permite moverla. No lanzan programas ni descartan documentos.
+Las miniaturas usan DWM; aplicaciones protegidas pueden no ofrecer imagen.
+
+ICONOS
+Configuración → Dock → Apariencia de iconos → Aplicar.
+Automáticos, claros, oscuros u originales. Variantes vectoriales de Chrome,
+WhatsApp, Roblox, Spotify, Firefox, VLC y Discord de Simple Icons (CC0).
+Las otras apps conservan su icono identificable sobre una pieza clara u oscura.
+Los controles de MacFlow adaptan su contraste para seguir siendo legibles.
+
+INTEGRACIÓN Y ANIMACIONES
+Dock: fijar, abrir, activar, minimizar y cerrar ventanas mediante Windows.
+Los paneles de sistema propios entran y salen hacia arriba con movimiento suave.
+Las demás ventanas propias conservan el cierre y minimización hacia el Dock.
+Las aplicaciones externas usan su transición de Windows y respuesta del Dock.
+MacFlow no sustituye las barras de título externas ni inyecta código en Explorer.
+El cristal reutiliza el compositor y shaders: no refracción óptica real del escritorio.
+Reducir movimiento respeta Windows y la configuración de MacFlow.
+
+INICIO Y DESINSTALACIÓN
+Iniciar con Windows es opcional y usa la ubicación fija de la instalación.
+Configuración → Sistema → Reparar inicio automático permite revisar el acceso.
+Windows puede deshabilitarlo en Aplicaciones de inicio; MacFlow respeta esa decisión.
+La barra original vuelve al pausar, salir o desinstalar MacFlow.
+El desinstalador elimina sus archivos y, si lo elegís, datos de los nuevos módulos.
+Proyecto independiente de Apple. Código MIT y atribuciones incluidas.

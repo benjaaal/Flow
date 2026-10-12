@@ -24,8 +24,8 @@ float4 main(float2 uv : TEXCOORD) : COLOR
     float foot=pow(saturate(dot(normal,normalize(float2(.55,.83)))),4);
     float reflection=exp(-pow((uv.y-(.08+uv.x*.20))/.095,2))*.13;
     float alpha=(.18+reflection+edge*(.36*crown+.13*foot)+fine*(.58*crown+.23*foot))*a;
-    float3 color=lerp(float3(.66,.86,1),float3(.98,.995,1),saturate(crown+reflection*4));
-    color=lerp(color,float3(.10,.20,.32),darkInk*.90);
+    float3 color=lerp(float3(.88,.88,.88),float3(1,1,1),saturate(crown+reflection*4));
+    color=lerp(color,float3(.13,.13,.13),darkInk*.90);
     float2 sourceUV=saturate(offset+uv*extent+normal*edge*extent*.018);
     float3 photo=tex2D(wallpaper,sourceUV).rgb;
     float3 imageGlass=lerp(photo,color,saturate(frost+reflection+edge*.12+fine*.30));

@@ -99,7 +99,7 @@ namespace MacFlowSetup
                 });
                 if(presentation!=null){presentation.Complete();await System.Threading.Tasks.Task.Delay(400);presentation.Dispose();presentation=null;}
                 body.Children.Clear(); body.Children.Add(Design.Text("MacFlow está instalado", 25, true)); var text = Design.Text("Personalizá el cristal, los colores y el tamaño de los iconos.\nPodés desinstalarlo desde Configuración > Aplicaciones.", 15, false); text.TextWrapping = TextWrapping.Wrap; text.Margin = new Thickness(0, 20, 0, 24); body.Children.Add(text);
-                body.Children.Add(Design.Button("Abrir MacFlow", delegate { Process.Start(new ProcessStartInfo(Path.Combine(Program.Target, "MacFlow.exe")) { UseShellExecute = true }); Close(); }, true)); body.Children.Add(Design.Button("Finalizar", Close, false));
+                Process.Start(new ProcessStartInfo(Path.Combine(Program.Target,"MacFlow.exe")){UseShellExecute=true});Close();
             }
             catch(OperationCanceledException){if(presentation!=null){presentation.Dispose();presentation=null;}if(stopped&&File.Exists(Path.Combine(Program.Target,"MacFlow.exe")))try{Process.Start(new ProcessStartInfo(Path.Combine(Program.Target,"MacFlow.exe")){UseShellExecute=true});}catch{}Intro();MessageBox.Show("Actualización cancelada. Se conservó la instalación anterior.","MacFlow");}
             catch (Exception ex) { if(presentation!=null){presentation.Dispose();presentation=null;}MessageBox.Show("No se pudo instalar MacFlow.\n" + ex.Message, "MacFlow", MessageBoxButton.OK, MessageBoxImage.Error); }
@@ -233,7 +233,7 @@ namespace MacFlowSetup
                 if (settings)
                 {
                     var data = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MacFlow"); CheckDirectory(data);
-                    foreach (var name in new[] { "settings.json", "settings.json.tmp", "MacFlow.log" }) { var file = Path.Combine(data, name); if (File.Exists(file)) File.Delete(file); }
+                    foreach (var name in new[] { "settings.json", "settings.json.tmp", "MacFlow.log", "widgets.json", "widgets.json.new", "widgets.json.bak", "stage-manager.json", "stage-manager.json.new", "stage-manager.json.bak" }) { var file = Path.Combine(data, name); if (File.Exists(file)) File.Delete(file); }
                     var wallpapers=Path.Combine(data,"Wallpapers");CheckDirectory(wallpapers);
                     var generated=Enumerable.Range(0,4).Select(i=>"MacFlow-"+i+".jpg").Concat(new[]{"MacFlow-Aqua-1.png","MacFlow-Midnight-1.png","MacFlow-Sierra-1.png"});foreach(var name in generated){var file=Path.Combine(wallpapers,name);if(File.Exists(file)){if((File.GetAttributes(file)&FileAttributes.ReparsePoint)!=0)throw new IOException("Fondo enlazado.");File.Delete(file);}}
                     if(Directory.Exists(wallpapers)&&!Directory.EnumerateFileSystemEntries(wallpapers).Any())Directory.Delete(wallpapers);

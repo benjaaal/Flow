@@ -43,6 +43,10 @@ namespace MacFlow
         private string notifiedUpdate;
         internal const double TopBarHeight=40,TopBarReserve=46;
         private ClockWidget widget;
+        internal WidgetManager Widgets;
+        internal StageController Stage;
+        private WidgetGallery widgetGallery;
+        private UpdateTour tour;
         private DispatcherTimer edgeTimer;
         private ForegroundEvents foregroundEvents;
         private IntPtr materialForeground;
@@ -113,6 +117,7 @@ namespace MacFlow
             if(dockUpgraded&&!smoke)Save();
             if (!smoke) { CreateTray(); lease.Restore(); if (Preferences.AutoHideTaskbar) TryAcquire(); ResumeWallpaper();lidTransition=new LidTransition(Dock,delegate{return !suspended&&Preferences.LidAnimation&&Preferences.Animations;}); }
             timer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromSeconds(Preferences.LowPower?2:1) };
+            Widgets=new WidgetManager(this);Stage=new StageController(this);
             timer.Tick += delegate { Refresh(); }; timer.Start(); Refresh(); RebuildWidget();
             edgeTimer=new DispatcherTimer(DispatcherPriority.Background){Interval=TimeSpan.FromMilliseconds(120)};
             edgeTimer.Tick+=delegate {UpdateDockVisibility();};edgeTimer.Start();
@@ -120,7 +125,7 @@ namespace MacFlow
             var thread = new Thread(delegate()
             {
                 var found = Catalog.Scan(); Icons.Warm(found);
-                Application.Current.Dispatcher.BeginInvoke(new Action(delegate { if (disposed) return; Apps = found;
+                Application.Current.Dispatcher.BeginInvoke(new Action(delegate { if (disposed) return; Apps = found;if(widgetGallery!=null)widgetGallery.RefreshApps();
                     foreach(var pin in Preferences.Pins){var installed=found.FirstOrDefault(a=>a.Key==pin.Key||String.Equals(a.Target,pin.Target,StringComparison.OrdinalIgnoreCase));if(installed!=null){pin.IconPath=installed.IconPath;pin.Executable=installed.Executable;}}
                     if(!File.Exists(Store.PathName)&&Preferences.Pins.Count<=2){string[] favorites={"Edge","Chrome","Bloc","Paint","WhatsApp","Spotify"};foreach(var name in favorites){var app=found.FirstOrDefault(a=>a.Name.IndexOf(name,StringComparison.OrdinalIgnoreCase)>=0);if(app!=null&&!Preferences.Pins.Any(p=>p.Key==app.Key)&&Preferences.Pins.Count<8)Preferences.Pins.Add(app);}DrawDock();}
                     DrawDock();if (Search != null) RefreshSearch(); if(Launcher!=null)((Launchpad)Launcher).Refresh(); }));
@@ -130,7 +135,7 @@ namespace MacFlow
             UpdateDockEdge();
             if(!smoke){updatesTimer=new DispatcherTimer{Interval=TimeSpan.FromSeconds(25)};updatesTimer.Tick+=delegate{updatesTimer.Interval=TimeSpan.FromHours(12);CheckUpdatesInBackground();};updatesTimer.Start();WatchLocalUpdates();}
         }
-        private void ApplyDesign() { Design.Dark = Preferences.Theme == "Dark"; Design.Accent = Preferences.Accent; Design.Animations = Preferences.Animations; Design.GlassOpacity=Preferences.GlassOpacity; LiquidMaterial.LowPower=Preferences.LowPower;LiquidMaterial.LiveBackdrop=Preferences.LiveGlass;Design.InstallTheme(); }
+        private void ApplyDesign() { Design.Dark = Preferences.Theme == "Dark";Design.IconAppearance=Preferences.IconAppearance; Design.Accent = Preferences.Accent; Design.Animations = Preferences.Animations; Design.GlassOpacity=Preferences.GlassOpacity; LiquidMaterial.LowPower=Preferences.LowPower;LiquidMaterial.LiveBackdrop=Preferences.LiveGlass;Design.InstallTheme(); }
         private void TryAcquire()
         {
             if(smoke||disposed||suspended)return;
@@ -159,11 +164,11 @@ namespace MacFlow
         public void ToggleSuspend()
         {
             suspended = !suspended;
-            if (suspended) { if(!smoke)Wallpapers.Restore(Store.DirectoryPath);if(lidTransition!=null)lidTransition.Cancel();shellRecovery.Reset(lease.Restore); UnregisterAppbar(); dockVisibility.HideImmediately(); TopBar.Hide(); if(widget!=null)widget.Hide(); ClosePanels(); }
+            if (suspended) { if(!smoke)Wallpapers.Restore(Store.DirectoryPath);if(lidTransition!=null)lidTransition.Cancel();shellRecovery.Reset(lease.Restore); UnregisterAppbar(); dockVisibility.HideImmediately(); TopBar.Hide(); if(widget!=null)widget.Hide();if(Widgets!=null)Widgets.SetVisible(false); ClosePanels(); }
             else { ResumeWallpaper();dockHidden=false;dockVisibility.Show(); if(widget!=null)widget.Show(); if (Preferences.ShowTopBar) { TopBar.Show(); RegisterAppbar(); } if (Preferences.AutoHideTaskbar) TryAcquire(); Position(); }
             ConfigureWindowsKey();
         }
-        private void ClosePanels() { if(stacks!=null)stacks.Close();if(filePreview!=null)filePreview.Close();if(focusWindow!=null)focusWindow.Close();if(updates!=null)updates.Close();if(welcome!=null)welcome.Close();if(connections!=null)connections.Close();if(GlassMenu.Current!=null)GlassMenu.Current.Close(); if(PowerConfirmation!=null)PowerConfirmation.Close();if (Search != null) Search.Close(); if (Control != null) Control.Close(); if (Settings != null) Settings.Close();if(Launcher!=null)Launcher.Close();if(Overview!=null)Overview.Close(); }
+        private void ClosePanels() { if(tour!=null)tour.Close();if(widgetGallery!=null)widgetGallery.Close(); if(stacks!=null)stacks.Close();if(filePreview!=null)filePreview.Close();if(focusWindow!=null)focusWindow.Close();if(updates!=null)updates.Close();if(welcome!=null)welcome.Close();if(connections!=null)connections.Close();if(GlassMenu.Current!=null)GlassMenu.Current.Close(); if(PowerConfirmation!=null)PowerConfirmation.Close();if (Search != null) Search.Close(); if (Control != null) Control.Close(); if (Settings != null) Settings.Close();if(Launcher!=null)Launcher.Close();if(Overview!=null)Overview.Close(); }
         private void CreateDock()
         {
             Dock = Design.Panel("MacFlow Dock", 420, 100); Dock.ShowActivated = false;
@@ -491,6 +496,10 @@ namespace MacFlow
         }
         private void ShowFeature(FeaturePanel window, double y)
         { PrepareTestWindow(window); var size = ScreenSize(); window.Width = Math.Min(window.Width, size.Width - 32); window.Height = Math.Min(window.Height, size.Height - 70); PlaceCenter(window, y); window.Show(); Design.Reveal(window); }
+        internal void ShowModule(FeaturePanel window){ShowFeature(window,.08);}
+        public void OpenWidgets(string selection)
+        {if(widgetGallery!=null){widgetGallery.SelectWidget(selection);RestoreFeature(widgetGallery);return;}widgetGallery=new WidgetGallery(Widgets,selection);widgetGallery.Closed+=delegate{widgetGallery=null;};ShowModule(widgetGallery);}
+        public void OpenStageManager(){Stage.OpenSettings();}
         private void RestoreFeature(Window window)
         { if (window.WindowState == WindowState.Minimized) window.WindowState = WindowState.Normal; if (!window.IsVisible) window.Show(); if (!nonInteractiveTest) window.Activate(); }
         public void OpenFocus()
@@ -503,6 +512,7 @@ namespace MacFlow
         {
             GlassMenu.Open(TopBar, "Tu escritorio", new List<GlassCommand> {
                 new GlassCommand("Pilas de carpetas", delegate { OpenStack(FolderStack.Downloads()); }, "folder"), new GlassCommand("Concentración", OpenFocus, "moon"),
+                new GlassCommand("Widgets",delegate{OpenWidgets(null);},"grid"),new GlassCommand("Stage Manager",OpenStageManager,"windows"),
                 new GlassCommand("Ventanas abiertas", OpenOverview, "windows"), new GlassCommand("Fondos de escritorio", delegate { OpenSettings(); ((SettingsWindow)Settings).SelectPage(1); }, "display"),
                 new GlassCommand("Configuración de pantalla", delegate { OpenUri("ms-settings:display"); }, "display"), new GlassCommand("Personalizar MacFlow", OpenSettings, "settings")
             }, nonInteractiveTest);
@@ -527,8 +537,24 @@ namespace MacFlow
         {
             if(disposed||suspended)return;
             if(welcome!=null){welcome.Activate();return;}
-            welcome=new WelcomeWindow(smoke?(System.Drawing.Rectangle?)new System.Drawing.Rectangle(40,40,600,420):null,afterUpdate);var window=welcome;window.Closed+=delegate{if(welcome==window)welcome=null;};if(afterUpdate)window.Loaded+=delegate{Preferences.LastWelcomedVersion=Product.VersionText;if(!smoke)Save();};PrepareTestWindow(window);window.Show();
+            welcome=new WelcomeWindow(smoke?(System.Drawing.Rectangle?)new System.Drawing.Rectangle(40,40,600,420):null,afterUpdate,null,afterUpdate?(Action)OpenUpdateTour:null){PreferredWallpaper=Preferences.WallpaperPath};var window=welcome;window.Closed+=delegate{if(welcome==window)welcome=null;if(afterUpdate){Preferences.LastWelcomedVersion=Product.VersionText;if(!smoke)Save();}};PrepareTestWindow(window);window.Show();
         }
+        internal void OpenUpdateTour()
+        {if(disposed||suspended||tour!=null)return;tour=new UpdateTour(this);var presentation=tour;tour.Closed+=delegate{tour=null;if(presentation.Completed)OpenCompletedWelcome();};tour.Loaded+=delegate{Preferences.LastWelcomedVersion=Product.VersionText;if(!smoke)Save();};tour.Show();}
+        internal void OpenCompletedWelcome(){if(disposed||suspended||welcome!=null)return;welcome=new WelcomeWindow(smoke?(System.Drawing.Rectangle?)new System.Drawing.Rectangle(40,40,600,420):null,false,null,null,true){PreferredWallpaper=Preferences.WallpaperPath,EnterDesktop=EnterUpdatedDesktop};var final=welcome;final.Closed+=delegate{if(welcome==final)welcome=null;};PrepareTestWindow(final);final.Show();}
+        internal bool EnteredUpdatedDesktop{get;private set;}
+        private void EnterUpdatedDesktop()
+        {
+            if(disposed||suspended)return;EnteredUpdatedDesktop=true;startupDockUntil=DateTime.UtcNow.AddSeconds(3);TourDock(true);if(smoke)return;
+            var worker=new Thread(delegate()
+            {
+                object shell=null;try{shell=Activator.CreateInstance(Type.GetTypeFromProgID("Shell.Application"));((dynamic)shell).MinimizeAll();}
+                catch(Exception ex){Log.Write("Mostrar escritorio: "+ex.Message);foreach(var w in Native.Windows())if(Native.Matches(w)&&!Native.IsIconic(w.Handle))Native.RequestMinimize(w);}
+                finally{if(shell!=null&&Marshal.IsComObject(shell))Marshal.ReleaseComObject(shell);}
+                if(!Application.Current.Dispatcher.HasShutdownStarted)Application.Current.Dispatcher.BeginInvoke(new Action(delegate{if(disposed||suspended)return;var h=Native.GetShellWindow();if(h!=IntPtr.Zero&&Native.IsDesktopWindow(h))Native.SetForegroundWindow(h);dockVisibility.ShowImmediately();dockHidden=false;Widgets.SetVisible(true);if(Preferences.ShowTopBar&&!TopBar.IsVisible)TopBar.Show();}));
+            });worker.IsBackground=true;worker.SetApartmentState(ApartmentState.STA);worker.Start();
+        }
+        internal void TourDock(bool show){if(show){dockVisibility.ShowImmediately();dockHidden=false;}else StopDockProbe();}
         internal bool WelcomeForNewVersion()
         {
             bool show=Preferences.NeedsUpdateWelcome(Product.Version);if(show)OpenWelcome(true);else if(Preferences.LastWelcomedVersion!=Product.VersionText){Preferences.LastWelcomedVersion=Product.VersionText;if(!smoke)Save();}return show;
@@ -615,8 +641,7 @@ namespace MacFlow
         }
         private void RebuildWidget()
         {
-            if(widget!=null){widget.Close();widget=null;}if(!Preferences.ShowWidget)return;
-            widget=new ClockWidget();widget.Left=22;widget.Top=Preferences.ShowTopBar?60:22;if(!suspended&&!fullscreenNow)widget.Show();
+            if(widget!=null){widget.Close();widget=null;}if(Widgets!=null){Widgets.Sync();Widgets.SetVisible(!suspended&&!fullscreenNow&&desktopForeground);}
         }
         private void UpdateDockVisibility()
         {
@@ -624,11 +649,16 @@ namespace MacFlow
             if(!smoke&&!disposed&&!suspended&&Preferences.AutoHideTaskbar){if(!shellRecovery.Acquired){TryAcquire();if(shellRecovery.Acquired)Position();}if(shellRecovery.Acquired)lease.Maintain();}
             var foreground=Native.GetForegroundWindow();desktopForeground=DesktopContextForForeground(foreground);if(foreground!=materialForeground){materialForeground=foreground;LiquidMaterial.DesktopChanged();}
             UpdateActiveWindow(foreground);
+            uint foregroundPid;Native.GetWindowThreadProcessId(foreground,out foregroundPid);
+            bool ours=foregroundPid==(uint)Process.GetCurrentProcess().Id;
+            if(Widgets!=null&&!ours)Widgets.SetVisible(!suspended&&!fullscreenNow&&desktopForeground);
+            if(Stage!=null)Stage.Update(Windows,foreground,suspended||fullscreenNow||desktopForeground);
             // External caption overlays were removed: never cover another app's
             // native controls. Traffic lights belong only to MacFlow windows.
             if(captionButtons!=null){captionButtons.Dispose();captionButtons=null;}
             UpdateDockEdge();
             if(disposed||suspended||fullscreenNow&&!desktopForeground)return;
+            if(tour!=null){dockVisibility.ShowImmediately();dockHidden=false;return;}
             if(desktopForeground){fullscreenNow=false;dockLeaveAt=DateTime.UtcNow;dockVisibility.ShowImmediately();dockHidden=false;if(Preferences.ShowTopBar&&!TopBar.IsVisible)TopBar.Show();if(widget!=null&&!widget.IsVisible)widget.Show();return;}
             if(DateTime.UtcNow<startupDockUntil){dockVisibility.ShowImmediately();dockHidden=false;return;}
             bool automatic=AutomaticDockPolicy(Preferences.DockAutoHide,Preferences.HideDockInApps,Preferences.HideDockInCodex,codexForeground,smoke);
@@ -652,6 +682,7 @@ namespace MacFlow
         {
             if (foreground == IntPtr.Zero || !Native.IsWindow(foreground) || Native.IsIconic(foreground) || !Native.IsWindowVisible(foreground))
                 return !Windows.Any(w => Native.IsWindow(w.Handle) && Native.IsWindowVisible(w.Handle) && !Native.IsIconic(w.Handle));
+            var source=HwndSource.FromHwnd(foreground);if(source!=null&&source.RootVisual is DesktopWidget)return true;
             return Native.IsDesktopContext(foreground);
         }
         private void RegisterHotkey()
@@ -672,7 +703,7 @@ namespace MacFlow
             if(lidTransition!=null)lidTransition.Dispose();
             Focus.Dispose();
             if(foregroundEvents!=null)foregroundEvents.Dispose();
-            if (disposed) return; disposed = true;if(dockRedraw!=null)dockRedraw.Stop();if(captionButtons!=null)captionButtons.Dispose();if(dockEdge!=null)dockEdge.Close();if(windowsKey!=null)windowsKey.Dispose();if(dockMotion!=null)dockMotion.Dispose();if (timer != null) timer.Stop();if(edgeTimer!=null)edgeTimer.Stop();if(widget!=null)widget.Close();
+            if (disposed) return; disposed = true;if(tour!=null)tour.Close();if(Widgets!=null)Widgets.Dispose();if(Stage!=null)Stage.Dispose();if(dockRedraw!=null)dockRedraw.Stop();if(captionButtons!=null)captionButtons.Dispose();if(dockEdge!=null)dockEdge.Close();if(windowsKey!=null)windowsKey.Dispose();if(dockMotion!=null)dockMotion.Dispose();if (timer != null) timer.Stop();if(edgeTimer!=null)edgeTimer.Stop();if(widget!=null)widget.Close();
             UnregisterAppbar(); if (!smoke) {lease.Restore();try{Wallpapers.Restore(Store.DirectoryPath);}catch(Exception ex){Log.Write(ex.Message);}}
             if (Dock != null) Native.UnregisterHotKey(new WindowInteropHelper(Dock).Handle, 1);
             if (Dock != null) Native.UnregisterHotKey(new WindowInteropHelper(Dock).Handle, 2);

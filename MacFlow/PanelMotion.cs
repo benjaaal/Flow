@@ -38,6 +38,8 @@ namespace MacFlow
         internal static event Action<Window> Frame;
         internal static Func<Window,Point?> DockDestination;
         internal static bool IsClosing(Window window){return (bool)window.GetValue(Closing);}
+        internal static bool FromTop(Window window)
+        {return window.Title=="MacFlow · Centro de control"||window.Title=="MacFlow · Conexiones"||window.Title=="MacFlow · Widgets"||window.Title=="MacFlow · Stage Manager · Grupos"||window.Title=="MacFlow · Menú";}
         private static void ExitChanged(DependencyObject target,DependencyPropertyChangedEventArgs args)
         {
             var window=(Window)target;if(!IsClosing(window))return;double remaining=Math.Max(.001,1-(double)args.NewValue);
@@ -65,12 +67,17 @@ namespace MacFlow
         {
             if(window.WindowState!=WindowState.Normal||Double.IsNaN(window.Top))return;
             Reset(window);double top=window.Top;window.SetValue(BaseTop,top);window.SetValue(BaseLeft,window.Left);
-            bool menu=window.Title=="MacFlow · Menú";var motion=new DoubleAnimation(top+(menu?4:8),top,TimeSpan.FromMilliseconds(menu?Motion.Menu:Motion.Panel)){EasingFunction=Motion.Ease()};
+            bool menu=window.Title=="MacFlow · Menú";var motion=new DoubleAnimation(top+(FromTop(window)?-18:8),top,TimeSpan.FromMilliseconds(menu?Motion.Menu:Motion.Panel)){EasingFunction=FromTop(window)?(IEasingFunction)new SpringEase{EasingMode=EasingMode.EaseIn}:Motion.Ease()};
             Timeline.SetDesiredFrameRate(motion,60);motion.Completed+=delegate{if(window.IsVisible&&Math.Abs(window.Top-top)<.1)Reset(window);};window.BeginAnimation(Window.TopProperty,motion);
         }
         internal static void Close(Window window)
         {
             if(window.WindowState==WindowState.Minimized)return;
+            if(FromTop(window))
+            {
+                double current=window.Top;window.SetValue(BaseTop,current);window.SetValue(BaseLeft,window.Left);window.SetValue(Closing,true);
+                var lift=new DoubleAnimation(current,current-14,TimeSpan.FromMilliseconds(Motion.WindowClose)){EasingFunction=new CubicEase{EasingMode=EasingMode.EaseInOut}};Timeline.SetDesiredFrameRate(lift,60);window.BeginAnimation(Window.TopProperty,lift);return;
+            }
             double start=window.Top;if(Double.IsNaN((double)window.GetValue(BaseTop)))window.SetValue(BaseTop,start);
             double left=window.Left;if(Double.IsNaN((double)window.GetValue(BaseLeft)))window.SetValue(BaseLeft,left);
             window.SetValue(ExitState,window.WindowState);

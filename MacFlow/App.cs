@@ -40,6 +40,8 @@ namespace MacFlow
             if (args.Length == 2 && args[0] == "--connections-smoke") return ConnectivityVisual.Run(args[1]);
             if (args.Length == 2 && args[0] == "--public-update-test") return PublicUpdateProbe.Run(args[1]);
             if (args.Length == 2 && args[0] == "--features-smoke") return NewFeaturesVisual.Run(args[1]);
+            if (args.Length == 2 && args[0] == "--modules-smoke") return ModulesVisual.Run(args[1]);
+            if (args.Length == 2 && args[0] == "--weather-test") return WeatherProbe.Run(args[1]);
             if (args.Length == 2 && args[0] == "--panel-dock-smoke") return PanelDockVisual.Run(args[1]);
             if (args.Length == 2 && args[0] == "--glass-smoke") return GlassVisual.Run(args[1]);
             if (args.Length == 2 && args[0] == "--welcome-smoke") return WelcomeVisual.Run(args[1]);
@@ -167,6 +169,7 @@ namespace MacFlow
                 File.WriteAllText(store.PathName,"{\"IconSize\":36,\"Animations\":true}");Assert(store.Load().NeedsUpdateWelcome(Product.Version),"Bienvenida: perfiles anteriores detectan el cambio de versión",results);restored.WelcomeAfterUpdate=false;store.Save(restored);Assert(!store.Load().NeedsUpdateWelcome(Product.Version),"Bienvenida: se conserva la elección de desactivarla",results);restored.WelcomeAfterUpdate=true;restored.LastWelcomedVersion=Product.VersionText;store.Save(restored);Assert(!store.Load().NeedsUpdateWelcome(Product.Version),"Bienvenida: reiniciar la misma versión no repite Hola",results);Assert(restored.NeedsUpdateWelcome(new Version(Product.Version.Major,Product.Version.Minor,Product.Version.Build+1)),"Bienvenida: una nueva versión vuelve a mostrar Hola",results);
                 UpdateRegression.Run(Path.Combine(directory,"updates"),results);
                 NewFeaturesRegression.Run(Path.Combine(directory,"features"),results);
+                ModuleRegression.Run(Path.Combine(directory,"modules"),results);
                 StartupRegression.Run(Path.Combine(directory,"startup"),results);
                 Assert(LiquidMaterial.LightInkForLuminance(.2,false,false)&&!LiquidMaterial.LightInkForLuminance(.8,false,true),"Cristal: tinta legible sobre material oscuro y claro",results);
                 Assert(LiquidMaterial.LightInkForLuminance(.55,true,true)&&!LiquidMaterial.LightInkForLuminance(.48,true,false),"Cristal: histéresis evita parpadeos de texto cerca del umbral",results);
@@ -274,12 +277,12 @@ namespace MacFlow
                 var actionHost=DockAppMotion.Host(new System.Windows.Controls.Border());var hoverScale=new ScaleTransform(1.27,1.27);
                 var appIcon=new System.Windows.Controls.Border{Child=actionHost,RenderTransform=hoverScale};var appFixture=TestWindow();appFixture.Content=appIcon;appFixture.Show();
                 var actionTransforms=(TransformGroup)actionHost.RenderTransform;var actionScale=(ScaleTransform)actionTransforms.Children[0];var actionShift=(TranslateTransform)actionTransforms.Children[1];
-                DockAppMotion.Play(appIcon,false);Pump(460);
+                DockAppMotion.Play(appIcon,false);Pump(540);
                 Assert(Math.Abs(actionHost.Opacity-1)<.001&&Math.Abs(actionShift.Y)<.001&&Math.Abs(actionScale.ScaleX-1)<.001,"Apertura: icono vuelve nítido y a su posición",results);
                 Assert(Math.Abs(hoverScale.ScaleX-1.27)<.001,"Apertura: conserva la ampliación del cursor",results);
                 DockAppMotion.Play(appIcon,true);Pump(330);
                 Assert(Math.Abs(actionHost.Opacity-1)<.001&&Math.Abs(actionShift.Y)<.001&&Math.Abs(actionScale.ScaleY-1)<.001,"Cierre: icono fijado conserva visibilidad y tamaño",results);
-                DockAppMotion.Play(appIcon,true,true);Pump(245);Assert(actionHost.Opacity<.01,"Cierre: icono no fijado permanece oculto hasta retirarlo, sin reaparecer",results);DockAppMotion.Play(appIcon,true,true);Pump(70);DockAppMotion.Play(appIcon,false);Pump(470);
+                DockAppMotion.Play(appIcon,true,true);Pump(245);Assert(actionHost.Opacity<.01,"Cierre: icono no fijado permanece oculto hasta retirarlo, sin reaparecer",results);DockAppMotion.Play(appIcon,true,true);Pump(70);DockAppMotion.Play(appIcon,false);Pump(540);
                 Assert(Math.Abs(actionHost.Opacity-1)<.001&&Math.Abs(actionShift.Y)<.001,"Apps: reapertura interrumpida recupera el icono",results);
                 DockAppMotion.Play(appIcon,false);Design.Animations=false;DockAppMotion.Play(appIcon,true);
                 Assert(!actionHost.HasAnimatedProperties&&!actionScale.HasAnimatedProperties&&!actionShift.HasAnimatedProperties,"Apps: desactivar animaciones cancela los relojes",results);DockAppMotion.Play(appIcon,true,true);Assert(actionHost.Opacity==0&&!actionHost.HasAnimatedProperties,"Apps: movimiento reducido retira inmediatamente un icono que deja de estar abierto",results);Design.Animations=true;appFixture.Close();

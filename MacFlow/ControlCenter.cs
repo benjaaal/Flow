@@ -1,49 +1,68 @@
 using System;
-using System.Diagnostics;
+using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
-
+using System.Windows.Threading;
 namespace MacFlow
 {
     public sealed class ControlCenter : Window
     {
-        private readonly Audio audio;
-        private bool closed;
-        public ControlCenter(Desktop desktop)
+        private readonly IControlBackend backend;private readonly CancellationTokenSource stop=new CancellationTokenSource();
+        private readonly DispatcherTimer poll=new DispatcherTimer(DispatcherPriority.Background){Interval=TimeSpan.FromSeconds(2)};
+        private readonly DispatcherTimer brightnessDelay=new DispatcherTimer{Interval=TimeSpan.FromMilliseconds(140)};
+        private readonly CheckBox wifi,bluetooth,mute;private readonly TextBlock wifiText,bluetoothText,soundText,brightnessText,powerText,status;
+        internal readonly Slider VolumeSlider,BrightnessSlider;
+        private readonly MediaCard media;private bool updating,busy,closed,radioBusy,brightnessBusy;private int? pendingBrightness;
+        private int radioGeneration;
+        public ControlCenter(Desktop desktop):this(desktop,desktop.IsTesting?(IControlBackend)new ControlFixture():new ControlBackend()){}
+        internal ControlCenter(Desktop desktop,IControlBackend provider)
         {
-            Title="MacFlow · Centro de control";Width=350;Height=Math.Min(608,SystemParameters.WorkArea.Height-70);WindowStyle=WindowStyle.None;AllowsTransparency=false;ResizeMode=ResizeMode.NoResize;Topmost=true;ShowInTaskbar=false;Background=Brushes.Transparent;
-            var root=new StackPanel();var head=new DockPanel {Margin=new Thickness(0,0,0,16)};var lights=new WindowControls(this,delegate{Design.Dismiss(this);});DockPanel.SetDock(lights,System.Windows.Controls.Dock.Left);head.Children.Add(lights);var title=Design.Text("Centro de control",13,true);title.Margin=new Thickness(11,0,0,0);head.Children.Add(title);root.Children.Add(head);
-            var upper=new Grid{Margin=new Thickness(-4,0,-4,8)};upper.ColumnDefinitions.Add(new ColumnDefinition());upper.ColumnDefinitions.Add(new ColumnDefinition());
-            var connectivity=new StackPanel();connectivity.Children.Add(Tile("wifi","Wi-Fi","Redes y conexión",true,null,delegate{Design.Dismiss(this,desktop.OpenWifi);},true));connectivity.Children.Add(Tile("bluetooth","Bluetooth","Dispositivos",true,null,delegate{Design.Dismiss(this,desktop.OpenBluetooth);},true));upper.Children.Add(connectivity);
-            var media=new MediaCard(desktop.IsTesting?(IMediaSource)new MediaFixture():new WindowsMediaSource());
-            var mediaGlass=new GlassPiece(media,18,new Thickness(14,10,12,10)){Margin=new Thickness(4)};Grid.SetColumn(mediaGlass,1);upper.Children.Add(mediaGlass);root.Children.Add(upper);
-            var grid=new UniformGrid {Columns=2,Margin=new Thickness(-4,0,-4,12)};grid.Children.Add(Tile("moon","Concentración","Tu tiempo, a tu ritmo",false,null,delegate {Design.Dismiss(this,desktop.OpenFocus);}));grid.Children.Add(Tile("display","Pantalla","Escala y resolución",false,"ms-settings:display"));root.Children.Add(grid);
-            audio=new Audio();var sound=new StackPanel();var soundHeader=new DockPanel();soundHeader.Children.Add(new Border {Child=Design.Symbol("volume",17,Design.Ink),Margin=new Thickness(0,0,9,0)});soundHeader.Children.Add(Design.Text("Sonido",13,true));sound.Children.Add(soundHeader);
-            var slider=new Slider {Minimum=0,Maximum=100,Value=audio.Available?audio.Volume*100:0,IsEnabled=audio.Available,Margin=new Thickness(0,10,0,7)};
-            var volume=Design.Text(audio.Available?"Salida predeterminada · "+(int)slider.Value+"%":"Sin dispositivo de salida",11,false);volume.SetResourceReference(TextBlock.ForegroundProperty,"GlassMuted");sound.Children.Add(slider);sound.Children.Add(volume);
-            slider.ValueChanged+=delegate {try{audio.Volume=(float)(slider.Value/100);volume.Text="Salida predeterminada · "+(int)slider.Value+"%";}catch(Exception ex){Log.Write(ex.Message);}};
-            var mute=Design.Check("Silenciar",audio.Muted,delegate(bool v){try{audio.Muted=v;}catch(Exception ex){Log.Write(ex.Message);}});mute.FontSize=11;mute.Margin=new Thickness(0,9,0,0);sound.Children.Add(mute);root.Children.Add(new GlassPiece(sound,18,new Thickness(14)){Margin=new Thickness(0,0,0,12)});
-            Loaded+=async delegate
-            {
-                var brightness=await System.Threading.Tasks.Task.Run(delegate{return Brightness.Get();});if(closed||!brightness.HasValue)return;
-                Height=Math.Min(Height+77,SystemParameters.WorkArea.Height-70);var card=new StackPanel();card.Children.Add(Design.Text("Brillo",13,true));var level=new Slider {Minimum=0,Maximum=100,Value=brightness.Value,Margin=new Thickness(0,8,0,0)};
-                Action update=async delegate {int value=(int)level.Value;try{await System.Threading.Tasks.Task.Run(delegate {Brightness.Set(value);});}catch(Exception ex){Log.Write(ex.Message);}};level.PreviewMouseLeftButtonUp+=delegate {update();};level.PreviewKeyUp+=delegate {update();};card.Children.Add(level);root.Children.Insert(3,new GlassPiece(card,18,new Thickness(14)){Margin=new Thickness(0,0,0,12)});
-            };
-            var bottom=new DockPanel();Native.POWER power;Native.GetSystemPowerStatus(out power);var battery=Design.Text(power.BatteryFlag==128||power.BatteryLifePercent==255?"Alimentación por corriente":"Batería · "+power.BatteryLifePercent+"%",10,false);battery.SetResourceReference(TextBlock.ForegroundProperty,"GlassMuted");
-            var theme=Design.Circle(Design.Dark?"sun":"moon",delegate {desktop.Preferences.Theme=Design.Dark?"Light":"Dark";Design.Dismiss(this,delegate {desktop.ApplyPreferences(desktop.Preferences,null);desktop.OpenControl();});},"Cambiar apariencia");DockPanel.SetDock(theme,System.Windows.Controls.Dock.Right);bottom.Children.Add(theme);bottom.Children.Add(battery);root.Children.Add(bottom);
-            Content=Design.Glass(new ScrollViewer { Content=root,VerticalScrollBarVisibility=ScrollBarVisibility.Auto,HorizontalScrollBarVisibility=ScrollBarVisibility.Disabled },26,false);SourceInitialized+=delegate {Native.Glass(this,Design.Dark);};Closed+=delegate {closed=true;media.Dispose();audio.Dispose();};KeyDown+=delegate(object sender,KeyEventArgs e){if(e.Key==Key.Escape)Design.Dismiss(this);};
+            backend=provider;Title="MacFlow · Centro de control";Width=430;Height=Math.Min(700,SystemParameters.WorkArea.Height-65);WindowStyle=WindowStyle.None;AllowsTransparency=false;ResizeMode=ResizeMode.NoResize;Topmost=true;ShowInTaskbar=false;Background=Brushes.Transparent;
+            var root=new StackPanel();var header=new DockPanel{Margin=new Thickness(0,0,0,16)};var lights=new WindowControls(this,delegate{Design.Dismiss(this);});DockPanel.SetDock(lights,Dock.Left);header.Children.Add(lights);var title=Design.Text("Centro de control",16,true);title.Margin=new Thickness(14,0,0,0);header.Children.Add(title);root.Children.Add(header);
+            var top=new Grid{Margin=new Thickness(-4,0,-4,0)};top.ColumnDefinitions.Add(new ColumnDefinition());top.ColumnDefinitions.Add(new ColumnDefinition());
+            var radios=new StackPanel();var wifiCard=new StackPanel();wifi=Design.Check("Wi-Fi",false,delegate(bool on){if(!updating)ChangeRadio(true,on);});wifiText=Note("Consultando…");wifiCard.Children.Add(wifi);wifiCard.Children.Add(wifiText);wifiCard.Children.Add(Link("Redes disponibles",desktop.OpenWifi));radios.Children.Add(Piece(wifiCard));
+            var btCard=new StackPanel();bluetooth=Design.Check("Bluetooth",false,delegate(bool on){if(!updating)ChangeRadio(false,on);});bluetoothText=Note("Consultando…");btCard.Children.Add(bluetooth);btCard.Children.Add(bluetoothText);btCard.Children.Add(Link("Dispositivos",desktop.OpenBluetooth));radios.Children.Add(Piece(btCard));top.Children.Add(radios);
+            media=new MediaCard(desktop.IsTesting?(IMediaSource)new MediaFixture():new WindowsMediaSource());var music=Piece(media);Grid.SetColumn(music,1);top.Children.Add(music);root.Children.Add(top);
+            var sound=new StackPanel();sound.Children.Add(Heading("volume","Sonido"));VolumeSlider=new Slider{Minimum=0,Maximum=100,Margin=new Thickness(0,7,0,4),IsEnabled=false};soundText=Note("Salida predeterminada");sound.Children.Add(VolumeSlider);sound.Children.Add(soundText);mute=Design.Check("Silenciar",false,delegate(bool on){if(!updating)try{backend.Mute(on);}catch(Exception ex){status.Text=ex.Message;}});var soundActions=new DockPanel();DockPanel.SetDock(mute,Dock.Left);mute.Margin=new Thickness(0,0,10,0);soundActions.Children.Add(mute);soundActions.Children.Add(Link("Salida de audio ↗",delegate{Settings("ms-settings:sound");}));sound.Children.Add(soundActions);root.Children.Add(Piece(sound));
+            var light=new StackPanel();light.Children.Add(Heading("sun","Pantalla"));BrightnessSlider=new Slider{Minimum=0,Maximum=100,Margin=new Thickness(0,7,0,4),IsEnabled=false};brightnessText=Note("Consultando brillo…");light.Children.Add(BrightnessSlider);light.Children.Add(brightnessText);light.Children.Add(Link("Luz nocturna · Configurar",delegate{Settings("ms-settings:nightlight");}));root.Children.Add(Piece(light));
+            var tiles=new UniformGrid{Columns=2};tiles.Children.Add(Tile("moon","No molestar",delegate{Settings("ms-settings:notifications");}));tiles.Children.Add(Tile("battery","Energía",delegate{Settings("ms-settings:batterysaver");}));tiles.Children.Add(Tile("display","Proyectar",delegate{if(!desktop.IsTesting)Settings(System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows),"System32","DisplaySwitch.exe"));}));tiles.Children.Add(Tile("camera","Captura de pantalla",delegate{Design.Dismiss(this,delegate{Settings("ms-screenclip:");});}));tiles.Children.Add(Tile("grid","Widgets",delegate{Design.Dismiss(this,delegate{desktop.OpenWidgets(null);});}));tiles.Children.Add(Tile("windows","Stage Manager",delegate{Design.Dismiss(this,desktop.OpenStageManager);}));root.Children.Add(tiles);
+            powerText=Note("");root.Children.Add(powerText);var bottom=new StackPanel{Orientation=Orientation.Horizontal};bottom.Children.Add(Link("Configuración",delegate{Settings("ms-settings:");}));bottom.Children.Add(Link("Claro / oscuro",delegate{desktop.Preferences.Theme=Design.Dark?"Light":"Dark";Design.Dismiss(this,delegate{desktop.ApplyPreferences(desktop.Preferences,null);desktop.OpenControl();});}));root.Children.Add(bottom);
+            status=Note("");root.Children.Add(status);Content=Design.Glass(new ScrollViewer{Content=root,VerticalScrollBarVisibility=ScrollBarVisibility.Auto,HorizontalScrollBarVisibility=ScrollBarVisibility.Disabled},26,false);
+            VolumeSlider.ValueChanged+=delegate{if(updating)return;try{backend.Volume(VolumeSlider.Value);soundText.Text="Salida predeterminada · "+(int)VolumeSlider.Value+"%";}catch(Exception ex){status.Text=ex.Message;}};
+            BrightnessSlider.ValueChanged+=delegate{if(updating||!BrightnessSlider.IsEnabled)return;pendingBrightness=(int)BrightnessSlider.Value;brightnessText.Text=pendingBrightness+"%";brightnessDelay.Stop();brightnessDelay.Start();};brightnessDelay.Tick+=delegate{brightnessDelay.Stop();WriteBrightness();};
+            SourceInitialized+=delegate{Native.Glass(this,Design.Dark);};Loaded+=delegate{RefreshState();poll.Start();};poll.Tick+=delegate{if(IsVisible)RefreshState();};Closed+=delegate{closed=true;poll.Stop();brightnessDelay.Stop();stop.Cancel();media.Dispose();backend.Dispose();stop.Dispose();};KeyDown+=delegate(object s,KeyEventArgs e){if(e.Key==Key.Escape)Design.Dismiss(this);};
         }
-        private static Button Tile(string icon,string label,string detail,bool blue,string uri,Action action=null,bool compact=false)
+        private static TextBlock Note(string text){var t=Design.Text(text,11,false);t.TextWrapping=TextWrapping.Wrap;t.SetResourceReference(TextBlock.ForegroundProperty,"GlassMuted");return t;}
+        private static UIElement Heading(string icon,string text){var row=new DockPanel();row.Children.Add(new Border{Child=Design.Symbol(icon,17,Design.Ink),Margin=new Thickness(0,0,9,0)});row.Children.Add(Design.Text(text,13,true));return row;}
+        private static GlassPiece Piece(UIElement child){return new GlassPiece(child,19,new Thickness(12,9,12,9)){Margin=new Thickness(4,3,4,5)};}
+        private static Button Link(string label,Action action){var b=Design.Button(label,action,false);b.FontSize=11;b.Background=Brushes.Transparent;b.Padding=new Thickness(3,3,3,3);b.Margin=new Thickness(0,3,0,0);b.HorizontalContentAlignment=HorizontalAlignment.Left;return b;}
+        private static Button Tile(string icon,string name,Action action){var b=Design.Button("",action,false);b.Background=Brushes.Transparent;b.Padding=new Thickness(0);b.Content=new GlassPiece(Heading(icon,name),17,new Thickness(10)){MinHeight=42};b.Margin=new Thickness(4);return b;}
+        private void Settings(string uri){try{backend.Settings(uri);}catch(Exception ex){status.Text="Windows no pudo abrir esta opción: "+ex.Message;}}
+        internal async void RefreshState()
         {
-            var b=Design.Button("",delegate {try{if(action!=null)action();else Process.Start(new ProcessStartInfo(uri){UseShellExecute=true});}catch(Exception ex){MessageBox.Show(ex.Message,"MacFlow");}},false);b.Margin=new Thickness(4);b.Padding=new Thickness(14,11,14,11);b.Height=compact?70:86;b.Background=Brushes.Transparent;
-            var stack=new StackPanel {HorizontalAlignment=HorizontalAlignment.Left};var symbol=new Border {Width=29,Height=29,CornerRadius=new CornerRadius(15),Background=blue?Design.Brush("#327BEE"):Design.Brush(Design.Dark?"#30FFFFFF":"#30A5B4CB"),Child=Design.Symbol(icon,17,blue?Brushes.White:Design.Ink),HorizontalAlignment=HorizontalAlignment.Left,Margin=new Thickness(0,0,0,5)};
-            stack.Children.Add(Design.Text(label,12,true));var sub=Design.Text(detail,10,false);sub.SetResourceReference(TextBlock.ForegroundProperty,"GlassMuted");sub.Margin=new Thickness(0,3,0,0);stack.Children.Add(sub);UIElement content;
-            if(compact){symbol.Margin=new Thickness(0,0,8,0);symbol.VerticalAlignment=VerticalAlignment.Center;var row=new DockPanel();DockPanel.SetDock(symbol,System.Windows.Controls.Dock.Left);row.Children.Add(symbol);stack.VerticalAlignment=VerticalAlignment.Center;row.Children.Add(stack);content=row;}
-            else{stack.Children.Insert(0,symbol);content=stack;}
-            b.Padding=new Thickness(0);b.Background=Brushes.Transparent;b.BorderThickness=new Thickness(0);b.HorizontalContentAlignment=HorizontalAlignment.Stretch;b.VerticalContentAlignment=VerticalAlignment.Stretch;b.Content=new GlassPiece(content,18,new Thickness(12,10,12,10));return b;
+            if(busy||closed)return;busy=true;int generation=radioGeneration;
+            try
+            {
+                var sound=backend.Sound();updating=true;VolumeSlider.IsEnabled=mute.IsEnabled=sound.Available;if(!VolumeSlider.IsMouseCaptureWithin&&!VolumeSlider.IsKeyboardFocusWithin)VolumeSlider.Value=sound.Volume;mute.IsChecked=sound.Muted;soundText.Text=sound.Available?"Salida predeterminada · "+(int)sound.Volume+"%":"Sin dispositivo de audio";updating=false;
+                var w=await backend.Radio(true);if(closed)return;var b=await backend.Radio(false);if(closed)return;var bright=await backend.ReadBrightness();if(closed)return;updating=true;
+                if(!radioBusy&&generation==radioGeneration){wifi.IsChecked=w.On;bluetooth.IsChecked=b.On;wifi.IsEnabled=w.Available&&w.CanChange;bluetooth.IsEnabled=b.Available&&b.CanChange;wifiText.Text=!w.CanChange&&!String.IsNullOrEmpty(w.Message)?w.Message:w.Available?w.On?"Activado":"Desactivado":w.Message;bluetoothText.Text=!b.CanChange&&!String.IsNullOrEmpty(b.Message)?b.Message:b.Available?b.On?"Activado":"Desactivado":b.Message;}
+                BrightnessSlider.IsEnabled=bright.HasValue;if(bright.HasValue&&!brightnessBusy&&!pendingBrightness.HasValue&&!BrightnessSlider.IsMouseCaptureWithin&&!BrightnessSlider.IsKeyboardFocusWithin)BrightnessSlider.Value=bright.Value;
+                brightnessText.Text=bright.HasValue?(int)BrightnessSlider.Value+"%":"Este monitor controla el brillo desde sus botones o Windows.";var p=backend.Power();powerText.Text=(p.BatteryFlag==128||p.BatteryLifePercent==255?"Con corriente":"Batería · "+p.BatteryLifePercent+"%")+(p.SystemStatusFlag==1?" · Ahorro activo":"");
+            }
+            catch(Exception ex){if(!closed)status.Text="No se pudo consultar este estado.";Log.Write(ex.Message);}finally{updating=false;busy=false;if(!closed&&!radioBusy&&generation!=radioGeneration)RefreshState();}
+        }
+        private async void ChangeRadio(bool mode,bool on)
+        {
+            if(radioBusy||closed)return;radioBusy=true;radioGeneration++;wifi.IsEnabled=bluetooth.IsEnabled=false;
+            try{var result=await backend.SwitchRadio(mode,on,stop.Token);if(!closed)status.Text=result.Success?"":result.Message;}catch(Exception ex){if(!closed)status.Text="El cambio no se completó.";Log.Write(ex.Message);}finally{radioBusy=false;if(!closed)RefreshState();}
+        }
+        private async void WriteBrightness()
+        {
+            if(brightnessBusy||closed)return;brightnessBusy=true;
+            try{while(pendingBrightness.HasValue&&!closed){int value=pendingBrightness.Value;pendingBrightness=null;await backend.SetBrightness(value);}}catch(Exception ex){pendingBrightness=null;if(!closed)status.Text="Windows no permitió cambiar el brillo.";Log.Write(ex.Message);}finally{brightnessBusy=false;}
         }
     }
 }

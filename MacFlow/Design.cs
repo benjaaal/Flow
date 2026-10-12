@@ -15,6 +15,7 @@ namespace MacFlow
         public static bool Dark = false, Animations = true;
         public static double GlassOpacity = .18;
         public static string Accent = "#8DAEFF";
+        internal static string IconAppearance="Auto";
         private static bool loaded;
         private static readonly DependencyProperty ScaleTargetProperty=DependencyProperty.RegisterAttached("ScaleTarget",typeof(double),typeof(Design),new PropertyMetadata(1.0));
         private static readonly DependencyProperty DismissingProperty=DependencyProperty.RegisterAttached("Dismissing",typeof(bool),typeof(Design),new PropertyMetadata(false));
@@ -77,7 +78,7 @@ namespace MacFlow
             b.RenderTransformOrigin = new Point(.5, .5); b.RenderTransform = new ScaleTransform(1, 1);
             b.MouseEnter += delegate { AnimateGlint(b,.065); }; b.MouseLeave += delegate { Scale(b, 1); AnimateGlint(b,0); };
             b.PreviewMouseLeftButtonDown+=delegate {Scale(b,.985);};b.PreviewMouseLeftButtonUp+=delegate {Scale(b,1);};
-            b.Click += delegate { action(); }; return b;
+            b.Click += delegate { if(action!=null)action(); }; return b;
         }
         private static void AnimateGlint(Button button,double value)
         {
@@ -131,13 +132,14 @@ namespace MacFlow
         }
         public static UIElement AppIcon(AppEntry app, int size)
         {
+            var brand=IconThemes.Brand(app);if(brand!=null)return new Image{Source=brand,Width=size,Height=size,Stretch=Stretch.Uniform};
             if(System.IO.Directory.Exists(app.Target))return new Image{Source=FeatureIcons.Get("folder"),Width=size,Height=size,Stretch=Stretch.Uniform};
             var system=SystemAppIcon(app);if(system!=null)return new Image{Source=system,Width=size,Height=size,Stretch=Stretch.Uniform};
             var iconPath=!String.IsNullOrEmpty(app.IconPath)?app.IconPath:!String.IsNullOrEmpty(app.Target)&&app.Target.StartsWith("shell:AppsFolder\\",StringComparison.OrdinalIgnoreCase)?app.Target:!String.IsNullOrEmpty(app.Executable)?app.Executable:app.Target;
             var source = Icons.Get(iconPath);
-            if (source != null) return new Image { Source = source, Width = size, Height = size, Stretch = Stretch.Uniform };
+            if (source != null) return IconThemes.Frame(new Image { Source = source,Stretch=Stretch.Uniform },size);
             var host=new Grid {Width=size,Height=size};var placeholder=new Border {CornerRadius=new CornerRadius(size*.24),Background=Brush("#158DAEFF"),Child=Symbol("windows",size*.56,Ink)};var actual=new Image {Stretch=Stretch.Uniform};host.Children.Add(placeholder);host.Children.Add(actual);
-            Icons.Request(iconPath,delegate(ImageSource icon){if(icon!=null){actual.Source=icon;placeholder.Visibility=Visibility.Collapsed;}});return host;
+            Icons.Request(iconPath,delegate(ImageSource icon){if(icon!=null){actual.Source=icon;placeholder.Visibility=Visibility.Collapsed;}});return IconThemes.Frame(host,size);
         }
         private static readonly System.Collections.Generic.Dictionary<string,ImageSource> systemIcons=new System.Collections.Generic.Dictionary<string,ImageSource>();
         private static ImageSource SystemAppIcon(AppEntry app)
@@ -148,17 +150,17 @@ namespace MacFlow
             else if(String.Equals(file,"MacFlow.exe",StringComparison.OrdinalIgnoreCase))kind="macflow";
             if(kind=="macflow")return FeatureIcons.Get("macflow");
             if(kind=="settings")return FeatureIcons.Get("settings");
-            if(kind==null)return null;ImageSource cached;if(systemIcons.TryGetValue(kind,out cached))return cached;
+            if(kind==null)return null;string iconKey=kind+(IconThemes.Dark&&IconAppearance!="Original"?":dark":":light");ImageSource cached;if(systemIcons.TryGetValue(iconKey,out cached))return cached;
             var drawing=new DrawingGroup();
             using(var dc=drawing.Open())
             {
                 // Original vector artwork. Other applications retain their brands.
                 var fill=new LinearGradientBrush(kind=="files"?Color.FromRgb(51,166,255):kind=="settings"?Color.FromRgb(236,241,248):Color.FromRgb(172,143,255),kind=="files"?Color.FromRgb(0,103,226):kind=="settings"?Color.FromRgb(152,165,184):Color.FromRgb(62,91,235),90);
-                dc.DrawRoundedRectangle(fill,null,new Rect(2,2,60,60),14,14);
+                if(IconThemes.Dark&&IconAppearance!="Original")fill=new LinearGradientBrush(Color.FromRgb(44,57,76),Color.FromRgb(13,24,41),90);dc.DrawRoundedRectangle(fill,null,new Rect(2,2,60,60),14,14);
                 if(kind=="files")
                 {
-                    dc.PushClip(new RectangleGeometry(new Rect(2,2,60,60),14,14));dc.DrawRectangle(Brush("#CFEAFF"),null,new Rect(32,2,30,60));dc.Pop();
-                    var pen=new Pen(Brush("#173961"),2.4){StartLineCap=PenLineCap.Round,EndLineCap=PenLineCap.Round};
+                    dc.PushClip(new RectangleGeometry(new Rect(2,2,60,60),14,14));dc.DrawRectangle(Brush(IconThemes.Dark&&IconAppearance!="Original"?"#355876":"#CFEAFF"),null,new Rect(32,2,30,60));dc.Pop();
+                    var pen=new Pen(Brush(IconThemes.Dark&&IconAppearance!="Original"?"#CEE7FF":"#173961"),2.4){StartLineCap=PenLineCap.Round,EndLineCap=PenLineCap.Round};
                     dc.DrawLine(pen,new Point(20,20),new Point(20,25));dc.DrawLine(pen,new Point(44,20),new Point(44,25));
                     dc.DrawGeometry(null,pen,Geometry.Parse("M33,14 L29,35 35,35 M18,42 C24,49 40,49 46,41"));
                 }
@@ -169,7 +171,7 @@ namespace MacFlow
                 }
                 else dc.DrawGeometry(null,new Pen(Brushes.White,4){StartLineCap=PenLineCap.Round,EndLineCap=PenLineCap.Round,LineJoin=PenLineJoin.Round},Geometry.Parse("M13,40 C20,40 18,23 25,23 C32,23 29,42 36,42 C43,42 42,22 51,22"));
             }
-            drawing.Freeze();cached=new DrawingImage(drawing);cached.Freeze();systemIcons[kind]=cached;return cached;
+            drawing.Freeze();cached=new DrawingImage(drawing);cached.Freeze();systemIcons[iconKey]=cached;return cached;
         }
         public static CheckBox Check(string text, bool value, Action<bool> change)
         {

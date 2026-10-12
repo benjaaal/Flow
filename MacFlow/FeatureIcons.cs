@@ -13,12 +13,13 @@ namespace MacFlow
         private static Pen Line(string color,double width){return new Pen(Brush(color),width){StartLineCap=PenLineCap.Round,EndLineCap=PenLineCap.Round,LineJoin=PenLineJoin.Round};}
         private static void Plate(DrawingContext dc,string top,string bottom)
         {
+            if(IconThemes.Dark&&Design.IconAppearance!="Original"){top="#303B4D";bottom="#111B29";}
             dc.DrawRoundedRectangle(Gradient(top,bottom),null,new Rect(3,3,58,58),14,14);
             dc.DrawRoundedRectangle(null,new Pen(Gradient("#50FFFFFF","#05FFFFFF"),.65),new Rect(3.5,3.5,57,57),13.5,13.5);
         }
         internal static ImageSource Get(string kind)
         {
-            ImageSource image;if(cache.TryGetValue(kind,out image))return image;
+            string cacheKey=kind+(IconThemes.Dark&&Design.IconAppearance!="Original"?":dark":":light");ImageSource image;if(cache.TryGetValue(cacheKey,out image))return image;
             var drawing=new DrawingGroup();using(var dc=drawing.Open())
             {
                 dc.DrawRectangle(Brushes.Transparent,null,new Rect(0,0,64,64));
@@ -53,7 +54,7 @@ namespace MacFlow
                             var p=new Point(32+r*Math.Cos(a),32+r*Math.Sin(a));if(i==0)path.BeginFigure(p,true,true);else path.LineTo(p,true,false);
                         }
                     }
-                    dc.DrawGeometry(Gradient("#636B76","#424B58"),null,gear);
+                    dc.DrawGeometry(IconThemes.Dark&&Design.IconAppearance!="Original"?Gradient("#B2C4DB","#657D9E"):Gradient("#636B76","#424B58"),null,gear);
                     dc.DrawEllipse(null,new Pen(Gradient("#F1F4F7","#C5CED9"),2.1),new Point(32,32),16.3,16.3);
                     dc.DrawEllipse(null,new Pen(Brush("#8793A2"),1.4),new Point(32,32),12.7,12.7);
                     for(int i=0;i<8;i++){double a=i*Math.PI/4;dc.DrawLine(Line("#AAB6C5",1.4),new Point(32+9.2*Math.Cos(a),32+9.2*Math.Sin(a)),new Point(32+11.6*Math.Cos(a),32+11.6*Math.Sin(a)));}
@@ -74,7 +75,7 @@ namespace MacFlow
                     Plate(dc,"#7ABCEB","#4379D6");dc.DrawGeometry(null,new Pen(Gradient("#F9FDFF","#D0E7FA"),5.5){StartLineCap=PenLineCap.Round,EndLineCap=PenLineCap.Round},Geometry.Parse("M13,42 C19,42 18,22 25,22 C32,22 30,42 37,42 C44,42 44,23 51,22"));
                 }
             }
-            drawing.Freeze();image=new DrawingImage(drawing);image.Freeze();cache[kind]=image;return image;
+            drawing.Freeze();image=new DrawingImage(drawing);image.Freeze();cache[cacheKey]=image;return image;
         }
     }
 }

@@ -24,6 +24,7 @@ namespace MacFlow
         [DataMember] public string Theme = "Light";
         [DataMember] public string Accent = "#8DAEFF";
         [DataMember] public int IconSize = 32;
+        [DataMember] public string IconAppearance="Auto";
         [DataMember] public bool ContainedDockApplied;
         public bool UpgradeContainedDock()
         {
@@ -69,6 +70,7 @@ namespace MacFlow
         {
             if (Theme != "Dark" && Theme != "Light") Theme = "Dark";
             IconSize = Math.Max(32, Math.Min(72, IconSize));
+            if(IconAppearance!="Auto"&&IconAppearance!="Light"&&IconAppearance!="Dark"&&IconAppearance!="Original")IconAppearance="Auto";
             GlassOpacity = Math.Max(.06, Math.Min(.65, GlassOpacity));
             if (DockPosition != "Bottom" && DockPosition != "Left" && DockPosition != "Right") DockPosition = "Bottom";
             if (Hotkey != "AltSpace" && Hotkey != "CtrlAltSpace" && Hotkey != "CtrlSpace") Hotkey = "AltSpace";

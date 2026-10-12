@@ -85,3 +85,12 @@ For these and/or other purposes and motivations, and without any expectation of 
 
 For more information, please see <https://creativecommons.org/publicdomain/zero/1.0>.
 
+
+## App icon variants (26.1.0)
+Seven brand geometries from Simple Icons, CC0-1.0. Pinned commit: dc7b10662a0a2cfdfc9305e2a2b06c023c30724a.
+Source: https://github.com/simple-icons/simple-icons/tree/dc7b10662a0a2cfdfc9305e2a2b06c023c30724a/icons
+Included: Google Chrome, WhatsApp, Roblox, Spotify, Firefox Browser, VLC media player, Discord. The CC0 text is included above; brand marks remain the property of their owners. Artwork identifies installed applications and does not imply endorsement.
+
+## Weather data
+Weather: https://open-meteo.com/ — CC BY 4.0 data. Geocoding: GeoNames, CC BY 4.0.
+The bundled free endpoint is for non-commercial use, is contacted only after selecting a city, and can be unavailable. A commercial distribution must configure an appropriate licensed service. No location is inferred automatically.

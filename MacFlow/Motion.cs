@@ -7,7 +7,7 @@ namespace MacFlow
     // discrete navigation has finite clocks and exact, cancellable endpoints.
     internal static class Motion
     {
-        internal const int Hover=140,Press=100,Menu=180,Panel=260,WindowClose=300,Content=220;
+        internal const int Hover=160,Press=100,Menu=220,Panel=340,WindowClose=300,Content=240;
         // Isolated fixture processes can exercise both policies without changing
         // Windows. Normal application and installer sessions leave this unset.
         internal static bool? TestClientAreaAnimations;
