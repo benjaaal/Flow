@@ -8,7 +8,10 @@ namespace MacFlow
     internal static class Motion
     {
         internal const int Hover=140,Press=100,Menu=180,Panel=260,WindowClose=300,Content=220;
-        internal static bool Enabled {get{return Design.Animations&&SystemParameters.ClientAreaAnimation&&!SystemParameters.HighContrast;}}
+        // Isolated fixture processes can exercise both policies without changing
+        // Windows. Normal application and installer sessions leave this unset.
+        internal static bool? TestClientAreaAnimations;
+        internal static bool Enabled {get{return Design.Animations&&(TestClientAreaAnimations??SystemParameters.ClientAreaAnimation)&&!SystemParameters.HighContrast;}}
         internal static IEasingFunction Ease(bool exit=false){return new CubicEase{EasingMode=exit?EasingMode.EaseIn:EasingMode.EaseOut};}
         internal static void To(Animatable target,DependencyProperty property,double value,int duration,bool exit=false,Action completed=null)
         {

@@ -246,6 +246,7 @@ namespace MacFlow
                     secondary.Show();surfaces.Remember();secondary.Hide();surfaces.Acquire();Pump(150);surfaces.Restore();Pump(150);Assert(primary.Visible&&secondary.Visible,"Barra: guarda visibilidad antes de liberar el espacio de Windows",results);
                     Assert(TaskbarSurfaces.TaskbarClass("Shell_TrayWnd")&&TaskbarSurfaces.TaskbarClass("Shell_SecondaryTrayWnd")&&!TaskbarSurfaces.TaskbarClass("Notepad"),"Barra: filtro restringido a las superficies de Explorer",results);
                 }
+                Motion.TestClientAreaAnimations=false;var reducedPanel=TestWindow();int reducedCalls=0;reducedPanel.Show();Design.Dismiss(reducedPanel,delegate{reducedCalls++;});Assert(!reducedPanel.IsVisible&&reducedCalls==1,"Panel: política de movimiento reducido cierra inmediatamente y ejecuta su acción una vez",results);Motion.TestClientAreaAnimations=true;
                 var panel=TestWindow();int calls=0;panel.Show();Design.Dismiss(panel,delegate{calls++;});panel.BeginAnimation(UIElement.OpacityProperty,null);Pump(500);
                 Assert(!panel.IsVisible&&calls==1,"Panel: cierre garantizado si se interrumpe la animación; callback una vez",results);
                 panel=TestWindow();calls=0;panel.Show();Design.Dismiss(panel,delegate{calls++;});panel.Close();Pump(400);
@@ -288,6 +289,7 @@ namespace MacFlow
                 results.Add("PASS: " + results.Count + " comprobaciones"); File.WriteAllLines(Path.Combine(directory, "self-tests.txt"), results); return 0;
             }
             catch (Exception ex) { results.Add("FAIL: " + ex); File.WriteAllLines(Path.Combine(directory, "self-tests.txt"), results); return 1; }
+            finally{Motion.TestClientAreaAnimations=null;}
         }
         private static void Assert(bool value, string name, List<string> results) { if (!value) throw new Exception(name); results.Add("PASS " + name); }
         private static Window TestWindow(){return new Window{Width=30,Height=30,Left=-2000,Top=-2000,ShowActivated=false,ShowInTaskbar=false,WindowStyle=WindowStyle.None,AllowsTransparency=true,Background=System.Windows.Media.Brushes.Transparent};}
