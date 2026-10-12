@@ -41,6 +41,7 @@ namespace MacFlow
             if (args.Length == 2 && args[0] == "--public-update-test") return PublicUpdateProbe.Run(args[1]);
             if (args.Length == 2 && args[0] == "--features-smoke") return NewFeaturesVisual.Run(args[1]);
             if (args.Length == 2 && args[0] == "--modules-smoke") return ModulesVisual.Run(args[1]);
+            if (args.Length == 2 && args[0] == "--edges-smoke") return GlassEdgesVisual.Run(args[1]);
             if (args.Length == 2 && args[0] == "--weather-test") return WeatherProbe.Run(args[1]);
             if (args.Length == 2 && args[0] == "--panel-dock-smoke") return PanelDockVisual.Run(args[1]);
             if (args.Length == 2 && args[0] == "--glass-smoke") return GlassVisual.Run(args[1]);

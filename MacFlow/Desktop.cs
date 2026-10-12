@@ -531,6 +531,7 @@ namespace MacFlow
             var size = ScreenSize(); Settings.Width = Math.Min(Settings.Width, size.Width - 40); Settings.Height = Math.Min(Settings.Height, size.Height - 60);
             Settings.Closed += delegate { Settings = null; }; PlaceCenter(Settings, .08); Settings.Show(); Design.Reveal(Settings);
         }
+        public void ReplayWelcome(){OpenWelcome(true);}
         public void OpenWelcome()
         {OpenWelcome(false);}
         private void OpenWelcome(bool afterUpdate)

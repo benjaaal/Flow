@@ -1,10 +1,19 @@
-# MacFlow 26.1.0
+# MacFlow 26.1.1
 
 Aplicación nativa para Windows 11 x64, con C# y WPF sobre .NET Framework 4.8.
 
-[Descargar instalador](https://github.com/benjaaal/Flow/releases/tag/v26.1.0).
+[Descargar instalador](https://github.com/benjaaal/Flow/releases/tag/v26.1.1).
 Actualizar conserva las preferencias y vuelve a abrir MacFlow. La instalación
 es por usuario y el inicio con Windows es opcional.
+
+## Correcciones 26.1.1
+
+- El instalador cierra antes de iniciar MacFlow; elimina la pantalla final bloqueada.
+- Hola espera Continuar. La demostración espera Siguiente y añade Atrás y Ver de nuevo.
+- Configuración permite repetir Hola y la demostración. Una versión nueva los vuelve a mostrar.
+- Se eliminan el marco nativo y la sombra exterior adicional de las ventanas propias.
+  El desenfoque del compositor todavía puede extenderse a las esquinas del rectángulo;
+  no se afirma un recorte óptico completo. Se conserva el radio y tamaño del cristal.
 
 ## Novedades
 
@@ -17,7 +26,7 @@ es por usuario y el inicio con Windows es opcional.
   guardada, lado, tamaño, etiquetas, modo automático/manual y ahorro de recursos.
 - Iconos claros, oscuros, automáticos u originales en Configuración → Dock.
   Siete marcas con variantes vectoriales de Simple Icons; avisos de licencia incluidos.
-- Después de actualizar: Hola → demostración sobre los componentes reales →
+- Después de actualizar: Hola → Continuar → demostración sobre los componentes reales →
   Bienvenido → Iniciar → escritorio. El cursor ilustrado no mueve el cursor del usuario.
   La bienvenida usa el fondo seleccionado, puede omitirse y aparece una vez por versión.
 

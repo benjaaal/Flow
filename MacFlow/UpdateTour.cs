@@ -15,21 +15,23 @@ namespace MacFlow
     internal sealed class UpdateTour : Window
     {
         private readonly Desktop desktop;private readonly TextBlock title,description,step;
-        private readonly DispatcherTimer next=new DispatcherTimer{Interval=TimeSpan.FromSeconds(7)};
+        private readonly Button forward;
         private Window example,cursor;private int index;private bool rendering,closed;private readonly Stopwatch elapsed=new Stopwatch();
         internal int Step{get{return index;}}
         internal bool FrameRunning{get{return rendering;}}
         internal bool Completed{get;private set;}
         internal UpdateTour(Desktop desktop)
         {
-            this.desktop=desktop;Title="MacFlow · Descubrí las novedades";Width=420;Height=250;Left=(SystemParameters.PrimaryScreenWidth-Width)/2;Top=SystemParameters.WorkArea.Top+90;
+            this.desktop=desktop;Title="MacFlow · Descubrí las novedades";Width=450;Height=260;Left=(SystemParameters.PrimaryScreenWidth-Width)/2;Top=SystemParameters.WorkArea.Top+90;
             WindowStyle=WindowStyle.None;ResizeMode=ResizeMode.NoResize;ShowInTaskbar=false;Topmost=true;Background=Brushes.Transparent;
             var root=new StackPanel();step=Design.Text("",11,true);root.Children.Add(step);title=Design.Text("",24,true);title.Margin=new Thickness(0,10,0,10);root.Children.Add(title);description=Design.Text("",13,false);description.TextWrapping=TextWrapping.Wrap;root.Children.Add(description);
-            var buttons=new StackPanel{Orientation=Orientation.Horizontal,Margin=new Thickness(0,16,0,0)};buttons.Children.Add(ModuleUI.Button("Omitir",Close,false));buttons.Children.Add(Design.Button("Siguiente",Advance,true));root.Children.Add(buttons);Content=Design.Glass(root,24,false);
-            SourceInitialized+=delegate{Native.Glass(this,Design.Dark);};Loaded+=delegate{ShowStep();};next.Tick+=delegate{Advance();};Closed+=delegate{closed=true;next.Stop();ClearExample();desktop.TourDock(false);};KeyDown+=delegate(object s,KeyEventArgs e){if(e.Key==Key.Escape)Close();};
+            var buttons=new StackPanel{Orientation=Orientation.Horizontal,Margin=new Thickness(0,16,0,0)};buttons.Children.Add(ModuleUI.Button("Omitir",Close,false));buttons.Children.Add(ModuleUI.Button("Atrás",Back,false));forward=Design.Button("Siguiente",Advance,true);buttons.Children.Add(forward);buttons.Children.Add(ModuleUI.Button("Ver de nuevo",Repeat,false));root.Children.Add(buttons);Content=Design.Glass(root,24,false);
+            SourceInitialized+=delegate{Native.Glass(this,Design.Dark);};Loaded+=delegate{ShowStep();};Closed+=delegate{closed=true;ClearExample();desktop.TourDock(false);};KeyDown+=delegate(object s,KeyEventArgs e){if(e.Key==Key.Escape)Close();};
             if(desktop.IsTesting){IsHitTestVisible=false;ShowActivated=false;SourceInitialized+=delegate{Native.NoActivate(this);};}
         }
-        internal void Advance(){if(closed)return;next.Stop();ClearExample();if(++index>=4){Completed=true;Close();return;}ShowStep();}
+        internal void Advance(){if(closed)return;ClearExample();if(++index>=4){Completed=true;Close();return;}ShowStep();}
+        internal void Back(){if(closed||index==0)return;ClearExample();index--;ShowStep();}
+        internal void Repeat(){if(closed)return;ClearExample();ShowStep();}
         private void ShowStep()
         {
             step.Text="MACFLOW "+Product.VersionText+"  ·  "+(index+1)+" / 4";desktop.TourDock(true);
@@ -50,7 +52,7 @@ namespace MacFlow
                     title.Text="Cada proyecto, en su lugar.";description.Text="Stage Manager muestra tus ventanas. Guardá grupos de trabajo y recuperá su distribución desde Tu escritorio → Stage Manager.";
                     var available=desktop.Windows.Where(w=>w.ProcessId!=(uint)Process.GetCurrentProcess().Id&&Native.Matches(w)).Take(4).ToList();var sidebar=new StageSidebar(desktop.Stage);example=sidebar;sidebar.Position(Math.Max(1,available.Count));sidebar.Build(available);sidebar.IsHitTestVisible=false;sidebar.ShowActivated=false;sidebar.Show();Design.Reveal(sidebar);break;
             }
-            Design.Reveal(this);next.Start();
+            forward.Content=index==3?"Continuar":"Siguiente";Design.Reveal(this);
         }
         private void Frame(object sender,EventArgs e)
         {

@@ -98,12 +98,22 @@ namespace MacFlowSetup
                     Installer.Install(Program.Target,true,startup,desktopShortcut,installCancellation.Token,presentation==null?(Action)null:presentation.WaitBeforeCommit,delegate{Dispatcher.Invoke(new Action(delegate{installCancellation.Token.ThrowIfCancellationRequested();installCommitting=true;if(presentation!=null)presentation.Commit();}));});
                 });
                 if(presentation!=null){presentation.Complete();await System.Threading.Tasks.Task.Delay(400);presentation.Dispose();presentation=null;}
-                body.Children.Clear(); body.Children.Add(Design.Text("MacFlow está instalado", 25, true)); var text = Design.Text("Personalizá el cristal, los colores y el tamaño de los iconos.\nPodés desinstalarlo desde Configuración > Aplicaciones.", 15, false); text.TextWrapping = TextWrapping.Wrap; text.Margin = new Thickness(0, 20, 0, 24); body.Children.Add(text);
-                Process.Start(new ProcessStartInfo(Path.Combine(Program.Target,"MacFlow.exe")){UseShellExecute=true});Close();
+                CompleteInstall(delegate{Process.Start(new ProcessStartInfo(Path.Combine(Program.Target,"MacFlow.exe")){UseShellExecute=true});});
             }
             catch(OperationCanceledException){if(presentation!=null){presentation.Dispose();presentation=null;}if(stopped&&File.Exists(Path.Combine(Program.Target,"MacFlow.exe")))try{Process.Start(new ProcessStartInfo(Path.Combine(Program.Target,"MacFlow.exe")){UseShellExecute=true});}catch{}Intro();MessageBox.Show("Actualización cancelada. Se conservó la instalación anterior.","MacFlow");}
             catch (Exception ex) { if(presentation!=null){presentation.Dispose();presentation=null;}MessageBox.Show("No se pudo instalar MacFlow.\n" + ex.Message, "MacFlow", MessageBoxButton.OK, MessageBoxImage.Error); }
             finally{if(presentation!=null)presentation.Dispose();installing=false;installCommitting=false;body.IsEnabled=true;installCancellation.Dispose();installCancellation=null;}
+        }
+        internal void CompleteInstall(Action launch)
+        {
+            // Closing previously vetoed our own successful Close() while
+            // installing was still true, leaving an empty success page behind.
+            installing=false;installCommitting=false;Hide();Close();launch();
+        }
+        internal static void TestCompletion(List<string> results)
+        {
+            if(Application.Current==null)new Application{ShutdownMode=ShutdownMode.OnExplicitShutdown};Design.Dark=true;Design.InstallTheme();
+            var wizard=new Wizard(false,true){ShowActivated=false,Left=-2400,Top=-2400,WindowStartupLocation=WindowStartupLocation.Manual};wizard.SourceInitialized+=delegate{Native.NoActivate(wizard);};wizard.Show();wizard.installing=wizard.installCommitting=true;int closed=0,launched=0;wizard.Closed+=delegate{closed++;};wizard.CompleteInstall(delegate{if(wizard.IsVisible||closed!=1)throw new Exception("El instalador no cerró antes de iniciar MacFlow");launched++;});if(closed!=1||launched!=1||wizard.installing||wizard.installCommitting)throw new Exception("Finalización del asistente bloqueada");results.Add("PASS asistente de actualización cierra antes de iniciar MacFlow, sin página de instalación terminada.");
         }
         private void Remove()
         {
@@ -274,7 +284,7 @@ namespace MacFlowSetup
                 File.WriteAllText(Path.Combine(target, "user-file.txt"), "preserve"); Remove(target, false, false);
                 if (Owned.Any(n => File.Exists(Path.Combine(target, n))) || !File.Exists(Path.Combine(target, "user-file.txt"))) throw new Exception("Desinstalación incorrecta"); results.Add("PASS desinstalación: elimina archivos propios y conserva archivos ajenos");
                 bool refused = false; try { Install(target, false, false, false); } catch (IOException) { refused = true; } if (!refused) throw new Exception("No rechazó la carpeta ocupada"); results.Add("PASS rechazo de carpeta ajena sin manifiesto");
-                File.Delete(Path.Combine(target, "user-file.txt")); Directory.Delete(target); File.WriteAllLines(Path.Combine(directory, "installer-tests.txt"), results); return 0;
+                Wizard.TestCompletion(results);File.Delete(Path.Combine(target, "user-file.txt")); Directory.Delete(target); File.WriteAllLines(Path.Combine(directory, "installer-tests.txt"), results); return 0;
             }
             catch (Exception ex) { results.Add("FAIL " + ex); File.WriteAllLines(Path.Combine(directory, "installer-tests.txt"), results); return 1; }
         }

@@ -140,10 +140,10 @@ namespace MacFlow
         private readonly bool finalGreeting;
         internal Action EnterDesktop;
         internal string PreferredWallpaper;
-        private readonly System.Windows.Threading.DispatcherTimer automatic=new System.Windows.Threading.DispatcherTimer{Interval=TimeSpan.FromSeconds(10)};
+        private readonly Action afterHello;
         internal WelcomeWindow(System.Drawing.Rectangle? testBounds=null,bool showNews=false,BitmapSource wallpaper=null,Action afterHello=null,bool finalGreeting=false)
         {
-            this.showNews=showNews;this.finalGreeting=finalGreeting;
+            this.showNews=showNews;this.finalGreeting=finalGreeting;this.afterHello=afterHello;
             bounds=testBounds??System.Windows.Forms.Screen.PrimaryScreen.Bounds;
             animated=Design.Animations&&SystemParameters.ClientAreaAnimation&&!SystemParameters.HighContrast;
             Title="MacFlow · Hola";Width=bounds.Width;Height=bounds.Height;Left=bounds.Left;Top=bounds.Top;WindowStyle=WindowStyle.None;ResizeMode=ResizeMode.NoResize;
@@ -169,7 +169,7 @@ namespace MacFlow
             var label=Design.Text("Iniciar  →",14,true);startLabel=label;label.Foreground=SystemParameters.HighContrast?SystemColors.WindowTextBrush:Brushes.White;label.HorizontalAlignment=HorizontalAlignment.Center;buttonFace.Children.Add(label);
             buttonFace.Clip=new RectangleGeometry(new Rect(0,0,168,48),24,24);StartButton.Content=buttonFace;actions.Children.Add(StartButton);scene.Children.Add(actions);
             if(finalGreeting){subtitleLabel.Text="Tu escritorio está listo.";if(!Lettering.SetWord("Bienvenido")){Lettering.Visibility=Visibility.Collapsed;translatedGreeting.Visibility=Visibility.Visible;translatedGreeting.Text="Bienvenido";}}
-            if(afterHello!=null){actions.Visibility=Visibility.Collapsed;automatic.Tick+=delegate{automatic.Stop();Closed+=delegate{afterHello();};DismissWelcome();};}
+            if(afterHello!=null){startLabel.Text="Continuar  →";subtitleLabel.Text="Descubrí las novedades a tu ritmo.";System.Windows.Automation.AutomationProperties.SetName(StartButton,"Continuar a la demostración");}
             content=new Viewbox{Stretch=Stretch.Uniform,StretchDirection=StretchDirection.DownOnly,HorizontalAlignment=HorizontalAlignment.Center,VerticalAlignment=VerticalAlignment.Center,Margin=new Thickness(24),Child=scene};surface.Children.Add(content);Content=surface;
             SourceInitialized+=delegate{Native.WelcomeBackdrop(this);RemoveFrame(this);};
             Loaded+=delegate
@@ -180,7 +180,7 @@ namespace MacFlow
                     var companion=new Window{Title="MacFlow · Hola",Width=rect.Width,Height=rect.Height,Left=rect.Left,Top=rect.Top,Background=Brushes.Transparent,Content=new Grid{Background=SceneBackdrop()},WindowStyle=WindowStyle.None,ResizeMode=ResizeMode.NoResize,ShowInTaskbar=false,Topmost=true,ShowActivated=false};
                     companion.SourceInitialized+=delegate{Native.WelcomeBackdrop(companion);RemoveFrame(companion);Native.NoActivate(companion);};companion.Loaded+=delegate{Cover(companion,rect);};if(WallpaperVisible)((Grid)companion.Content).Children.Insert(0,new Image{Source=wallpaperImage.Source,Stretch=Stretch.UniformToFill,IsHitTestVisible=false});companions.Add(companion);companion.Show();
                 }
-                Cover(this,bounds);Play();if(finalGreeting)languageTimer.Stop();RefreshInk();if(afterHello!=null)automatic.Start();if(WallpaperVisible){UpdateWallpaperMapping();if(animated)StartWallpaperMapping();}else if(!testBounds.HasValue)LoadWallpaper();
+                Cover(this,bounds);Play();if(finalGreeting)languageTimer.Stop();RefreshInk();if(WallpaperVisible){UpdateWallpaperMapping();if(animated)StartWallpaperMapping();}else if(!testBounds.HasValue)LoadWallpaper();
             };
             Closed+=delegate{StopScene();foreach(var window in companions)window.Close();companions.Clear();};
             languageTimer.Interval=TimeSpan.FromMilliseconds(4800);languageTimer.Tick+=delegate{if(!dismissing&&IsVisible)ChangeGreeting((greetingIndex+1)%Greetings.Length);};
@@ -287,7 +287,7 @@ namespace MacFlow
             animation.Completed+=delegate{if(dismissing)return;target.SetValue(property,to);target.BeginAnimation(property,null);activeAnimations--;if(done!=null)done();};
             clearAnimations.Add(delegate{var current=target.GetValue(property);target.BeginAnimation(property,null);target.SetValue(property,current);});target.BeginAnimation(property,animation);
         }
-        private void StopScene(){automatic.Stop();languageTimer.Stop();StopWallpaperMapping();greetings.BeginAnimation(OpacityProperty,null);greetingPosition.BeginAnimation(TranslateTransform.YProperty,null);foreach(var clear in clearAnimations)clear();clearAnimations.Clear();double current=Lettering.Progress;Lettering.BeginAnimation(HelloLettering.ProgressProperty,null);Lettering.Progress=current;activeAnimations=0;}
+        private void StopScene(){languageTimer.Stop();StopWallpaperMapping();greetings.BeginAnimation(OpacityProperty,null);greetingPosition.BeginAnimation(TranslateTransform.YProperty,null);foreach(var clear in clearAnimations)clear();clearAnimations.Clear();double current=Lettering.Progress;Lettering.BeginAnimation(HelloLettering.ProgressProperty,null);Lettering.Progress=current;activeAnimations=0;}
         private static void RemoveFrame(Window window){var h=new System.Windows.Interop.WindowInteropHelper(window).Handle;int disabled=1;Native.DwmSetWindowAttribute(h,33,ref disabled,4);Native.DwmSetWindowAttribute(h,2,ref disabled,4);int noBorder=unchecked((int)0xFFFFFFFE);Native.DwmSetWindowAttribute(h,34,ref noBorder,4);}
         private static void Cover(Window window,System.Drawing.Rectangle rect){Native.SetWindowPos(new System.Windows.Interop.WindowInteropHelper(window).Handle,new IntPtr(-1),rect.Left,rect.Top,rect.Width,rect.Height,0x50);}
         internal double ContentOpacity{get{return surface.Opacity;}}
@@ -296,7 +296,9 @@ namespace MacFlow
         internal bool Ready{get{return StartButton.IsEnabled&&Lettering.Progress==1&&activeAnimations==0;}}
         private void ContinueWelcome()
         {
+            if(dismissing)return;
             if(finalGreeting){var enter=EnterDesktop;EnterDesktop=null;if(enter!=null)Closed+=delegate{enter();};DismissWelcome();return;}
+            if(afterHello!=null){Closed+=delegate{afterHello();};DismissWelcome();return;}
             if(!showNews||NewsVisible){DismissWelcome();return;}
             StopScene();NewsVisible=true;StartButton.IsDefault=false;
             var news=new Grid{Width=580,Height=450};var stack=new StackPanel{Margin=new Thickness(24,10,24,8)};news.Children.Add(stack);

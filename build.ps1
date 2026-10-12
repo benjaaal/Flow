@@ -65,7 +65,7 @@ $setup = Join-Path $deliverables ('MacFlow-Setup-'+$packageVersion+'.exe')
 if ($LASTEXITCODE -ne 0) { throw 'Falló la compilación del instalador.' }
 Copy-Item -LiteralPath (Join-Path $root 'MacFlow\App.config') -Destination ($setup + '.config') -Force
 $packageInfo=Get-Item -LiteralPath $setup
-$packageJson=@{Product='MacFlow';Architecture='x64';Version=$packageVersion;Installer=$packageInfo.Name;Sha256=(Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash;Size=$packageInfo.Length;FeedUrl=$UpdateFeedUrl;Notes='26.1.0: Widgets configurables, nuevo Centro de control, Stage Manager y grupos, iconos claros/oscuros y bienvenida Hola - demostracion - Bienvenido con Iniciar. Conserva el Dock y tus preferencias.'} | ConvertTo-Json
+$packageJson=@{Product='MacFlow';Architecture='x64';Version=$packageVersion;Installer=$packageInfo.Name;Sha256=(Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash;Size=$packageInfo.Length;FeedUrl=$UpdateFeedUrl;Notes='26.1.1: el instalador cierra correctamente sin pantalla final. Hola espera Continuar; demostracion manual con Siguiente, Atras y Ver de nuevo; se repite al actualizar. Sin marco ni sombra exterior adicional; el desenfoque nativo aun puede cubrir las esquinas del rectangulo.'} | ConvertTo-Json
 [System.IO.File]::WriteAllText((Join-Path $deliverables 'MacFlow-update.json'),$packageJson,[System.Text.UTF8Encoding]::new($false))
 if ($RunTests) {
     $tests = Join-Path $deliverables 'verification'

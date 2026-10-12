@@ -1,12 +1,13 @@
-MacFlow 26.1.0 — Windows 11 x64
+MacFlow 26.1.1 — Windows 11 x64
 
-Descarga oficial: https://github.com/benjaaal/Flow/releases/tag/v26.1.0
-Ejecutá MacFlow-Setup-26.1.0.exe. Si MacFlow ya está instalado, elegí Actualizar.
+Descarga oficial: https://github.com/benjaaal/Flow/releases/tag/v26.1.1
+Ejecutá MacFlow-Setup-26.1.1.exe. Si MacFlow ya está instalado, elegí Actualizar.
 Conserva tus preferencias y vuelve a abrir la aplicación automáticamente.
 También podés buscarla en Configuración → Sistema → Actualizaciones.
 
 BIENVENIDA DESPUÉS DE ACTUALIZAR
 Manzanita y Hola de cristal → demostración guiada → Bienvenido → Iniciar.
+Hola espera Continuar. Cada paso espera Siguiente; Atrás y Ver de nuevo permiten revisarlo.
 La demostración usa el Dock real y un cursor ilustrado: no mueve tu mouse.
 Muestra Widgets, Centro de control y Stage Manager sin cambiar preferencias.
 Podés avanzar u omitirla. Iniciar en Bienvenido deja el escritorio listo.

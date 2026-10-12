@@ -80,6 +80,18 @@ namespace MacFlow
             int fallback=LiquidMaterial.LiveBackdrop?3:1;DwmSetWindowAttribute(h,38,ref fallback,4);return false;
         }
         private static readonly DependencyProperty GlassRegionHook=DependencyProperty.RegisterAttached("GlassRegionHook",typeof(bool),typeof(Native),new PropertyMetadata(false));
+        [DllImport("user32.dll",EntryPoint="GetClassLongPtrW")]private static extern UIntPtr GetClassLongPtr(IntPtr window,int index);
+        [DllImport("user32.dll",EntryPoint="SetClassLongPtrW")]private static extern UIntPtr SetClassLongPtr(IntPtr window,int index,UIntPtr value);
+        internal static void RemoveGlassFrame(Window window)
+        {
+            if(window.WindowStyle!=WindowStyle.None)return;var h=new WindowInteropHelper(window).Handle;uint pid;GetWindowThreadProcessId(h,out pid);if(h==IntPtr.Zero||pid!=(uint)Process.GetCurrentProcess().Id)return;
+            // Only our borderless HWNDs: a second native frame/corner policy
+            // could create an opaque rim and shadow behind the rounded glass.
+            int style=GetWindowLong(h,-16),next=style&~(0x00800000|0x00400000|0x00040000);int extended=GetWindowLong(h,-20),nextExtended=extended&~(0x100|0x200|1);
+            if(next!=style)SetWindowLong(h,-16,next);if(nextExtended!=extended)SetWindowLong(h,-20,nextExtended);
+            ulong classStyle=GetClassLongPtr(h,-26).ToUInt64();if((classStyle&0x20000)!=0)SetClassLongPtr(h,-26,new UIntPtr(classStyle&~0x20000UL));
+            if(next!=style||nextExtended!=extended)SetWindowPos(h,IntPtr.Zero,0,0,0,0,0x37);
+        }
         internal static double GlassRadius(Window window)
         {
             var border=window.Content as System.Windows.Controls.Border;
@@ -98,6 +110,7 @@ namespace MacFlow
             double scale=source.CompositionTarget.TransformToDevice.M11,remaining=Math.Max(0,Math.Min(1,fraction));
             double width=window.ActualWidth*scale,height=window.ActualHeight*scale,left=width*(1-remaining)/2,top=height*(1-remaining)/2;
             double radius=Math.Min(GlassRadius(window)*scale,Math.Min(width,height)*remaining/2);
+            
             var region=CreateRoundRectRgn((int)left,(int)top,(int)Math.Ceiling(width-left),(int)Math.Ceiling(height-top),Math.Max(1,(int)(radius*2)),Math.Max(1,(int)(radius*2)));
             if(region!=IntPtr.Zero&&SetWindowRgn(new WindowInteropHelper(window).Handle,region,true)==0)DeleteObject(region);
         }
@@ -201,9 +214,12 @@ namespace MacFlow
                 System.Windows.Shell.WindowChrome.SetWindowChrome(window,new System.Windows.Shell.WindowChrome{CaptionHeight=0,ResizeBorderThickness=new Thickness(0),GlassFrameThickness=new Thickness(0),CornerRadius=new CornerRadius(0),UseAeroCaptionButtons=false});
             if(!(bool)window.GetValue(GlassRegionHook)){window.SetValue(GlassRegionHook,true);window.SizeChanged+=delegate{RoundGlass(window);};window.Loaded+=delegate{RoundGlass(window);};}
             var h = new WindowInteropHelper(window).Handle;
+            RemoveGlassFrame(window);
             int noFrame=1;DwmSetWindowAttribute(h,2,ref noFrame,4);
             int value = dark ? 1 : 0; DwmSetWindowAttribute(h, 20, ref value, 4);
-            value = 2; DwmSetWindowAttribute(h, 33, ref value, 4);
+            // Our GDI region supplies the exact curve. Do not add another DWM
+            // rounded frame or its shadow outside the glass.
+            value = 1; DwmSetWindowAttribute(h, 33, ref value, 4);
             // DWMWA_COLOR_NONE removes the solid Windows outline on our own windows.
             value = unchecked((int)0xFFFFFFFE); DwmSetWindowAttribute(h,34,ref value,4);
             bool composition;DwmIsCompositionEnabled(out composition);
