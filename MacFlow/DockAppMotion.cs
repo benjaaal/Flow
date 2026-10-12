@@ -20,7 +20,7 @@ namespace MacFlow
             var scale=(ScaleTransform)group.Children[0];var shift=(TranslateTransform)group.Children[1];
             double sx=scale.ScaleX,sy=scale.ScaleY,y=shift.Y,opacity=host.Opacity;
             scale.BeginAnimation(ScaleTransform.ScaleXProperty,null);scale.BeginAnimation(ScaleTransform.ScaleYProperty,null);shift.BeginAnimation(TranslateTransform.YProperty,null);host.BeginAnimation(UIElement.OpacityProperty,null);
-            scale.ScaleX=scale.ScaleY=1;shift.Y=0;host.Opacity=1;if(!Motion.Enabled)return;
+            scale.ScaleX=scale.ScaleY=1;shift.Y=0;host.Opacity=closing&&remove&&!Motion.Enabled?0:1;if(!Motion.Enabled)return;
             if(closing&&remove)
             {
                 var curve=Motion.Ease(true);var shrink=new DoubleAnimation(sx,.94,TimeSpan.FromMilliseconds(220)){EasingFunction=curve};Timeline.SetDesiredFrameRate(shrink,60);scale.BeginAnimation(ScaleTransform.ScaleXProperty,shrink);scale.BeginAnimation(ScaleTransform.ScaleYProperty,new DoubleAnimation(sy,.94,TimeSpan.FromMilliseconds(220)){EasingFunction=curve});shift.BeginAnimation(TranslateTransform.YProperty,new DoubleAnimation(y,3,TimeSpan.FromMilliseconds(220)){EasingFunction=curve});host.BeginAnimation(UIElement.OpacityProperty,new DoubleAnimation(opacity,0,TimeSpan.FromMilliseconds(220)){EasingFunction=curve});return;

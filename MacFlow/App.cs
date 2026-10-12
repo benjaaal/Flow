@@ -281,7 +281,7 @@ namespace MacFlow
                 DockAppMotion.Play(appIcon,true,true);Pump(245);Assert(actionHost.Opacity<.01,"Cierre: icono no fijado permanece oculto hasta retirarlo, sin reaparecer",results);DockAppMotion.Play(appIcon,true,true);Pump(70);DockAppMotion.Play(appIcon,false);Pump(470);
                 Assert(Math.Abs(actionHost.Opacity-1)<.001&&Math.Abs(actionShift.Y)<.001,"Apps: reapertura interrumpida recupera el icono",results);
                 DockAppMotion.Play(appIcon,false);Design.Animations=false;DockAppMotion.Play(appIcon,true);
-                Assert(!actionHost.HasAnimatedProperties&&!actionScale.HasAnimatedProperties&&!actionShift.HasAnimatedProperties,"Apps: desactivar animaciones cancela los relojes",results);Design.Animations=true;appFixture.Close();
+                Assert(!actionHost.HasAnimatedProperties&&!actionScale.HasAnimatedProperties&&!actionShift.HasAnimatedProperties,"Apps: desactivar animaciones cancela los relojes",results);DockAppMotion.Play(appIcon,true,true);Assert(actionHost.Opacity==0&&!actionHost.HasAnimatedProperties,"Apps: movimiento reducido retira inmediatamente un icono que deja de estar abierto",results);Design.Animations=true;appFixture.Close();
                 ClickRegression.Run(results);
                 ConnectivityRegression.Run(directory,results);
                 MediaRegression.Run(results);

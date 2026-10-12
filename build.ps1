@@ -72,9 +72,9 @@ if ($RunTests) {
     New-Item -ItemType Directory -Force -Path $tests | Out-Null
     $app = Start-Process -FilePath (Join-Path $bin 'MacFlow.exe') -ArgumentList @('--self-test',('"' + $tests + '"')) -PassThru -WindowStyle Hidden
     $app.WaitForExit()
-    if ($app.ExitCode -ne 0) { throw 'Fallaron los tests de aplicación. Ver verification/self-tests.txt.' }
+    if ($app.ExitCode -ne 0) { Get-Content -LiteralPath (Join-Path $tests 'self-tests.txt') -Tail 12; throw 'Fallaron los tests de aplicación. Ver verification/self-tests.txt.' }
     $installer = Start-Process -FilePath $setup -ArgumentList @('--setup-test',('"' + (Join-Path $tests 'installer') + '"')) -PassThru -WindowStyle Hidden
     $installer.WaitForExit()
-    if ($installer.ExitCode -ne 0) { throw 'Fallaron los tests del instalador. Ver verification/installer/installer-tests.txt.' }
+    if ($installer.ExitCode -ne 0) { Get-Content -LiteralPath (Join-Path $tests 'installer/installer-tests.txt') -Tail 12; throw 'Fallaron los tests del instalador. Ver verification/installer/installer-tests.txt.' }
 }
 Get-Item -LiteralPath $setup,(Join-Path $bin 'MacFlow.exe') | Select-Object FullName,Length
