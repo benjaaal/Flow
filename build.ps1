@@ -55,7 +55,7 @@ Copy-Item -LiteralPath (Join-Path $root 'THIRD-PARTY-NOTICES.md') -Destination (
 $payload = Join-Path $build 'payload.zip'
 if (Test-Path -LiteralPath $payload) { Remove-Item -LiteralPath $payload }
 Compress-Archive -LiteralPath @((Join-Path $bin 'MacFlow.exe'),(Join-Path $bin 'MacFlow.exe.config'),$iconPath,(Join-Path $bin 'README.txt'),(Join-Path $bin 'LICENSE.txt'),(Join-Path $bin 'THIRD-PARTY-NOTICES.md')) -DestinationPath $payload
-$shared = @('Models.cs','Native.cs','Services.cs','Startup.cs','TaskbarSurfaces.cs','Design.cs','FeatureIcons.cs','PanelMotion.cs','GlassPiece.cs','LiquidMaterial.cs','CrystalLight.cs','WallpaperLibrary.cs','SystemFeatures.cs','UpdateService.cs','AssemblyInfo.cs','WindowsMenuKey.cs') | ForEach-Object { Join-Path $root ('MacFlow\' + $_) }
+$shared = @('Models.cs','Native.cs','Services.cs','Startup.cs','TaskbarSurfaces.cs','Design.cs','Motion.cs','SystemSymbols.cs','FeatureIcons.cs','PanelMotion.cs','GlassPiece.cs','LiquidMaterial.cs','CrystalLight.cs','WallpaperLibrary.cs','SystemFeatures.cs','UpdateService.cs','AssemblyInfo.cs','WindowsMenuKey.cs') | ForEach-Object { Join-Path $root ('MacFlow\' + $_) }
 $versionSource=[System.IO.File]::ReadAllText((Join-Path $root 'MacFlow/AssemblyInfo.cs'))
 $versionMatch=[regex]::Match($versionSource,'AssemblyFileVersion\("(\d+\.\d+\.\d+)\.0"\)')
 if(!$versionMatch.Success){throw 'La versión del producto no es válida.'}
@@ -65,7 +65,7 @@ $setup = Join-Path $deliverables ('MacFlow-Setup-'+$packageVersion+'.exe')
 if ($LASTEXITCODE -ne 0) { throw 'Falló la compilación del instalador.' }
 Copy-Item -LiteralPath (Join-Path $root 'MacFlow\App.config') -Destination ($setup + '.config') -Force
 $packageInfo=Get-Item -LiteralPath $setup
-$packageJson=@{Product='MacFlow';Architecture='x64';Version=$packageVersion;Installer=$packageInfo.Name;Sha256=(Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash;Size=$packageInfo.Length;FeedUrl=$UpdateFeedUrl;Notes='Version 26.0.1: bienvenida de cristal, 30 saludos y fondo real. Cierre y minimizar hacia el Dock; icono de Ajustes; reflejos suaves. Reparacion del inicio automatico con ruta verificada. Conserva preferencias.'} | ConvertTo-Json
+$packageJson=@{Product='MacFlow';Architecture='x64';Version=$packageVersion;Installer=$packageInfo.Name;Sha256=(Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash;Size=$packageInfo.Length;FeedUrl=$UpdateFeedUrl;Notes='Version 26.0.2: Dock compacto con ampliacion coordinada y movimiento continuo; reflejos delicados, nuevos iconos de estado, transiciones de paneles y Hola y manzanita de cristal sobre tu fondo; novedades al continuar. Conserva la reparacion del inicio automatico y las preferencias.'} | ConvertTo-Json
 [System.IO.File]::WriteAllText((Join-Path $deliverables 'MacFlow-update.json'),$packageJson,[System.Text.UTF8Encoding]::new($false))
 if ($RunTests) {
     $tests = Join-Path $deliverables 'verification'

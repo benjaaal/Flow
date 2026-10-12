@@ -41,15 +41,15 @@ namespace MacFlow
         private static void ExitChanged(DependencyObject target,DependencyPropertyChangedEventArgs args)
         {
             var window=(Window)target;if(!IsClosing(window))return;double remaining=Math.Max(.001,1-(double)args.NewValue);
-            var content=window.Content as FrameworkElement;
-            if(content!=null){var transform=content.RenderTransform as ScaleTransform;if(transform!=null)transform.ScaleX=transform.ScaleY=remaining;}
+            bool menu=window.Title=="MacFlow · Menú";var content=window.Content as FrameworkElement;
+            if(content!=null&&!menu){var transform=content.RenderTransform as ScaleTransform;if(transform!=null)transform.ScaleX=transform.ScaleY=remaining;}
             // Apply the native crop after WPF has submitted the matching scaled
             // content. Cropping first reveals an unscaled, cut-off text frame.
             if((bool)window.GetValue(ClipPending))return;window.SetValue(ClipPending,true);
             window.Dispatcher.BeginInvoke(DispatcherPriority.Loaded,new Action(delegate
             {
                 window.SetValue(ClipPending,false);if(!IsClosing(window)||!window.IsVisible)return;
-                double progress=(double)window.GetValue(ExitProgress);Native.SetGlassClip(window,Math.Max(.001,1-progress));
+                double progress=(double)window.GetValue(ExitProgress);Native.SetGlassClip(window,menu?1:Math.Max(.001,1-progress));
                 if((bool)window.GetValue(HasTarget))
                 {
                     var start=(Native.RECT)window.GetValue(ExitStart);var targetPoint=(Point)window.GetValue(ExitTarget);
@@ -65,7 +65,7 @@ namespace MacFlow
         {
             if(window.WindowState!=WindowState.Normal||Double.IsNaN(window.Top))return;
             Reset(window);double top=window.Top;window.SetValue(BaseTop,top);window.SetValue(BaseLeft,window.Left);
-            var motion=new DoubleAnimation(top+14,top,TimeSpan.FromMilliseconds(320)){EasingFunction=new SpringEase{EasingMode=EasingMode.EaseIn}};
+            bool menu=window.Title=="MacFlow · Menú";var motion=new DoubleAnimation(top+(menu?4:8),top,TimeSpan.FromMilliseconds(menu?Motion.Menu:Motion.Panel)){EasingFunction=Motion.Ease()};
             Timeline.SetDesiredFrameRate(motion,60);motion.Completed+=delegate{if(window.IsVisible&&Math.Abs(window.Top-top)<.1)Reset(window);};window.BeginAnimation(Window.TopProperty,motion);
         }
         internal static void Close(Window window)
@@ -80,8 +80,8 @@ namespace MacFlow
             if(window.WindowState==WindowState.Normal){window.Top=start;window.Left=left;}
             if(!IsClosing(window)){var content=window.Content as FrameworkElement;if(content!=null){window.SetValue(OriginalTransform,content.RenderTransform);window.SetValue(OriginalOrigin,content.RenderTransformOrigin);content.RenderTransformOrigin=new Point(.5,.5);content.RenderTransform=new ScaleTransform(1,1);}window.SetValue(Closing,true);}
             Native.RECT bounds;Native.GetWindowRect(new System.Windows.Interop.WindowInteropHelper(window).Handle,out bounds);window.SetValue(ExitStart,bounds);
-            var destination=DockDestination==null?null:DockDestination(window);window.SetValue(HasTarget,destination.HasValue);if(destination.HasValue)window.SetValue(ExitTarget,destination.Value);
-            var collapse=new DoubleAnimation((double)window.GetValue(ExitProgress),.999,TimeSpan.FromMilliseconds(300)){EasingFunction=new CubicEase{EasingMode=EasingMode.EaseInOut}};Timeline.SetDesiredFrameRate(collapse,60);window.BeginAnimation(ExitProgress,collapse);
+            bool menu=window.Title=="MacFlow · Menú";var destination=menu?(Point?)new Point((bounds.Left+bounds.Right)/2.0,(bounds.Top+bounds.Bottom)/2.0-4):DockDestination==null?null:DockDestination(window);window.SetValue(HasTarget,destination.HasValue);if(destination.HasValue)window.SetValue(ExitTarget,destination.Value);
+            var collapse=new DoubleAnimation((double)window.GetValue(ExitProgress),.999,TimeSpan.FromMilliseconds(menu?Motion.Menu:Motion.WindowClose)){EasingFunction=new CubicEase{EasingMode=EasingMode.EaseInOut}};Timeline.SetDesiredFrameRate(collapse,60);window.BeginAnimation(ExitProgress,collapse);
         }
         internal static void Reset(Window window)
         {

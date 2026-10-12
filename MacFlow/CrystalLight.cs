@@ -55,16 +55,14 @@ namespace MacFlow
         {
             if(lighting==null)return;
             if(!Design.Animations){lighting.BeginAnimation(CrystalLighting.ActivityProperty,null);lighting.Activity=target;return;}
-            var animation=new DoubleAnimation(lighting.Activity,target,TimeSpan.FromMilliseconds(220)){EasingFunction=new CubicEase{EasingMode=EasingMode.EaseOut},FillBehavior=FillBehavior.Stop};
-            lighting.Activity=target;Timeline.SetDesiredFrameRate(animation,60);lighting.BeginAnimation(CrystalLighting.ActivityProperty,animation);
+            Motion.To(lighting,CrystalLighting.ActivityProperty,target,Motion.Hover);
         }
         private void Move(object sender,System.Windows.Input.MouseEventArgs e)
         {
             if(lighting==null||ActualWidth<=0||ActualHeight<=0||DateTime.UtcNow-lastMove<TimeSpan.FromMilliseconds(32))return;lastMove=DateTime.UtcNow;
             var p=e.GetPosition(this);var target=new Point(Math.Max(0,Math.Min(1,p.X/ActualWidth)),Math.Max(0,Math.Min(1,p.Y/ActualHeight)));
             if(!Design.Animations){lighting.BeginAnimation(CrystalLighting.PointerProperty,null);lighting.Pointer=target;return;}
-            var from=lighting.Pointer;lighting.BeginAnimation(CrystalLighting.PointerProperty,null);lighting.Pointer=target;
-            var animation=new PointAnimation(from,target,TimeSpan.FromMilliseconds(160)){EasingFunction=new CubicEase{EasingMode=EasingMode.EaseOut},FillBehavior=FillBehavior.Stop};Timeline.SetDesiredFrameRate(animation,60);lighting.BeginAnimation(CrystalLighting.PointerProperty,animation);
+            lighting.BeginAnimation(CrystalLighting.PointerProperty,null);lighting.Pointer=target;
         }
     }
 }

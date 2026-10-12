@@ -34,6 +34,19 @@ Descargas oficiales: https://github.com/benjaaal/Flow/releases. El canal se gene
 
 Código bajo MIT: [LICENSE.txt](LICENSE.txt). Atribuciones en [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md). Las capacidades y limitaciones de Windows se explican en [README.txt](README.txt).
 
+## MacFlow 26.0.2
+
+- Se retiraron los accesos fijos a Aplicaciones y Pilas del Dock; siguen disponibles en la barra superior.
+- Dock más compacto: iconos y accesos del mismo tamaño, con espacio para que la ampliación desplace suavemente los vecinos. La retargetización conserva la velocidad y no recalcula el layout cada cuadro.
+- Cristal neutral con reflejos más finos; iluminación del puntero sin una segunda animación retrasada. Desenfoque nativo del compositor, sin capturas continuas del escritorio ni refracción óptica declarada.
+- Familia de 26 símbolos vectoriales originales para Wi-Fi, Bluetooth, sonido, controles y navegación. Nuevos accesos de carpetas, aplicaciones, ventanas, Ajustes, concentración y vista rápida. Los iconos de programas externos conservan su identidad.
+- Configuración con seis iconos específicos y transiciones entre controles reales; las páginas salientes dejan de recibir clics. Los menús se cierran localmente, los paneles se recogen hacia el Dock.
+- Hola y la manzanita pueden mostrar tu fondo de Windows, con reflejos y un desplazamiento sutil de esa imagen dentro de sus trazos. El shader usa la imagen de esta pantalla de bienvenida; no refracta el escritorio ni otras aplicaciones. La imagen se decodifica fuera del hilo de interfaz y se limita a 1920 × 1200 puntos.
+- Tras actualizar, Hola conduce a tres tarjetas de novedades y Comenzar. La bienvenida se registra cuando efectivamente carga; Escape permite salir.
+- Se mantiene la reparación del inicio automático y el destino comprobado de la instalación. La ejecución después de reiniciar depende también de que Windows mantenga habilitado MacFlow en Aplicaciones de inicio.
+
+Las ideas de movimiento se contrastaron con la guía Motion de Apple y los proyectos [magnification-effect](https://github.com/Kaww/magnification-effect), [Wave](https://github.com/jtrivedi/Wave) y [Motion](https://github.com/b3ll/Motion). Se implementan en WPF con código propio, sin un navegador ni dependencias de Swift. Los ejemplos web de [liquid-glass-react](https://github.com/rdev/liquid-glass-react) y [liquid-glass](https://github.com/samasante/liquid-glass) no permiten refractar el escritorio de Windows desde WPF.
+
 ## MacFlow 26.0.1
 
 - Bienvenida sobre el fondo vivo del compositor: manzanita de cristal → Hola manuscrito → Iniciar.

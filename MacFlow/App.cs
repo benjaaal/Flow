@@ -35,6 +35,7 @@ namespace MacFlow
             }
             if (args.Length > 0 && args[0] == "--restore") { new TaskbarLease(data).Restore();TaskbarSurfaces.RecoverVisible(); return 0; }
             if (args.Length == 2 && args[0] == "--self-test") return SelfTests.Run(args[1]);
+            if (args.Length == 2 && args[0] == "--icons-smoke") return IconsVisual.Run(args[1]);
             if (args.Length == 2 && args[0] == "--media-smoke") return MediaRegression.Probe(args[1]);
             if (args.Length == 2 && args[0] == "--connections-smoke") return ConnectivityVisual.Run(args[1]);
             if (args.Length == 2 && args[0] == "--public-update-test") return PublicUpdateProbe.Run(args[1]);

@@ -40,9 +40,9 @@ namespace MacFlow
         public static SolidColorBrush Brush(string hex) { var b = (SolidColorBrush)new BrushConverter().ConvertFromString(hex); b.Freeze(); return b; }
         public static Brush Ink { get { return Brush(Dark ? "#F5F5F7" : "#202023"); } }
         public static Brush Muted { get { return Brush(Dark ? "#C5C5CC" : "#5D5D64"); } }
-        public static Brush ContentSurface {get{return Brush(Dark?"#18161A22":"#20FFFFFF");}}
-        public static Brush SidebarSurface {get{return Brush(Dark?"#26171B23":"#30FFFFFF");}}
-        public static Brush CardSurface {get{return Brush(Dark?"#22313942":"#40FFFFFF");}}
+        public static Brush ContentSurface {get{return Brush(Dark?"#1812151B":"#18FFFFFF");}}
+        public static Brush SidebarSurface {get{return Brush(Dark?"#3014171D":"#28FFFFFF");}}
+        public static Brush CardSurface {get{return Brush(Dark?"#201C222B":"#30FFFFFF");}}
         public static Border Glass(UIElement child, int radius, bool dock, bool contain=false)
         {
             var background = MaterialTint(dock,Dark);
@@ -56,8 +56,8 @@ namespace MacFlow
         }
         internal static LinearGradientBrush MaterialTint(bool dock,bool dark)
         {
-            var colors=dock?dark?new[]{"#142B3B4C","#0C91AED0","#1025364B"}:new[]{"#30FFFFFF","#16D3E8FF","#28FFFFFF"}
-                :dark?new[]{"#38232B38","#34202735","#38202835"}:new[]{"#60FFFFFF","#50F7FAFF","#55FFFFFF"};
+            var colors=dock?dark?new[]{"#24151A22","#10151A22","#28121720"}:new[]{"#30FFFFFF","#18FFFFFF","#28F4F7FC"}
+                :dark?new[]{"#60131921","#54131921","#60131921"}:new[]{"#68FFFFFF","#58FFFFFF","#60F4F7FC"};
             var brush=new LinearGradientBrush{StartPoint=new Point(0,0),EndPoint=new Point(.8,1)};
             for(int i=0;i<3;i++){var color=(Color)ColorConverter.ConvertFromString(colors[i]);color.A=(byte)Math.Min(220,color.A*Math.Max(.75,GlassOpacity/.18));brush.GradientStops.Add(new GradientStop(color,i==0?0:i==1?.48:1));}brush.Freeze();return brush;
         }
@@ -75,33 +75,30 @@ namespace MacFlow
             var layers=new FrameworkElementFactory(typeof(Grid));var glint=new FrameworkElementFactory(typeof(Border));glint.Name="Glint";glint.SetValue(Border.CornerRadiusProperty,new CornerRadius(14));glint.SetValue(Border.BackgroundProperty,new LinearGradientBrush(Colors.White,Colors.Transparent,70));glint.SetValue(UIElement.OpacityProperty,0.0);glint.SetValue(UIElement.IsHitTestVisibleProperty,false);layers.AppendChild(glint);layers.AppendChild(cp);border.AppendChild(layers);var hitArea=new FrameworkElementFactory(typeof(Grid));hitArea.SetValue(System.Windows.Controls.Panel.BackgroundProperty,Brushes.Transparent);hitArea.AppendChild(border);template.VisualTree = hitArea; b.Template = template;
             if(!prominent)b.SetResourceReference(Control.ForegroundProperty,"GlassInk");
             b.RenderTransformOrigin = new Point(.5, .5); b.RenderTransform = new ScaleTransform(1, 1);
-            b.MouseEnter += delegate { Scale(b, 1.025); AnimateGlint(b,.19); }; b.MouseLeave += delegate { Scale(b, 1); AnimateGlint(b,0); };
-            b.PreviewMouseLeftButtonDown+=delegate {Scale(b,.975);};b.PreviewMouseLeftButtonUp+=delegate {Scale(b,b.IsMouseOver?1.025:1);};
+            b.MouseEnter += delegate { AnimateGlint(b,.065); }; b.MouseLeave += delegate { Scale(b, 1); AnimateGlint(b,0); };
+            b.PreviewMouseLeftButtonDown+=delegate {Scale(b,.985);};b.PreviewMouseLeftButtonUp+=delegate {Scale(b,1);};
             b.Click += delegate { action(); }; return b;
         }
         private static void AnimateGlint(Button button,double value)
         {
             var solid=button.Background as SolidColorBrush;if(solid!=null&&solid.Color.A==0&&!(button.Content is GlassPiece))return;
             var layer=button.Template.FindName("Glint",button) as Border;if(layer==null)return;
-            if(!Animations)layer.Opacity=value;else layer.BeginAnimation(UIElement.OpacityProperty,new DoubleAnimation(value,TimeSpan.FromMilliseconds(180)){EasingFunction=new CubicEase{EasingMode=EasingMode.EaseOut}});
+            Motion.Fade(layer,layer.Opacity,value,Motion.Hover);
         }
         public static void Scale(FrameworkElement element, double value)
         {
             var button=element as Button;if(button!=null){if(button.RenderTransform==null)return;button.ApplyTemplate();var face=button.Template.FindName("AnimatedFace",button) as FrameworkElement;if(face==null)return;element=face;}
             if(element.RenderTransform!=null&&element.RenderTransform.IsFrozen)element.RenderTransform=element.RenderTransform.CloneCurrentValue();
             var transform = element.RenderTransform as ScaleTransform;var group=element.RenderTransform as TransformGroup;if(transform==null&&group!=null)transform=group.Children.OfType<ScaleTransform>().FirstOrDefault();if(transform==null)return;
-            double previous=(double)element.GetValue(ScaleTargetProperty);if(Math.Abs(previous-value)<.015)return;element.SetValue(ScaleTargetProperty,value);
+            double previous=(double)element.GetValue(ScaleTargetProperty);if(Math.Abs(previous-value)<.0005)return;element.SetValue(ScaleTargetProperty,value);
             if (!Animations) { transform.BeginAnimation(ScaleTransform.ScaleXProperty, null); transform.BeginAnimation(ScaleTransform.ScaleYProperty, null); transform.ScaleX = transform.ScaleY = value; return; }
-            var a = new DoubleAnimation(value, TimeSpan.FromMilliseconds(240)) { EasingFunction = new SpringEase { EasingMode = EasingMode.EaseIn },FillBehavior=FillBehavior.Stop };
-            double x=transform.ScaleX,y=transform.ScaleY;transform.ScaleX=transform.ScaleY=value;
-            var ay=a.Clone();a.From=x;ay.From=y;
-            Timeline.SetDesiredFrameRate(a,60);Timeline.SetDesiredFrameRate(ay,60);transform.BeginAnimation(ScaleTransform.ScaleXProperty, a); transform.BeginAnimation(ScaleTransform.ScaleYProperty, ay);
+            Motion.To(transform,ScaleTransform.ScaleXProperty,value,value<1?Motion.Press:Motion.Hover);Motion.To(transform,ScaleTransform.ScaleYProperty,value,value<1?Motion.Press:Motion.Hover);
         }
         public static void Reveal(Window window)
         {
             if((bool)window.GetValue(DismissingProperty))return;
-            if (!Animations) return;
-            var entrance = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(220)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } };
+            if (!Motion.Enabled) return;
+            var entrance = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(window.Title=="MacFlow · Menú"?Motion.Menu:Motion.Content)) { EasingFunction = Motion.Ease() };
             entrance.Completed += delegate { if(window.IsVisible&&!(bool)window.GetValue(DismissingProperty)&&!(bool)window.GetValue(MinimizingProperty)){window.BeginAnimation(UIElement.OpacityProperty,null); Native.Glass(window,Dark);} };
             window.BeginAnimation(UIElement.OpacityProperty, entrance);
             PanelMotion.Open(window);
@@ -109,12 +106,12 @@ namespace MacFlow
         public static void Dismiss(Window window,Action after=null)
         {
             if((bool)window.GetValue(DismissingProperty))return;window.SetValue(DismissingProperty,true);window.IsHitTestVisible=false;
-            if(!Animations){window.Close();if(after!=null)after();return;}
-            bool finished=false;var fallback=new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Background){Interval=TimeSpan.FromMilliseconds(390)};
+            if(!Motion.Enabled){window.Close();if(after!=null)after();return;}
+            int duration=window.Title=="MacFlow · Menú"?Motion.Menu:Motion.WindowClose+10;bool finished=false;var fallback=new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Background){Interval=TimeSpan.FromMilliseconds(duration+80)};
             Action finish=delegate{if(finished)return;finished=true;fallback.Stop();window.Close();if(after!=null)after();};
             fallback.Tick+=delegate{finish();};window.Closed+=delegate{finished=true;fallback.Stop();};fallback.Start();
             PanelMotion.Close(window);
-            var animation=new DoubleAnimation(0,TimeSpan.FromMilliseconds(310)){EasingFunction=new CubicEase{EasingMode=EasingMode.EaseIn}};Timeline.SetDesiredFrameRate(animation,60);animation.Completed+=delegate{finish();};window.BeginAnimation(UIElement.OpacityProperty,animation);
+            var animation=new DoubleAnimation(0,TimeSpan.FromMilliseconds(duration)){EasingFunction=Motion.Ease(true)};Timeline.SetDesiredFrameRate(animation,60);animation.Completed+=delegate{finish();};window.BeginAnimation(UIElement.OpacityProperty,animation);
         }
         public static void Minimize(Window window)
         {
@@ -189,33 +186,7 @@ namespace MacFlow
             mark.SetResourceReference(System.Windows.Shapes.Path.FillProperty,"GlassInk");return mark;
         }
         public static UIElement Symbol(string key, double size, Brush color)
-        {
-            string data;
-            switch(key)
-            {
-                case "search": data="M10,3 A7,7 0 1 1 9.99,3 M15,15 L21,21"; break;
-                case "grid": data="M3,3 L9,3 9,9 3,9 Z M15,3 L21,3 21,9 15,9 Z M3,15 L9,15 9,21 3,21 Z M15,15 L21,15 21,21 15,21 Z"; break;
-                case "windows": data="M3,3 L17,3 17,15 3,15 Z M7,19 L21,19 21,7"; break;
-                case "settings": data="M12,7 A5,5 0 1 1 11.99,7 M12,1 L12,4 M12,20 L12,23 M1,12 L4,12 M20,12 L23,12 M4,4 L6,6 M18,18 L20,20 M4,20 L6,18 M18,6 L20,4"; break;
-                case "control": data="M3,6 L8,6 M13,6 L21,6 M3,18 L14,18 M19,18 L21,18 M10.5,3 A3,3 0 1 1 10.49,3 M16.5,15 A3,3 0 1 1 16.49,15"; break;
-                case "wifi": data="M2,8 Q12,-1 22,8 M5,12 Q12,5 19,12 M8,16 Q12,12 16,16 M12,20 L12.01,20"; break;
-                case "bluetooth": data="M12,2 L19,8 5,18 M12,22 L19,16 5,6 M12,2 L12,22"; break;
-                case "sun": data="M12,7 A5,5 0 1 1 11.99,7 M12,1 L12,3 M12,21 L12,23 M1,12 L3,12 M21,12 L23,12 M4,4 L5,5 M19,19 L20,20 M4,20 L5,19 M19,5 L20,4"; break;
-                case "moon": data="M20,15 A9,9 0 1 1 9,3 A8,8 0 0 0 20,15 Z"; break;
-                case "volume": data="M3,9 L7,9 12,4 12,20 7,15 3,15 Z M16,8 Q20,12 16,16 M19,5 Q25,12 19,19"; break;
-                case "display": data="M3,4 L21,4 21,17 3,17 Z M12,17 L12,21 M7,21 L17,21"; break;
-                case "power": data="M12,2 L12,12 M6,5 A9,9 0 1 0 18,5"; break;
-                case "play": data="M8,5 L19,12 8,19 Z"; break;
-                case "folder": data="M2,6 L9,6 11,8 22,8 22,20 2,20 Z"; break;
-                case "check": data="M4,12 L9,17 20,6"; break;
-                case "close": data="M6,6 L18,18 M18,6 L6,18"; break;
-                default: data="M12,2 L22,12 12,22 2,12 Z M8,15 L11,9 14,15 17,8"; break;
-            }
-            var path = new System.Windows.Shapes.Path { Data=Geometry.Parse(data), Stroke=color, StrokeThickness=1.7, StrokeStartLineCap=PenLineCap.Round, StrokeEndLineCap=PenLineCap.Round, StrokeLineJoin=PenLineJoin.Round, Stretch=Stretch.Uniform, Margin=new Thickness(2) };
-            var solid=color as SolidColorBrush;if(solid!=null&&solid.Color==((SolidColorBrush)Ink).Color)path.SetResourceReference(Shape.StrokeProperty,"GlassInk");
-            else if(solid!=null&&solid.Color==((SolidColorBrush)Muted).Color)path.SetResourceReference(Shape.StrokeProperty,"GlassMuted");
-            return new Viewbox { Width=size, Height=size, Child=new Border { Width=24, Height=24, Child=path } };
-        }
+        {return new SystemSymbol(key,size,color);}
         public static Border Card(UIElement content)
         {
             var card=new Border{Margin=new Thickness(0,0,0,16),Padding=new Thickness(14),CornerRadius=new CornerRadius(14),BorderThickness=new Thickness(0),Child=content};card.SetResourceReference(Border.BackgroundProperty,"GlassCardSurface");return card;

@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Media.Imaging;
 namespace MacFlow
 {
     // Bézier lettering adapted from kumailnanji/letters (MIT).
@@ -68,13 +69,13 @@ namespace MacFlow
         }
         protected override void OnRender(DrawingContext dc)
         {
-            base.OnRender(dc);double budget=total*Math.Max(0,Math.Min(1,Progress));double scale=Math.Min(ActualWidth/(wordWidth+5),ActualHeight/(wordBounds.Height+6));
+            base.OnRender(dc);bool imageGlass=Effect is WelcomeApple&&((WelcomeApple)Effect).Wallpaper>0;double budget=total*Math.Max(0,Math.Min(1,Progress));double scale=Math.Min(ActualWidth/(wordWidth+5),ActualHeight/(wordBounds.Height+6));
             dc.PushTransform(new MatrixTransform(scale,0,0,scale,(ActualWidth-wordWidth*scale)/2,(ActualHeight-wordBounds.Height*scale)/2-wordBounds.Top*scale));
-            var brush=SystemParameters.HighContrast?(Brush)SystemColors.WindowTextBrush:LightInk?WelcomeGlass.Brush("#EFFFFFFF","#609FCFFF","#D9FFFFFF"):WelcomeGlass.Brush("#F0152A40","#90234863","#EF172D45");var pen=new Pen(brush,1.55){StartLineCap=PenLineCap.Round,EndLineCap=PenLineCap.Round,LineJoin=PenLineJoin.Round};pen.Freeze();
+            var brush=imageGlass?Brushes.White:SystemParameters.HighContrast?(Brush)SystemColors.WindowTextBrush:LightInk?WelcomeGlass.Brush("#EFFFFFFF","#609FCFFF","#D9FFFFFF"):WelcomeGlass.Brush("#F0152A40","#90234863","#EF172D45");var pen=new Pen(brush,1.55){StartLineCap=PenLineCap.Round,EndLineCap=PenLineCap.Round,LineJoin=PenLineJoin.Round};pen.Freeze();
             var edge=new Pen(SystemParameters.HighContrast?(Brush)SystemColors.WindowTextBrush:WelcomeGlass.Brush("#FFFFFFFF","#25FFFFFF","#8ADDF5FF"),.12){StartLineCap=PenLineCap.Round,EndLineCap=PenLineCap.Round,LineJoin=PenLineJoin.Round};edge.Freeze();
             foreach(var stroke in strokes)
             {
-                if(budget<=0)break;double visible=Math.Min(stroke.Length,budget);var path=new StreamGeometry();using(var context=path.Open()){context.BeginFigure(stroke.Points[0],false,false);for(int i=1;i<stroke.Points.Length;i++){if(stroke.Distances[i]<=visible)context.LineTo(stroke.Points[i],true,false);else{double span=stroke.Distances[i]-stroke.Distances[i-1];double t=span==0?0:(visible-stroke.Distances[i-1])/span;context.LineTo(stroke.Points[i-1]+(stroke.Points[i]-stroke.Points[i-1])*t,true,false);break;}}}path.Freeze();dc.DrawGeometry(null,pen,path);dc.PushTransform(new TranslateTransform(0,-.63));dc.DrawGeometry(null,edge,path);dc.Pop();budget-=stroke.Length;
+                if(budget<=0)break;double visible=Math.Min(stroke.Length,budget);var path=new StreamGeometry();using(var context=path.Open()){context.BeginFigure(stroke.Points[0],false,false);for(int i=1;i<stroke.Points.Length;i++){if(stroke.Distances[i]<=visible)context.LineTo(stroke.Points[i],true,false);else{double span=stroke.Distances[i]-stroke.Distances[i-1];double t=span==0?0:(visible-stroke.Distances[i-1])/span;context.LineTo(stroke.Points[i-1]+(stroke.Points[i]-stroke.Points[i-1])*t,true,false);break;}}}path.Freeze();dc.DrawGeometry(null,pen,path);if(!imageGlass){dc.PushTransform(new TranslateTransform(0,-.63));dc.DrawGeometry(null,edge,path);dc.Pop();}budget-=stroke.Length;
             }dc.Pop();
         }
     }
@@ -116,6 +117,9 @@ namespace MacFlow
         private readonly Grid surface,scene,apple;
         private readonly StackPanel actions;
         private readonly Viewbox content;
+        private readonly Image wallpaperImage=new Image{Stretch=Stretch.UniformToFill,IsHitTestVisible=false};
+        private ImageBrush wallpaperSampler;private bool wallpaperRendering;private DateTime wallpaperDeadline;
+        internal bool WallpaperVisible{get{return wallpaperImage.Source!=null;}}
         private readonly Grid greetings;
         private readonly TextBlock translatedGreeting;
         private TextBlock subtitleLabel,startLabel;
@@ -132,13 +136,16 @@ namespace MacFlow
         private bool dismissing;
         private int activeAnimations;
         private readonly bool animated;
-        internal WelcomeWindow(System.Drawing.Rectangle? testBounds=null)
+        private readonly bool showNews;internal bool NewsVisible{get;private set;}internal Button ContinueButton{get;private set;}
+        internal WelcomeWindow(System.Drawing.Rectangle? testBounds=null,bool showNews=false,BitmapSource wallpaper=null)
         {
+            this.showNews=showNews;
             bounds=testBounds??System.Windows.Forms.Screen.PrimaryScreen.Bounds;
             animated=Design.Animations&&SystemParameters.ClientAreaAnimation&&!SystemParameters.HighContrast;
             Title="MacFlow · Hola";Width=bounds.Width;Height=bounds.Height;Left=bounds.Left;Top=bounds.Top;WindowStyle=WindowStyle.None;ResizeMode=ResizeMode.NoResize;
             AllowsTransparency=false;Background=Brushes.Transparent;ShowInTaskbar=false;Topmost=true;
-            surface=new Grid{Background=SceneBackdrop(),Opacity=animated?0:1};
+            surface=new Grid{Opacity=animated?0:1};surface.Children.Add(wallpaperImage);surface.Children.Add(new Border{Background=SceneBackdrop(),IsHitTestVisible=false});
+            if(wallpaper!=null)SetWallpaper(wallpaper);
             scene=new Grid{Width=580,Height=450};
             apple=WelcomeGlass.Apple();apple.HorizontalAlignment=HorizontalAlignment.Center;apple.VerticalAlignment=VerticalAlignment.Center;apple.Opacity=animated?0:1;
             var transform=new TransformGroup();transform.Children.Add(appleScale);transform.Children.Add(applePosition);apple.RenderTransform=transform;apple.RenderTransformOrigin=new Point(.5,.5);
@@ -151,7 +158,7 @@ namespace MacFlow
             greetings.Children.Add(new Viewbox{Stretch=Stretch.Uniform,StretchDirection=StretchDirection.DownOnly,Margin=new Thickness(8,20,8,20),Child=translatedGreeting});scene.Children.Add(greetings);
             actions=new StackPanel{HorizontalAlignment=HorizontalAlignment.Center,VerticalAlignment=VerticalAlignment.Bottom,Margin=new Thickness(0,0,0,18),Opacity=animated?0:1,RenderTransform=actionsPosition};
             var subtitle=Design.Text("Un nuevo comienzo.",14,false);subtitleLabel=subtitle;subtitle.Foreground=SystemParameters.HighContrast?SystemColors.WindowTextBrush:Design.Brush("#E5F0F6FF");subtitle.HorizontalAlignment=HorizontalAlignment.Center;subtitle.Margin=new Thickness(0,0,0,17);actions.Children.Add(subtitle);
-            StartButton=Design.Button("Iniciar",DismissWelcome,false);StartButton.Width=168;StartButton.Height=48;StartButton.Margin=new Thickness(0);StartButton.HorizontalAlignment=HorizontalAlignment.Center;StartButton.IsDefault=true;StartButton.FontSize=14;
+            StartButton=Design.Button("Iniciar",ContinueWelcome,false);StartButton.Width=168;StartButton.Height=48;StartButton.Margin=new Thickness(0);StartButton.HorizontalAlignment=HorizontalAlignment.Center;StartButton.IsDefault=true;StartButton.FontSize=14;
             StartButton.BorderThickness=new Thickness(0);StartButton.Background=Brushes.Transparent;StartButton.Padding=new Thickness(0);StartButton.IsEnabled=!animated;
             var buttonFace=new Grid{Width=168,Height=48,Background=WelcomeGlass.Brush("#32FFFFFF","#1495C6FF","#25FFFFFF")};
             buttonFace.Children.Add(new Border{BorderBrush=WelcomeGlass.Brush("#8AFFFFFF","#0BFFFFFF","#509ECFFF"),BorderThickness=new Thickness(.75),CornerRadius=new CornerRadius(24)});
@@ -167,16 +174,48 @@ namespace MacFlow
                     var companion=new Window{Title="MacFlow · Hola",Width=rect.Width,Height=rect.Height,Left=rect.Left,Top=rect.Top,Background=Brushes.Transparent,Content=new Grid{Background=SceneBackdrop()},WindowStyle=WindowStyle.None,ResizeMode=ResizeMode.NoResize,ShowInTaskbar=false,Topmost=true,ShowActivated=false};
                     companion.SourceInitialized+=delegate{Native.WelcomeBackdrop(companion);RemoveFrame(companion);Native.NoActivate(companion);};companion.Loaded+=delegate{Cover(companion,rect);};companions.Add(companion);companion.Show();
                 }
-                Cover(this,bounds);Play();RefreshInk();
+                Cover(this,bounds);Play();RefreshInk();if(WallpaperVisible){UpdateWallpaperMapping();if(animated)StartWallpaperMapping();}else if(!testBounds.HasValue)LoadWallpaper();
             };
             Closed+=delegate{StopScene();foreach(var window in companions)window.Close();companions.Clear();};
             languageTimer.Interval=TimeSpan.FromMilliseconds(4800);languageTimer.Tick+=delegate{if(!dismissing&&IsVisible)ChangeGreeting((greetingIndex+1)%Greetings.Length);};
             KeyDown+=delegate(object sender,KeyEventArgs e){if(e.Key==Key.Escape){e.Handled=true;DismissWelcome();}};
         }
+        private async void LoadWallpaper()
+        {
+            var image=await WelcomeWallpaper.Load();if(dismissing||!IsVisible||image==null)return;SetWallpaper(image);UpdateWallpaperMapping();if(activeAnimations>0)StartWallpaperMapping();RefreshInk();
+        }
+        private void SetWallpaper(BitmapSource image)
+        {
+            wallpaperImage.Source=image;wallpaperSampler=new ImageBrush(image){Stretch=Stretch.Fill};
+            Tag="Welcome wallpaper · recordable";
+        }
+        private void UpdateWallpaperMapping()
+        {
+            if(apple==null||wallpaperSampler==null||!IsLoaded||ActualWidth<=0||ActualHeight<=0)return;
+            var image=(BitmapSource)wallpaperImage.Source;double imageAspect=(double)image.PixelWidth/image.PixelHeight,screenAspect=ActualWidth/ActualHeight;
+            double width=Math.Min(1,screenAspect/imageAspect),height=Math.Min(1,imageAspect/screenAspect);wallpaperSampler.ViewboxUnits=BrushMappingMode.RelativeToBoundingBox;wallpaperSampler.Viewbox=new Rect((1-width)/2,(1-height)/2,width,height);
+            foreach(UIElement child in apple.Children){var layer=child as Grid;var effect=layer==null?null:layer.Effect as WelcomeApple;if(effect!=null)MapWallpaper(apple,effect);}
+            if(RenderCapability.IsPixelShaderVersionSupported(3,0)&&!SystemParameters.HighContrast)
+            {
+                if(Lettering.Effect==null){Lettering.Effect=new WelcomeApple{Frost=.30};Lettering.InvalidateVisual();}MapWallpaper(Lettering,(WelcomeApple)Lettering.Effect);
+                if(translatedGreeting.Effect==null)translatedGreeting.Effect=new WelcomeApple{Frost=.34};MapWallpaper(translatedGreeting,(WelcomeApple)translatedGreeting.Effect);
+            }
+        }
+        private void MapWallpaper(FrameworkElement element,WelcomeApple effect)
+        {if(element.ActualWidth<=0||element.ActualHeight<=0)return;var rect=element.TransformToAncestor(this).TransformBounds(new Rect(0,0,element.ActualWidth,element.ActualHeight));effect.Backdrop=wallpaperSampler;effect.Offset=new Point(rect.Left/ActualWidth,rect.Top/ActualHeight);effect.Extent=new Point(rect.Width/ActualWidth,rect.Height/ActualHeight);effect.Size=new Point(element.ActualWidth,element.ActualHeight);effect.DarkInk=Lettering.LightInk?0:1;effect.Wallpaper=1;}
+        private void StartWallpaperMapping(){if(wallpaperRendering)return;wallpaperRendering=true;CompositionTarget.Rendering+=WallpaperFrame;}
+        private void StopWallpaperMapping(){if(!wallpaperRendering)return;CompositionTarget.Rendering-=WallpaperFrame;wallpaperRendering=false;}
+        private void WallpaperFrame(object sender,EventArgs e){if(dismissing||!IsVisible){StopWallpaperMapping();return;}UpdateWallpaperMapping();if(activeAnimations==0&&DateTime.UtcNow>=wallpaperDeadline)StopWallpaperMapping();}
         private async void RefreshInk()
         {
-            if(SystemParameters.HighContrast)return;var tone=await LiquidMaterial.WelcomeTone(this);if(dismissing||!IsVisible||!tone.HasValue)return;
+            if(SystemParameters.HighContrast)return;
+            // Loaded can precede the first compositor frame. Give it one brief
+            // settling interval, then retry only an occluded/unavailable sample.
+            await System.Threading.Tasks.Task.Delay(120);bool? tone=null;
+            for(int attempt=0;attempt<3;attempt++){if(dismissing||!IsVisible)return;tone=await LiquidMaterial.WelcomeTone(this);if(tone.HasValue)break;await System.Threading.Tasks.Task.Delay(100);}
+            if(dismissing||!IsVisible||!tone.HasValue)return;
             bool light=tone.Value;Lettering.LightInk=light;Lettering.InvalidateVisual();
+            Resources["GlassInk"]=light?Brushes.White:Design.Brush("#152A40");Resources["GlassMuted"]=Design.Brush(light?"#D9E4F1":"#34485C");Resources["GlassTileSurface"]=Design.Brush(light?"#35131A23":"#58FFFFFF");
             translatedGreeting.Foreground=light?WelcomeGlass.Brush("#FFFFFFFF","#94C9E9FF","#F1FFFFFF"):WelcomeGlass.Brush("#FF152A40","#B0234863","#FF172D45");
             subtitleLabel.Foreground=Design.Brush(light?"#E5F0F6FF":"#F0192D42");startLabel.Foreground=light?Brushes.White:Design.Brush("#152A40");
             foreach(UIElement child in apple.Children){var layer=child as Grid;var effect=layer==null?null:layer.Effect as WelcomeApple;if(effect!=null)effect.DarkInk=light?0:1;}
@@ -185,7 +224,7 @@ namespace MacFlow
         {
             if(SystemParameters.HighContrast)return SystemColors.WindowBrush;
             var brush=new RadialGradientBrush{Center=new Point(.5,.46),GradientOrigin=new Point(.5,.46),RadiusX=.8,RadiusY=.85};
-            brush.GradientStops.Add(new GradientStop(Color.FromArgb(58,14,25,43),0));brush.GradientStops.Add(new GradientStop(Color.FromArgb(110,9,15,27),1));brush.Freeze();return brush;
+            brush.GradientStops.Add(new GradientStop(Color.FromArgb(12,14,25,43),0));brush.GradientStops.Add(new GradientStop(Color.FromArgb(28,9,15,27),1));brush.Freeze();return brush;
         }
         private void Play()
         {
@@ -213,7 +252,7 @@ namespace MacFlow
             {
                 if(dismissing||generation!=greetingGeneration)return;greetingIndex=index;translatedGreeting.Text=Greetings[index];translatedGreeting.FlowDirection=index==10||index==11?FlowDirection.RightToLeft:FlowDirection.LeftToRight;
                 bool script=Lettering.SetWord(Greetings[index]);Lettering.Visibility=script?Visibility.Visible:Visibility.Collapsed;translatedGreeting.Visibility=script?Visibility.Collapsed:Visibility.Visible;if(script)Lettering.Play(60);
-                greetings.Opacity=1;greetings.BeginAnimation(OpacityProperty,new DoubleAnimation(0,1,TimeSpan.FromMilliseconds(560)){EasingFunction=new CubicEase{EasingMode=EasingMode.EaseOut},FillBehavior=FillBehavior.Stop});
+                greetings.Opacity=1;greetings.BeginAnimation(OpacityProperty,new DoubleAnimation(0,1,TimeSpan.FromMilliseconds(560)){EasingFunction=new CubicEase{EasingMode=EasingMode.EaseOut},FillBehavior=FillBehavior.Stop});if(WallpaperVisible){wallpaperDeadline=DateTime.UtcNow.AddMilliseconds(650);StartWallpaperMapping();}
                 greetingPosition.BeginAnimation(TranslateTransform.YProperty,new DoubleAnimation(8,0,TimeSpan.FromMilliseconds(560)){EasingFunction=new CubicEase{EasingMode=EasingMode.EaseOut},FillBehavior=FillBehavior.Stop});
             };greetings.BeginAnimation(OpacityProperty,fade);
         }
@@ -242,13 +281,32 @@ namespace MacFlow
             animation.Completed+=delegate{if(dismissing)return;target.SetValue(property,to);target.BeginAnimation(property,null);activeAnimations--;if(done!=null)done();};
             clearAnimations.Add(delegate{var current=target.GetValue(property);target.BeginAnimation(property,null);target.SetValue(property,current);});target.BeginAnimation(property,animation);
         }
-        private void StopScene(){languageTimer.Stop();greetings.BeginAnimation(OpacityProperty,null);greetingPosition.BeginAnimation(TranslateTransform.YProperty,null);foreach(var clear in clearAnimations)clear();clearAnimations.Clear();double current=Lettering.Progress;Lettering.BeginAnimation(HelloLettering.ProgressProperty,null);Lettering.Progress=current;activeAnimations=0;}
+        private void StopScene(){languageTimer.Stop();StopWallpaperMapping();greetings.BeginAnimation(OpacityProperty,null);greetingPosition.BeginAnimation(TranslateTransform.YProperty,null);foreach(var clear in clearAnimations)clear();clearAnimations.Clear();double current=Lettering.Progress;Lettering.BeginAnimation(HelloLettering.ProgressProperty,null);Lettering.Progress=current;activeAnimations=0;}
         private static void RemoveFrame(Window window){var h=new System.Windows.Interop.WindowInteropHelper(window).Handle;int disabled=1;Native.DwmSetWindowAttribute(h,33,ref disabled,4);Native.DwmSetWindowAttribute(h,2,ref disabled,4);int noBorder=unchecked((int)0xFFFFFFFE);Native.DwmSetWindowAttribute(h,34,ref noBorder,4);}
         private static void Cover(Window window,System.Drawing.Rectangle rect){Native.SetWindowPos(new System.Windows.Interop.WindowInteropHelper(window).Handle,new IntPtr(-1),rect.Left,rect.Top,rect.Width,rect.Height,0x50);}
         internal double ContentOpacity{get{return surface.Opacity;}}
-        internal bool ContentFits{get{var rect=scene.TransformToAncestor(this).TransformBounds(new Rect(scene.RenderSize));return rect.Top>=0&&rect.Left>=0&&rect.Bottom<=ActualHeight+.5&&rect.Right<=ActualWidth+.5;}}
+        internal bool ContentFits{get{var current=(FrameworkElement)content.Child;var rect=current.TransformToAncestor(this).TransformBounds(new Rect(current.RenderSize));return rect.Top>=0&&rect.Left>=0&&rect.Bottom<=ActualHeight+.5&&rect.Right<=ActualWidth+.5;}}
         internal bool LogoVisible{get{return apple.Opacity>.5;}}
         internal bool Ready{get{return StartButton.IsEnabled&&Lettering.Progress==1&&activeAnimations==0;}}
+        private void ContinueWelcome()
+        {
+            if(!showNews||NewsVisible){DismissWelcome();return;}
+            StopScene();NewsVisible=true;StartButton.IsDefault=false;
+            var news=new Grid{Width=580,Height=450};var stack=new StackPanel{Margin=new Thickness(24,10,24,8)};news.Children.Add(stack);
+            var version=Design.Text("MACFLOW "+Product.VersionText,11,true);version.Margin=new Thickness(0,0,0,8);stack.Children.Add(version);
+            var heading=Design.Text("Un escritorio, en armonía.",28,true);heading.Margin=new Thickness(0,0,0,8);stack.Children.Add(heading);
+            var description=Design.Text("Estas son las novedades de tu actualización.",13,false);description.SetResourceReference(TextBlock.ForegroundProperty,"GlassMuted");description.Margin=new Thickness(0,0,0,22);stack.Children.Add(description);
+            string[] icons={"grid","wifi","windows"};string[] names={"Un Dock coordinado","Iconos claros, estados reales","Movimientos con continuidad"};string[] details={"Ampliación suave y espacio para los iconos vecinos.","Wi-Fi, sonido y controles con una geometría coherente.","Paneles hacia el Dock y cambios de sección sin cortes."};
+            for(int i=0;i<names.Length;i++)
+            {
+                var row=new DockPanel();var glyph=new Border{Child=Design.Symbol(icons[i],24,Design.Ink),Margin=new Thickness(0,0,14,0),VerticalAlignment=VerticalAlignment.Center};DockPanel.SetDock(glyph,Dock.Left);row.Children.Add(glyph);
+                var labels=new StackPanel();labels.Children.Add(Design.Text(names[i],14,true));var detail=Design.Text(details[i],12,false);detail.SetResourceReference(TextBlock.ForegroundProperty,"GlassMuted");detail.TextWrapping=TextWrapping.Wrap;detail.Margin=new Thickness(0,5,0,0);labels.Children.Add(detail);row.Children.Add(labels);
+                var card=new GlassPiece(row,16,new Thickness(16,12,16,12)){Margin=new Thickness(0,0,0,10)};stack.Children.Add(card);
+                if(animated){card.Opacity=0;Animate(card,OpacityProperty,0,1,240,80+i*65);}
+            }
+            ContinueButton=Design.Button("Comenzar",DismissWelcome,true);ContinueButton.Width=168;ContinueButton.Height=44;ContinueButton.IsDefault=true;ContinueButton.Margin=new Thickness(0,16,0,0);ContinueButton.HorizontalAlignment=HorizontalAlignment.Center;stack.Children.Add(ContinueButton);
+            var host=new Grid{Width=580,Height=450};var previous=(FrameworkElement)content.Child;content.Child=null;content.Child=host;ContentTransition.Show(host,previous,news,0);
+        }
         internal void DismissWelcome()
         {
             if(dismissing)return;dismissing=true;double opacity=surface.Opacity;StopScene();surface.Opacity=opacity;surface.IsHitTestVisible=false;

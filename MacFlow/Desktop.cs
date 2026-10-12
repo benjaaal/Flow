@@ -203,11 +203,11 @@ namespace MacFlow
             active = Design.Text("Escritorio", 11, true); active.Margin = new Thickness(9, 0, 9, 0);active.TextTrimming=TextTrimming.CharacterEllipsis;active.VerticalAlignment=VerticalAlignment.Center;
             var right = new StackPanel { Orientation = Orientation.Horizontal };
             focusIndicator = Design.Button("", OpenFocus, false); focusIndicator.ToolTip = "Concentración"; right.Children.Add(focusIndicator); UpdateFocusIndicator();
-            network = Design.Button("Red", OpenWifi, false); network.ToolTip = "Redes Wi-Fi"; network.Visibility=Preferences.ShowNetwork?Visibility.Visible:Visibility.Collapsed;
+            network = Design.Button("", OpenWifi, false);network.Content=Design.Symbol("wifi",18,Design.Ink);network.ToolTip = "Redes Wi-Fi"; network.Visibility=Preferences.ShowNetwork?Visibility.Visible:Visibility.Collapsed;
             battery = Design.Button("Batería", delegate { OpenUri("ms-settings:batterysaver"); }, false);
             batteryIcon=new BatteryGlyph {VerticalAlignment=VerticalAlignment.Center,Margin=new Thickness(0,0,5,0)};batteryText=Design.Text("—",11,false);batteryText.VerticalAlignment=VerticalAlignment.Center;var batteryRow=new StackPanel {Orientation=Orientation.Horizontal};batteryRow.Children.Add(batteryIcon);batteryRow.Children.Add(batteryText);battery.Content=batteryRow;
             battery.Visibility=Preferences.ShowBattery?Visibility.Visible:Visibility.Collapsed;
-            volume = Design.Button("Volumen", OpenControl, false);volume.Visibility=Preferences.ShowVolume?Visibility.Visible:Visibility.Collapsed;
+            volume = Design.Button("", OpenControl, false);volume.Content=Design.Symbol("volume",18,Design.Ink);volume.ToolTip="Sonido";volume.Visibility=Preferences.ShowVolume?Visibility.Visible:Visibility.Collapsed;
             right.Children.Add(network); right.Children.Add(battery); right.Children.Add(volume); var controls=Design.Button("",OpenControl,false);controls.Content=Design.Symbol("control",17,Design.Ink);right.Children.Add(controls);
             clock=Design.Text("",12,true);clock.Margin=new Thickness(12,0,5,0);right.Children.Add(clock);
             foreach (var b in left.Children.OfType<Button>().Concat(right.Children.OfType<Button>())) { b.Padding = new Thickness(7, 2, 7, 2); b.Margin = new Thickness(0); b.Background = Brushes.Transparent; b.BorderThickness=new Thickness(0); b.FontSize = 11;b.Height=36; }
@@ -241,10 +241,11 @@ namespace MacFlow
         public void DrawDock()
         {
             if(DockItems!=null&&Dock.IsMouseOver&&Mouse.LeftButton==MouseButtonState.Pressed){dockRebuildPending=true;return;}dockRebuildPending=false;
-            if(dockMotion!=null)dockMotion.Dispose();
+            var previousMotion=dockMotion;if(previousMotion!=null)previousMotion.Dispose();
             dockIcons.Clear();
             bool vertical=Preferences.DockPosition!="Bottom";
-            var items = new StackPanel { Orientation = vertical?Orientation.Vertical:Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Bottom,Margin=vertical?new Thickness(4,Math.Ceiling(Preferences.IconSize*.242+4),4,4):new Thickness(4,0,4,0) };
+            double reserve=DockMetrics.Reserve(Preferences.IconSize);
+            var items = new StackPanel { Orientation = vertical?Orientation.Vertical:Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Bottom,Margin=vertical?new Thickness(0,reserve,0,reserve):new Thickness(reserve,0,reserve,0) };
 
             var entries = new List<AppEntry>(Preferences.Pins);
             var running = Windows.Where(p => !String.IsNullOrEmpty(p.Executable)).GroupBy(p => p.Key).Select(p => p.First());
@@ -256,19 +257,20 @@ namespace MacFlow
             int max = Math.Max(3, (int)((vertical?ScreenSize().Height:ScreenSize().Width) / (Preferences.IconSize + 20)) - 6);
             foreach (var entry in entries.Take(max)) items.Children.Add(DockItem(entry));
             if (entries.Count > max) items.Children.Add(DockUtility("windows", "Más aplicaciones y ventanas", OpenWindowMenu));
-            items.Children.Add(new Border { Width = vertical?Preferences.IconSize*.65:1, Height = vertical?1:Preferences.IconSize * .65, Background = Design.Brush("#45BACAE3"), Margin = vertical?new Thickness(9,6,9,8):new Thickness(6,0,9,6), VerticalAlignment = VerticalAlignment.Center });
-            items.Children.Add(DockUtility("grid", "Aplicaciones · Alt+Espacio para buscar", OpenLaunchpad));
-            items.Children.Add(DockUtility("folder", "Pilas de carpetas", delegate { OpenStack(FolderStack.Downloads()); }));
-            var glass = Design.Glass(items, 18, true, true); glass.VerticalAlignment = VerticalAlignment.Stretch;
+            var glass = Design.Glass(items, 20, true, true);glass.Padding=new Thickness(DockMetrics.Padding);glass.VerticalAlignment = VerticalAlignment.Stretch;
             DockItems=items;DockGlass=glass;
-            var movement=new DockMotion(items,vertical,Preferences.IconSize);dockMotion=movement;
+            var movement=new DockMotion(items,vertical,Preferences.IconSize,previousMotion);dockMotion=movement;
             items.MouseMove+=delegate(object sender,MouseEventArgs e){movement.Move(e.GetPosition(items));};items.MouseLeave+=delegate{movement.Leave();};
-            double length=(Math.Min(entries.Count,max)+2+(entries.Count>max?1:0))*(Preferences.IconSize+12)+40+(vertical?Math.Ceiling(Preferences.IconSize*.242+4):0),thickness=Preferences.IconSize+32+Math.Ceiling(Preferences.IconSize*.242+4);
+            double slot=vertical?DockMetrics.Row(Preferences.IconSize)+DockMetrics.Indicator:DockMetrics.Slot(Preferences.IconSize);
+            double length=(Math.Min(entries.Count,max)+(entries.Count>max?1:0))*slot+reserve*2+DockMetrics.Padding*2,thickness=DockMetrics.Thickness(Preferences.IconSize);
             Dock.Content = glass; Dock.Width = vertical?thickness:Math.Min(ScreenSize().Width-20,length); Dock.Height=vertical?Math.Min(ScreenSize().Height-65,length):thickness; Position();
         }
         private UIElement DockUtility(string symbol, string tooltip, Action action)
         {
-            var button = Design.Button("", action, false); button.Content=new Image{Source=FeatureIcons.Get(symbol),Width=Preferences.IconSize*.75,Height=Preferences.IconSize*.75,Stretch=Stretch.Uniform};button.Width = Preferences.IconSize + 10; button.Height = Preferences.IconSize + 4; button.Padding = new Thickness(0); button.Margin = new Thickness(2, 0, 2, 7); button.ToolTip = tooltip; button.VerticalAlignment = VerticalAlignment.Bottom; button.Background=Brushes.Transparent;button.BorderThickness=new Thickness(0);return button;
+            var size=Preferences.IconSize;var group=new TransformGroup();group.Children.Add(new ScaleTransform(1,1));group.Children.Add(new TranslateTransform());
+            var icon=new Border{Width=size,Height=size,Tag="utility:"+symbol,Child=DockAppMotion.Host(new Image{Source=FeatureIcons.Get(symbol),Width=size,Height=size,Stretch=Stretch.Uniform}),RenderTransform=group,RenderTransformOrigin=new Point(.5,1),CacheMode=new BitmapCache(1.5)};
+            var button=Design.Button("",action,false);button.Content=icon;button.Width=DockMetrics.Slot(size);button.Height=DockMetrics.Row(size);button.VerticalContentAlignment=VerticalAlignment.Bottom;button.Padding=new Thickness(0);button.Margin=new Thickness(0);button.ToolTip=tooltip;button.Background=Brushes.Transparent;button.BorderThickness=new Thickness(0);button.RenderTransform=null;
+            var cell=new StackPanel{Width=DockMetrics.Slot(size),VerticalAlignment=VerticalAlignment.Bottom,Tag=icon};cell.Children.Add(button);cell.Children.Add(new Border{Height=DockMetrics.Indicator});return cell;
         }
         private UIElement DockItem(AppEntry entry)
         {
@@ -278,8 +280,8 @@ namespace MacFlow
             var motion=new TransformGroup();motion.Children.Add(transform);motion.Children.Add(new TranslateTransform());
             var icon = new Border { Child = DockAppMotion.Host(Design.AppIcon(entry, Preferences.IconSize)), Width = Preferences.IconSize, Height = Preferences.IconSize, RenderTransformOrigin = new Point(.5, 1), RenderTransform = motion,CacheMode=new BitmapCache(1.5) };dockIcons[entry.Key]=icon;
             var button = Design.Button("", delegate {if(Directory.Exists(entry.Target)){OpenStack(entry.Target);return;}if(String.Equals(entry.Executable??entry.Target,System.Reflection.Assembly.GetExecutingAssembly().Location,StringComparison.OrdinalIgnoreCase)){OpenSettings();return;}var current=Windows.Where(w=>w.Key==entry.Key&&Native.Matches(w)).ToList();if(current.Count==1){if(!Native.Activate(current[0]))Notify("Windows no permitió activar esta ventana. Podés usar Alt+Tab.");}else if(current.Count>1)WindowMenu(entry,current);else Launch(entry);}, false);
-            button.Content = icon; button.Background = Brushes.Transparent; button.BorderThickness=new Thickness(0); button.RenderTransform=null; button.Padding = new Thickness(0); button.Margin = new Thickness(0); button.Width = Preferences.IconSize + 12; button.Height = Preferences.IconSize + 4; button.ToolTip = entry.Name + (matching.Count > 0 ? " · " + matching.Count + " ventana(s)" : "");
-            cell.Tag=icon;
+            button.Content = icon; button.Background = Brushes.Transparent; button.BorderThickness=new Thickness(0); button.RenderTransform=null; button.Padding = new Thickness(0); button.Margin = new Thickness(0); button.Width = DockMetrics.Slot(Preferences.IconSize);button.Height = DockMetrics.Row(Preferences.IconSize);button.VerticalContentAlignment=VerticalAlignment.Bottom;button.ToolTip = entry.Name + (matching.Count > 0 ? " · " + matching.Count + " ventana(s)" : "");
+            icon.Tag=entry.Key;cell.Tag=icon;
             Point dragStart=new Point(); bool canDrag=false;
             button.PreviewMouseLeftButtonDown+=delegate(object sender,MouseButtonEventArgs e){dragStart=e.GetPosition(button);canDrag=Preferences.Pins.Any(p=>p.Key==entry.Key);};
             button.PreviewMouseLeftButtonUp+=delegate{canDrag=false;};
@@ -298,7 +300,7 @@ namespace MacFlow
                 else if(open.Count>1){foreach(var w in open){var captured=w;commands.Add(new GlassCommand("Cerrar: "+w.Title,delegate {CloseWindow(captured);}));}commands.Add(new GlassCommand("Cerrar todas sus ventanas",delegate {foreach(var w in open)CloseWindow(w);}));}
                 commands.Add(new GlassCommand(Preferences.Pins.Any(p=>p.Key==entry.Key)?"Quitar del Dock":"Fijar en el Dock",delegate {Pin(entry);}));GlassMenu.Open(Dock,entry.Name,commands);e.Handled=true;
             };
-            cell.Children.Add(button); cell.Children.Add(new Ellipse { Width = 3, Height = 3, Fill = matching.Count > 0 ? Design.Brush(Design.Accent) : Brushes.Transparent, Margin = new Thickness(0, 3, 0, 0) }); return cell;
+            cell.Children.Add(button);cell.Children.Add(new Border{Height=DockMetrics.Indicator,Child=new Ellipse{Width=3,Height=3,Fill=matching.Count>0?Design.Ink:Brushes.Transparent,VerticalAlignment=VerticalAlignment.Center}});return cell;
         }
         private void Bounce(FrameworkElement icon)
         {
@@ -350,7 +352,7 @@ namespace MacFlow
             return commands;
         }
         internal void ProbeDockMotion(double fraction){if(dockMotion!=null)dockMotion.Probe(fraction);}
-        internal void StopDockProbe(){if(dockMotion!=null)dockMotion.Leave();}
+        internal void StopDockProbe(){if(dockMotion!=null)dockMotion.EndProbe();}
         public void Pin(AppEntry entry)
         {
             var found = Preferences.Pins.FirstOrDefault(p => p.Key == entry.Key);
@@ -431,7 +433,7 @@ namespace MacFlow
             if (disposed) return;
             try
             {
-                var previous=Windows;Windows = Native.Windows(); string next = String.Join("|", Windows.Select(p => p.Handle.ToString() + ":" + p.Key));
+                var previous=Windows;Windows = Native.Windows(); string next = String.Join("|", Windows.OrderBy(p=>p.Handle.ToInt64()).Select(p => p.Handle.ToString() + ":" + p.Key));
                 if (next != signature || closeFeedback.Count>0) { bool initial=signature==""&&previous.Count==0;signature = next;AnimateWindowChanges(previous,initial); }
                 var foreground = Native.GetForegroundWindow(); uint pid; Native.GetWindowThreadProcessId(foreground, out pid);
                 if(pid!=(uint)Process.GetCurrentProcess().Id&&pid!=contextProcess){contextProcess=pid;string executable=Native.ProcessPath(pid);bool nextCodex=IsCodex(executable);if(nextCodex!=codexForeground){codexForeground=nextCodex;dockLeaveAt=DateTime.UtcNow;}}
@@ -462,10 +464,10 @@ namespace MacFlow
                     Native.POWER power;Native.GetSystemPowerStatus(out power);
                     bool wifi=NetworkInterface.GetAllNetworkInterfaces().Any(n=>n.NetworkInterfaceType==NetworkInterfaceType.Wireless80211&&n.OperationalStatus==OperationalStatus.Up);
                     string connection=wifi?"Wi-Fi conectado":NetworkInterface.GetIsNetworkAvailable()?"Red conectada":"Sin conexión";
-                    string sound;using(var device=new Audio())sound=!device.Available?"♪ —":device.Muted?"♪ Silencio":"♪ "+(int)Math.Round(device.Volume*100)+"%";
-                    return Tuple.Create(power,connection,sound);
+                    int level;bool muted;using(var device=new Audio()){level=device.Available?(int)Math.Round(device.Volume*100):-1;muted=device.Muted;}
+                    return Tuple.Create(power,connection,level,muted);
                 });
-                if(disposed)return;var powerState=snapshot.Item1;batteryIcon.Update(powerState);batteryText.Text=powerState.BatteryFlag==128?"AC":powerState.BatteryLifePercent>100?"—":powerState.BatteryLifePercent+"%";battery.ToolTip=powerState.BatteryFlag==128?"Equipo sin batería":powerState.ACLineStatus==1?"Conectada a corriente · Configuración de energía":"Batería · Configuración de energía";network.Content=Design.Symbol("wifi",17,Design.Ink);network.ToolTip=snapshot.Item2;volume.Content=snapshot.Item3;
+                if(disposed)return;var powerState=snapshot.Item1;batteryIcon.Update(powerState);batteryText.Text=powerState.BatteryFlag==128?"AC":powerState.BatteryLifePercent>100?"—":powerState.BatteryLifePercent+"%";battery.ToolTip=powerState.BatteryFlag==128?"Equipo sin batería":powerState.ACLineStatus==1?"Conectada a corriente · Configuración de energía":"Batería · Configuración de energía";network.Content=Design.Symbol(snapshot.Item2=="Sin conexión"?"wifi-off":"wifi",18,Design.Ink);network.ToolTip=snapshot.Item2;volume.Content=Design.Symbol(snapshot.Item3<0||snapshot.Item4?"volume-off":snapshot.Item3<35?"volume-low":"volume",18,Design.Ink);volume.ToolTip=snapshot.Item3<0?"Sin dispositivo de salida":snapshot.Item4?"Silenciado":"Volumen · "+snapshot.Item3+"%";
             }
             catch(Exception ex){if(!disposed)Log.Write("Indicadores: "+ex.Message);}finally{indicatorsBusy=false;}
         }
@@ -520,14 +522,16 @@ namespace MacFlow
             Settings.Closed += delegate { Settings = null; }; PlaceCenter(Settings, .08); Settings.Show(); Design.Reveal(Settings);
         }
         public void OpenWelcome()
+        {OpenWelcome(false);}
+        private void OpenWelcome(bool afterUpdate)
         {
             if(disposed||suspended)return;
             if(welcome!=null){welcome.Activate();return;}
-            welcome=new WelcomeWindow(smoke?(System.Drawing.Rectangle?)new System.Drawing.Rectangle(40,40,600,420):null);var window=welcome;window.Closed+=delegate{if(welcome==window)welcome=null;};PrepareTestWindow(window);window.Show();
+            welcome=new WelcomeWindow(smoke?(System.Drawing.Rectangle?)new System.Drawing.Rectangle(40,40,600,420):null,afterUpdate);var window=welcome;window.Closed+=delegate{if(welcome==window)welcome=null;};if(afterUpdate)window.Loaded+=delegate{Preferences.LastWelcomedVersion=Product.VersionText;if(!smoke)Save();};PrepareTestWindow(window);window.Show();
         }
         internal bool WelcomeForNewVersion()
         {
-            bool show=Preferences.NeedsUpdateWelcome(Product.Version);if(Preferences.LastWelcomedVersion!=Product.VersionText){Preferences.LastWelcomedVersion=Product.VersionText;if(!smoke)Save();}if(show)OpenWelcome();return show;
+            bool show=Preferences.NeedsUpdateWelcome(Product.Version);if(show)OpenWelcome(true);else if(Preferences.LastWelcomedVersion!=Product.VersionText){Preferences.LastWelcomedVersion=Product.VersionText;if(!smoke)Save();}return show;
         }
         public void ApplyPreferences(Preferences value, bool? startup)
         {

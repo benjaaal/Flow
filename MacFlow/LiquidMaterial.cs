@@ -86,7 +86,7 @@ namespace MacFlow
                 // control at its original position, with one full-sized material.
                 var glass=content as Border;materialFace=glass;
                 if(glass!=null&&!(bool)glass.GetValue(PaddingMerged))
-                {double gap=window.Title.Contains("barra superior")?2:window.Title.Contains("Dock")?4:6;var p=glass.Padding;glass.Padding=new Thickness(p.Left+gap,p.Top+gap,p.Right+gap,p.Bottom+gap);glass.SetValue(PaddingMerged,true);}
+                {double gap=window.Title.Contains("barra superior")||window.Title.Contains("Dock")?0:2;var p=glass.Padding;glass.Padding=new Thickness(p.Left+gap,p.Top+gap,p.Right+gap,p.Bottom+gap);glass.SetValue(PaddingMerged,true);}
                 surface=new Grid {Background=Brushes.Transparent};var shadow=new Border {Margin=new Thickness(Inset,TopInset,Inset,Inset),Child=lensLayer,CacheMode=new BitmapCache(.75)};
                 if(Inset>0)shadow.Effect=new DropShadowEffect {BlurRadius=10,ShadowDepth=2,Opacity=.10,Color=Color.FromRgb(19,35,56),RenderingBias=RenderingBias.Performance};
                 surface.Children.Add(shadow);readabilityLayer=new Border{Margin=new Thickness(Inset,TopInset,Inset,Inset),CornerRadius=new CornerRadius(Radius),IsHitTestVisible=false};surface.Children.Add(readabilityLayer);if(content!=null)surface.Children.Add(new Border {Margin=new Thickness(Inset,TopInset,Inset,Inset),Child=content});
@@ -172,7 +172,7 @@ namespace MacFlow
             if(materialFace!=null&&!SystemParameters.HighContrast)materialFace.Background=Design.MaterialTint(window.Title.Contains("Dock")||window.Title.Contains("barra superior"),whiteText);
             window.Resources["GlassInk"]=SystemParameters.HighContrast?SystemColors.WindowTextBrush:Design.Brush(whiteText?"#F8FAFF":"#19212D");
             window.Resources["GlassMuted"]=SystemParameters.HighContrast?SystemColors.WindowTextBrush:Design.Brush(whiteText?"#DCE4EF":"#303B4B");
-            window.Resources["GlassCardSurface"]=Design.Brush(whiteText?"#22313942":"#40FFFFFF");window.Resources["GlassTileSurface"]=Design.Brush(whiteText?"#22313942":"#40FFFFFF");
+            window.Resources["GlassCardSurface"]=Design.Brush(whiteText?"#201C222B":"#30FFFFFF");window.Resources["GlassTileSurface"]=Design.Brush(whiteText?"#22141A23":"#32FFFFFF");
             UpdateReadabilityLayer();if(BackdropChanged!=null)BackdropChanged();
         }
         internal static bool LightInkForLuminance(double average,bool known,bool wasLight)
@@ -186,9 +186,10 @@ namespace MacFlow
             {
                 double total=0;int count=0;var dc=GetDC(IntPtr.Zero);if(dc==IntPtr.Zero)return null;
                 try{for(int i=0;i<5;i++){int x=rect.Left+(int)((rect.Right-rect.Left)*(.18+i*.16)),y=rect.Top+(int)((rect.Bottom-rect.Top)*(i%2==0?.12:.88));var under=WindowFromPoint(new SamplePoint{X=x,Y=y});if(under!=handle&&GetAncestor(under,2)!=handle)continue;uint color=GetPixel(dc,x,y);if(color==0xFFFFFFFF)continue;total+=((color&255)*.2126+((color>>8)&255)*.7152+((color>>16)&255)*.0722)/255;count++;}}finally{ReleaseDC(IntPtr.Zero,dc);}
-                return count<3?(bool?)null:total/count<.55;
+                WelcomeToneDiagnostic="muestras="+count+"; luminancia="+(count==0?0:total/count).ToString("F3");return count<3?(bool?)null:total/count<.48;
             });
         }
+        internal static string WelcomeToneDiagnostic;
         private async void RefreshContrast()
         {
             if(disposed||toneBusy||!window.IsVisible||window.WindowState==WindowState.Minimized||SystemParameters.HighContrast)return;

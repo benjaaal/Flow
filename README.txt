@@ -1,7 +1,7 @@
-MacFlow 26.0.1 — Windows 11 x64
+MacFlow 26.0.2 — Windows 11 x64
 
 Instalador oficial: https://github.com/benjaaal/Flow/releases
-Abrí MacFlow-Setup-26.0.1.exe; elegí Actualizar si ya está instalado.
+Abrí MacFlow-Setup-26.0.2.exe; elegí Actualizar si ya está instalado.
 Las preferencias se conservan. Instalación por usuario, sin administrador.
 Buscar versiones: Configuración → Sistema → Actualizaciones.
 
@@ -9,8 +9,11 @@ BIENVENIDA
 Manzanita de cristal → Hola manuscrito → Iniciar.
 30 saludos locales con transiciones suaves. Los idiomas en alfabeto latino
 usan trazos manuscritos; otros sistemas de escritura usan fuentes de Windows.
-Iniciar o Escape cierra la bienvenida. Cerrar detiene el ciclo de idiomas.
-El fondo visible es el fondo vivo del compositor de Windows.
+Después de actualizar, Iniciar abre las novedades y Comenzar entra al escritorio.
+Escape permite salir. Cerrar detiene el ciclo de idiomas.
+La bienvenida muestra la imagen de tu fondo de Windows cuando está disponible.
+Manzanita y saludos tienen reflejos y desplazamiento de esa imagen propia.
+Sin imagen, conserva el fondo vivo del compositor.
 Se muestra una vez tras actualizar; puede desactivarse.
 Sin animaciones, Hola e Iniciar aparecen inmediatamente.
 El cristal usa desenfoque y reflejos; no refracción óptica real del escritorio.

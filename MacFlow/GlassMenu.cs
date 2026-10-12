@@ -27,7 +27,7 @@ namespace MacFlow
         }
         public static void Open(Window anchor,string title,IList<GlassCommand> commands,bool nonInteractive=false)
         {
-            if(Current!=null)Current.Close();var menu=new GlassMenu(title,commands,!nonInteractive);menu.Anchor=anchor;Current=menu;
+            if(Current!=null)Design.Dismiss(Current);var menu=new GlassMenu(title,commands,!nonInteractive);menu.Anchor=anchor;Current=menu;
             if(anchor is Launchpad)menu.Owner=anchor;
             if(nonInteractive){menu.ShowActivated=false;menu.IsHitTestVisible=false;menu.SourceInitialized+=delegate{Native.NoActivate(menu);};}
             var source=PresentationSource.FromVisual(anchor);var matrix=source==null?Matrix.Identity:source.CompositionTarget.TransformFromDevice;var cursor=Forms.Cursor.Position;var pos=matrix.Transform(new Point(cursor.X,cursor.Y));var screen=Forms.Screen.FromPoint(cursor).WorkingArea;var top=matrix.Transform(new Point(screen.Left,screen.Top));var bottom=matrix.Transform(new Point(screen.Right,screen.Bottom));

@@ -15,7 +15,7 @@ namespace MacFlow
     {
         private readonly Desktop desktop;
         private readonly Preferences draft;
-        private readonly StackPanel page;
+        private StackPanel page;private readonly Grid pagesHost;private readonly ScrollViewer pageScroll;
         private readonly TextBlock title, subtitle, status;
         private readonly List<Button> navigation = new List<Button>();
         private bool startupValue, startupAvailable;
@@ -43,7 +43,7 @@ namespace MacFlow
             identity.Children.Add(new Image{Source=Icon,Width=36,Height=36,Margin=new Thickness(0,0,9,0),VerticalAlignment=VerticalAlignment.Center});
             var labels=new StackPanel{VerticalAlignment=VerticalAlignment.Center};var brand=Design.Text("MacFlow",18,true);labels.Children.Add(brand);
             var caption=Design.Text("Configuración",11,false);caption.SetResourceReference(TextBlock.ForegroundProperty,"GlassMuted");caption.Margin=new Thickness(0,3,0,0);labels.Children.Add(caption);identity.Children.Add(labels);top.Children.Add(identity);
-            string[] names={"Apariencia","Fondos","Dock","Barra superior","Rendimiento","Sistema"}; string[] symbols={"sun","display","grid","control","display","settings"};
+            string[] names={"Apariencia","Fondos","Dock","Barra superior","Rendimiento","Sistema"}; string[] symbols={"appearance","wallpaper","dock","topbar","performance","settings"};
             for(int i=0;i<names.Length;i++)
             {
                 int index=i;var b=Design.Button("",delegate{ShowPage(index);},false);b.HorizontalContentAlignment=HorizontalAlignment.Left;b.Padding=new Thickness(7,6,7,6);b.Margin=new Thickness(0,2,0,2);b.BorderThickness=new Thickness(0);
@@ -58,7 +58,7 @@ namespace MacFlow
             main.Resources["GlassCardSurface"]=Design.CardSurface;
             var header=new StackPanel{Margin=new Thickness(0,0,0,20)};title=Design.Text("",21,true);subtitle=Design.Text("",12,false);subtitle.SetResourceReference(TextBlock.ForegroundProperty,"GlassMuted");subtitle.Margin=new Thickness(0,6,0,0);header.Children.Add(title);header.Children.Add(subtitle);DockPanel.SetDock(header,System.Windows.Controls.Dock.Top);main.Children.Add(header);
             var foot=new DockPanel{Margin=new Thickness(0,12,0,0)};status=Design.Text("",10,false);status.SetResourceReference(TextBlock.ForegroundProperty,"GlassMuted");status.TextWrapping=TextWrapping.Wrap;var apply=Design.Button("Aplicar",Apply,true);System.Windows.Automation.AutomationProperties.SetName(apply,"Aplicar cambios");apply.MinWidth=85;apply.Margin=new Thickness(8,0,0,0);DockPanel.SetDock(apply,System.Windows.Controls.Dock.Right);foot.Children.Add(apply);foot.Children.Add(status);DockPanel.SetDock(foot,System.Windows.Controls.Dock.Bottom);main.Children.Add(foot);
-            page=new StackPanel(); main.Children.Add(new ScrollViewer { Content=page,VerticalScrollBarVisibility=ScrollBarVisibility.Auto,HorizontalScrollBarVisibility=ScrollBarVisibility.Disabled });
+            page=new StackPanel();pagesHost=new Grid();pagesHost.Children.Add(page);pageScroll=new ScrollViewer {Content=pagesHost,VerticalScrollBarVisibility=ScrollBarVisibility.Auto,HorizontalScrollBarVisibility=ScrollBarVisibility.Disabled};main.Children.Add(pageScroll);
             var shell=Design.Glass(layout,16,false);shell.Padding=new Thickness(0);Content=shell;SourceInitialized+=delegate{Native.Glass(this,Design.Dark);};header.MouseLeftButtonDown+=delegate{DragMove();};top.MouseLeftButtonDown+=delegate(object sender,MouseButtonEventArgs e){if(e.OriginalSource is TextBlock&&!e.Handled){var node=(DependencyObject)e.OriginalSource;while(node!=null){if(node is System.Windows.Controls.Primitives.ButtonBase)return;node=VisualTreeHelper.GetParent(node);}DragMove();}};
             KeyDown+=delegate(object sender,KeyEventArgs e) { if(e.Key==Key.Escape) {e.Handled=true;Design.Dismiss(this);} };Closed+=delegate {windowClosed=true;wallpaperRequest++;};ShowPage(0);
         }
@@ -68,10 +68,10 @@ namespace MacFlow
         }
         private void ShowPage(int index)
         {
-            selected=index;page.Children.Clear();for(int i=0;i<navigation.Count;i++){navigation[i].Background=i==index?Design.Brush("#007AFF"):Brushes.Transparent;navigation[i].Resources["GlassInk"]=i==index?Brushes.White:Design.Ink;}
+            int direction=index.CompareTo(selected);selected=index;var previous=page;page=new StackPanel();for(int i=0;i<navigation.Count;i++){navigation[i].Background=i==index?Design.Brush(draft.Accent):Brushes.Transparent;navigation[i].Resources["GlassInk"]=i==index?Brushes.White:Design.Ink;}
             wallpaperRequest++;pageGeneration++;
             if(index==0) Appearance();else if(index==1) WallpaperPage();else if(index==2) Dock();else if(index==3) Bar();else if(index==4) Performance();else SystemPage();
-            if(Design.Animations) page.BeginAnimation(UIElement.OpacityProperty,new System.Windows.Media.Animation.DoubleAnimation(0,1,TimeSpan.FromMilliseconds(170)));
+            pageScroll.ScrollToVerticalOffset(0);ContentTransition.Show(pagesHost,previous.Children.Count==0?null:previous,page,direction);
         }
         private void Heading(string text,string description) { title.Text=text;subtitle.Text=description; }
         private StackPanel Section(string label)
@@ -94,7 +94,7 @@ namespace MacFlow
             themes.Children.Add(Design.Button("Oscuro",delegate {draft.Theme="Dark";ShowPage(0);},draft.Theme=="Dark"));page.Children.Add(themes);
             var material=Section("Cristal");material.Children.Add(Row("Intensidad del cristal","Transparencia del Dock y los menús.",Design.Symbol("sun",20,Design.Muted)));
             var transparency=new Slider {Minimum=.06,Maximum=.65,Value=draft.GlassOpacity,Margin=new Thickness(0,12,0,3)};transparency.ValueChanged+=delegate {draft.GlassOpacity=transparency.Value;};material.Children.Add(transparency);material.Children.Add(Row("Más transparente","",Design.Text("Más contraste",10,false)));
-            var colors=Section("Color del acento");var swatches=new StackPanel {Orientation=Orientation.Horizontal};string[] palette={"#8DAEFF","#B8A1FF","#7CDEC1","#FF9BC2","#F5CC85"};string[] labels={"Azul","Lavanda","Menta","Rosa","Ámbar"};
+            var colors=Section("Color del acento");var swatches=new StackPanel {Orientation=Orientation.Horizontal};string[] palette={"#8DAEFF","#B8A1FF","#7CDEC1","#FF9BC2","#F5CC85","#FF9F0A"};string[] labels={"Azul","Lavanda","Menta","Rosa","Ámbar","Mandarina"};
             for(int i=0;i<palette.Length;i++){string color=palette[i];var b=Design.Button("",delegate{draft.Accent=color;ShowPage(0);},false);var circle=new Grid{Width=26,Height=26};circle.Children.Add(new System.Windows.Shapes.Ellipse{Fill=Design.Brush(color),Stroke=Design.Brush("#20000000"),StrokeThickness=.5});if(draft.Accent==color){var mark=Design.Text("✓",14,true);mark.Foreground=Brushes.White;mark.HorizontalAlignment=HorizontalAlignment.Center;circle.Children.Add(mark);}b.Content=circle;b.Width=33;b.Height=33;b.Padding=new Thickness(0);b.Background=Brushes.Transparent;b.BorderThickness=new Thickness(0);b.ToolTip=labels[i];System.Windows.Automation.AutomationProperties.SetName(b,labels[i]);b.Margin=new Thickness(0,0,9,0);swatches.Children.Add(b);}colors.Children.Add(swatches);
             var extras=Section("Escritorio");Toggle(extras,"Widget de fecha y hora","Una pequeña tarjeta en tu escritorio.",draft.ShowWidget,delegate(bool v){draft.ShowWidget=v;});
             extras.Children.Add(Design.Button("Elegir fondo de pantalla…",delegate {ShowPage(1);},false));

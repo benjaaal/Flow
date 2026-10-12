@@ -27,8 +27,7 @@ namespace MacFlow
             Children.Add(new CrystalLight(corner,.6));
             Loaded+=delegate {owner=Window.GetWindow(this);material=LiquidMaterial.ForWindow(owner);if(material!=null)material.BackdropChanged+=Bind;Bind();};
             Unloaded+=delegate {if(material!=null)material.BackdropChanged-=Bind;material=null;owner=null;backdrop.ImageSource=null;};
-            LayoutUpdated+=delegate {if(IsVisible)Bind();};
-            SizeChanged+=delegate {lensLayer.Clip=new RectangleGeometry(new Rect(0,0,Math.Max(1,ActualWidth),Math.Max(1,ActualHeight)),radius,radius);if(lens!=null)lens.Size=new Point(Math.Max(1,ActualWidth),Math.Max(1,ActualHeight));};
+            SizeChanged+=delegate {lensLayer.Clip=new RectangleGeometry(new Rect(0,0,Math.Max(1,ActualWidth),Math.Max(1,ActualHeight)),radius,radius);if(lens!=null)lens.Size=new Point(Math.Max(1,ActualWidth),Math.Max(1,ActualHeight));Bind();};
             // Hover light lives in the button overlay. Keep the optical texture
             // cached instead of invalidating its shader on every mouse event.
         }
