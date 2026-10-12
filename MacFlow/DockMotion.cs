@@ -12,7 +12,8 @@ namespace MacFlow
     {
         internal const double Padding=6,Indicator=6,LaunchTravel=4;
         internal static double Slot(double size){return size+12;}
-        internal static double Row(double size){double peak=DockMotion.PeakScale(size);return Math.Ceiling(size*peak*1.035+LaunchTravel*peak)+2;}
+        internal static double LayoutScale(double size){return 1.28-Math.Max(0,Math.Min(36,size-36))*.08/36;}
+        internal static double Row(double size){double peak=LayoutScale(size);return Math.Ceiling(size*peak*1.035+LaunchTravel*peak)+2;}
         internal static double Thickness(double size){return Row(size)+Indicator+Padding*2;}
         internal static double Reserve(double size){return Math.Ceiling(size*.32)+2;}
     }
@@ -27,7 +28,14 @@ namespace MacFlow
         private readonly bool vertical;
         private readonly double reach;
         private readonly double magnification;
-        internal static double PeakScale(double size){return 1.28-Math.Max(0,Math.Min(36,size-36))*.08/36;}
+        internal static double PeakScale(double size)
+        {
+            double desired=1.32-Math.Max(0,Math.Min(36,size-36))*.085/36;
+            // Use the space already reserved in the glass. Keep room for the
+            // combined hover and launch impulse without enlarging the Dock.
+            double contained=(DockMetrics.Row(size)-.5)/(size*1.035+DockMetrics.LaunchTravel);
+            return Math.Min(desired,contained);
+        }
         private bool hovering,listening,disposed,centersReady,probing;
         private double pointer,previous=-1,probeFraction;
         public DockMotion(StackPanel panel,bool vertical,double size,DockMotion prior=null)

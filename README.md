@@ -34,6 +34,10 @@ Descargas oficiales: https://github.com/benjaaal/Flow/releases. El canal se gene
 
 Código bajo MIT: [LICENSE.txt](LICENSE.txt). Atribuciones en [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md). Las capacidades y limitaciones de Windows se explican en [README.txt](README.txt).
 
+## MacFlow 26.0.3
+
+Los iconos del Dock se amplían un poco más al acercar el cursor. Se utiliza el espacio ya reservado: conserva tamaño del Dock, posición, animación y contención, incluso durante el impulso de apertura. Este ajuste no incluye modificaciones de Widgets, Centro de control ni Stage Manager.
+
 ## MacFlow 26.0.2
 
 - Se retiraron los accesos fijos a Aplicaciones y Pilas del Dock; siguen disponibles en la barra superior.

@@ -65,7 +65,7 @@ $setup = Join-Path $deliverables ('MacFlow-Setup-'+$packageVersion+'.exe')
 if ($LASTEXITCODE -ne 0) { throw 'Falló la compilación del instalador.' }
 Copy-Item -LiteralPath (Join-Path $root 'MacFlow\App.config') -Destination ($setup + '.config') -Force
 $packageInfo=Get-Item -LiteralPath $setup
-$packageJson=@{Product='MacFlow';Architecture='x64';Version=$packageVersion;Installer=$packageInfo.Name;Sha256=(Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash;Size=$packageInfo.Length;FeedUrl=$UpdateFeedUrl;Notes='Version 26.0.2: Dock compacto con ampliacion coordinada y movimiento continuo; reflejos delicados, nuevos iconos de estado, transiciones de paneles y Hola y manzanita de cristal sobre tu fondo; novedades al continuar. Conserva la reparacion del inicio automatico y las preferencias.'} | ConvertTo-Json
+$packageJson=@{Product='MacFlow';Architecture='x64';Version=$packageVersion;Installer=$packageInfo.Name;Sha256=(Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash;Size=$packageInfo.Length;FeedUrl=$UpdateFeedUrl;Notes='Version 26.0.3: los iconos del Dock se amplian un poco mas al acercar el mouse, dentro del espacio existente. Conserva dimensiones, movimiento suave, preferencias y funciones de 26.0.2.'} | ConvertTo-Json
 [System.IO.File]::WriteAllText((Join-Path $deliverables 'MacFlow-update.json'),$packageJson,[System.Text.UTF8Encoding]::new($false))
 if ($RunTests) {
     $tests = Join-Path $deliverables 'verification'
