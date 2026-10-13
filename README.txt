@@ -1,7 +1,7 @@
-MacFlow 26.1.3 — Windows 11 x64
+MacFlow 26.1.4 — Windows 11 x64
 
-Descarga oficial: https://github.com/benjaaal/Flow/releases/tag/v26.1.3
-Ejecutá MacFlow-Setup-26.1.3.exe. Si MacFlow ya está instalado, elegí Actualizar.
+Descarga oficial: https://github.com/benjaaal/Flow/releases/tag/v26.1.4
+Ejecutá MacFlow-Setup-26.1.4.exe. Si MacFlow ya está instalado, elegí Actualizar.
 Conserva tus preferencias y vuelve a abrir la aplicación automáticamente.
 También podés buscarla en Configuración → Sistema → Actualizaciones.
 

@@ -66,7 +66,7 @@ $setup = Join-Path $deliverables ('MacFlow-Setup-'+$packageVersion+'.exe')
 if ($LASTEXITCODE -ne 0) { throw 'Falló la compilación del instalador.' }
 Copy-Item -LiteralPath (Join-Path $root 'MacFlow\App.config') -Destination ($setup + '.config') -Force
 $packageInfo=Get-Item -LiteralPath $setup
-$packageJson=@{Product='MacFlow';Architecture='x64';Version=$packageVersion;Installer=$packageInfo.Name;Sha256=(Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash;Size=$packageInfo.Length;FeedUrl=$UpdateFeedUrl;Notes='26.1.3: cristal mas transparente en Dock, paneles y botones, sin agregar bordes. Dock con resorte continuo y ocultacion suave. Navegacion con fundido y acercamiento delicado. Motor optimizado: tiempo real entre cuadros, menos trabajo en cada cuadro y geometria del compositor actualizada solo cuando cambia. Respeta movimiento reducido de Windows.'} | ConvertTo-Json
+$packageJson=@{Product='MacFlow';Architecture='x64';Version=$packageVersion;Installer=$packageInfo.Name;Sha256=(Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash;Size=$packageInfo.Length;FeedUrl=$UpdateFeedUrl;Notes='26.1.4: revision del Dock y widgets al grabar o cambiar de app. Configuracion sin superponer paginas, cristal con mas claridad, contraste que reacciona al fondo, textos mas legibles y calendario refinado. Volumen optimizado y restauracion de Buscador/Actualizaciones minimizados. Se eliminan capas graficas sin uso.'} | ConvertTo-Json
 [System.IO.File]::WriteAllText((Join-Path $deliverables 'MacFlow-update.json'),$packageJson,[System.Text.UTF8Encoding]::new($false))
 if ($RunTests) {
     $tests = Join-Path $deliverables 'verification'

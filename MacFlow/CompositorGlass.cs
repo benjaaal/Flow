@@ -119,7 +119,8 @@ namespace MacFlow
             if(width!=cachedWidth||height!=cachedHeight||remaining!=cachedRemaining)
             {visual.Size=new Vector2(width,height);geometry.Offset=new Vector2(width*(1-remaining)/2,height*(1-remaining)/2);geometry.Size=new Vector2(width*remaining,height*remaining);cachedWidth=width;cachedHeight=height;cachedRemaining=remaining;}
             if(radius!=cachedRadius){geometry.CornerRadius=new Vector2(radius,radius);cachedRadius=radius;}
-            if(cachedOpacity!=(float)window.Opacity){cachedOpacity=(float)window.Opacity;visual.Opacity=cachedOpacity;}
+            float opacity=(float)(window.Opacity*BackdropCoverage(Design.GlassOpacity));
+            if(cachedOpacity!=opacity){cachedOpacity=opacity;visual.Opacity=cachedOpacity;}
             if(cachedBackdrop!=LiquidMaterial.LiveBackdrop||!positionKnown){cachedBackdrop=LiquidMaterial.LiveBackdrop;visual.IsVisible=cachedBackdrop;}
             Native.RECT bounds;var h=new WindowInteropHelper(window).Handle;bool visible=window.IsVisible&&window.WindowState!=WindowState.Minimized;
             if(Native.GetWindowRect(h,out bounds)&&(!positionKnown||cachedVisible!=visible||bounds.Left!=cachedBounds.Left||bounds.Top!=cachedBounds.Top||bounds.Right!=cachedBounds.Right||bounds.Bottom!=cachedBounds.Bottom))
@@ -127,6 +128,8 @@ namespace MacFlow
         }
         private IntPtr Hook(IntPtr h,int message,IntPtr w,IntPtr l,ref bool handled){if(message==0x47&&visual!=null&&!disposed)try{Update(PanelMotion.IsClosing(window)?lastFraction:1);QueueReorder();}catch(Exception ex){Log.Write("Cristal suspendido: "+ex.Message);}return IntPtr.Zero;}
         private double lastFraction=1;
+        internal static double BackdropCoverage(double intensity)
+        {return .88+.10*Math.Max(0,Math.Min(1,(intensity-.06)/.59));}
         private void Visibility(object sender,DependencyPropertyChangedEventArgs e){Update(lastFraction);}
         private void Closed(object sender,EventArgs e){Dispose();windows.Remove(window);}
         public void Dispose()

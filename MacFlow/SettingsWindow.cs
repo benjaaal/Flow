@@ -80,7 +80,7 @@ namespace MacFlow
         }
         private static Grid Row(string name,string detail,UIElement control)
         {
-            var row=new Grid { Margin=new Thickness(0,5,0,5) };row.ColumnDefinitions.Add(new ColumnDefinition());row.ColumnDefinitions.Add(new ColumnDefinition {Width=GridLength.Auto});var text=new StackPanel {Margin=new Thickness(0,0,16,0),VerticalAlignment=VerticalAlignment.Center};text.Children.Add(Design.Text(name,13,true));if(!String.IsNullOrEmpty(detail)){var hint=Design.Text(detail,11,false);hint.SetResourceReference(TextBlock.ForegroundProperty,"GlassMuted");hint.TextWrapping=TextWrapping.Wrap;hint.Margin=new Thickness(0,4,0,0);text.Children.Add(hint);}row.Children.Add(text);Grid.SetColumn(control,1);row.Children.Add(control);return row;
+            var row=new Grid { Margin=new Thickness(0,5,0,5) };row.ColumnDefinitions.Add(new ColumnDefinition());row.ColumnDefinitions.Add(new ColumnDefinition {Width=GridLength.Auto});var text=new StackPanel {Margin=new Thickness(0,0,16,0),VerticalAlignment=VerticalAlignment.Center};text.Children.Add(Design.Text(name,13,true));if(!String.IsNullOrEmpty(detail)){var hint=Design.Text(detail,12,false);hint.SetResourceReference(TextBlock.ForegroundProperty,"GlassMuted");hint.TextWrapping=TextWrapping.Wrap;hint.Margin=new Thickness(0,4,0,0);text.Children.Add(hint);}row.Children.Add(text);Grid.SetColumn(control,1);row.Children.Add(control);return row;
         }
         private void Toggle(StackPanel section,string name,string detail,bool value,Action<bool> change)
         {

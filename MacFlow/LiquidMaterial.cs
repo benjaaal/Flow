@@ -58,7 +58,7 @@ namespace MacFlow
         internal double TextureScale {get{return .5;}}
         internal double Readability {get{return lens.Readability;}}
         internal static LiquidMaterial ForWindow(Window target){LiquidMaterial result;return target!=null&&instances.TryGetValue(target,out result)?result:null;}
-        internal static void DesktopChanged(){foreach(var material in instances.Values){if(!material.enabled||!material.window.IsVisible)continue;material.quietFrames=0;material.timer.Interval=TimeSpan.FromMilliseconds(166);material.Refresh();}}
+        internal static void DesktopChanged(){foreach(var material in instances.Values){if(material.disposed||!material.window.IsVisible)continue;if(!material.window.AllowsTransparency){material.RefreshContrast();continue;}if(!material.enabled)continue;material.quietFrames=0;material.timer.Interval=TimeSpan.FromMilliseconds(166);material.Refresh();}}
         public static void Apply(Window window,bool dark)
         {
             LiquidMaterial material;if(!instances.TryGetValue(window,out material)){material=new LiquidMaterial(window);instances.Add(window,material);}material.Update(dark);
@@ -70,7 +70,7 @@ namespace MacFlow
             window=target;image=new Image {Stretch=Stretch.Fill,IsHitTestVisible=false,Effect=new BlurEffect {Radius=window.Title.Contains("Dock")||window.Title.Contains("barra superior")?7:18,KernelType=KernelType.Gaussian,RenderingBias=RenderingBias.Performance}};
             lens=new LiquidLens();lensLayer=new Border {Child=image,IsHitTestVisible=false,CacheMode=new BitmapCache(.75)};if(RenderCapability.IsPixelShaderVersionSupported(3,0))lensLayer.Effect=lens;
             timer=new DispatcherTimer(DispatcherPriority.Background){Interval=TimeSpan.FromMilliseconds(166)};timer.Tick+=delegate{Refresh();};
-            toneTimer=new DispatcherTimer(DispatcherPriority.Background){Interval=TimeSpan.FromMilliseconds(400)};toneTimer.Tick+=delegate{RefreshContrast();};
+            toneTimer=new DispatcherTimer(DispatcherPriority.Background){Interval=TimeSpan.FromMilliseconds(400)};toneTimer.Tick+=delegate{toneTimer.Interval=TimeSpan.FromMilliseconds(window.IsMouseOver?300:LowPower?900:600);RefreshContrast();};window.MouseEnter+=delegate{RefreshContrast();};
             var descriptor=System.ComponentModel.DependencyPropertyDescriptor.FromProperty(ContentControl.ContentProperty,typeof(Window));descriptor.AddValueChanged(window,ContentChanged);
             window.SizeChanged+=delegate{Resize();};window.LocationChanged+=delegate{quietFrames=0;timer.Interval=TimeSpan.FromMilliseconds(LowPower?333:166);};window.IsVisibleChanged+=delegate{if(window.IsVisible&&enabled){Refresh();timer.Start();}else timer.Stop();if(window.IsVisible&&!SystemParameters.HighContrast)toneTimer.Start();else toneTimer.Stop();};
             window.Closed+=delegate{descriptor.RemoveValueChanged(window,ContentChanged);Dispose();instances.Remove(window);};Wrap();

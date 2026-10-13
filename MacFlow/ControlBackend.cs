@@ -28,8 +28,8 @@ namespace MacFlow
     }
     internal sealed class ControlFixture : IControlBackend
     {
-        internal readonly AudioState State=new AudioState{Available=true,Volume=45};internal int Bright=60;internal bool Wifi=true,Bluetooth=true;
-        public AudioState Sound(){return State;}public void Volume(double value){State.Volume=value;}public void Mute(bool value){State.Muted=value;}
+        internal readonly AudioState State=new AudioState{Available=true,Volume=45};internal int VolumeWrites;internal int Bright=60;internal bool Wifi=true,Bluetooth=true;
+        public AudioState Sound(){return State;}public void Volume(double value){VolumeWrites++;State.Volume=value;}public void Mute(bool value){State.Muted=value;}
         public Task<int?> ReadBrightness(){return Task.FromResult((int?)Bright);}public Task SetBrightness(int value){Bright=value;return Task.FromResult(0);}
         public Task<RadioSnapshot> Radio(bool wifi){return Task.FromResult(new RadioSnapshot{Available=true,On=wifi?Wifi:Bluetooth,CanChange=true});}
         public Task<RadioChange> SwitchRadio(bool wifi,bool on,CancellationToken token){token.ThrowIfCancellationRequested();if(wifi)Wifi=on;else Bluetooth=on;return Task.FromResult(new RadioChange{Success=true});}

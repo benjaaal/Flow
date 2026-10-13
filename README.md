@@ -1,10 +1,31 @@
-# MacFlow 26.1.3
+# MacFlow 26.1.4
 
 Aplicación nativa para Windows 11 x64, con C# y WPF sobre .NET Framework 4.8.
 
-[Descargar instalador](https://github.com/benjaaal/Flow/releases/tag/v26.1.3).
+[Descargar instalador](https://github.com/benjaaal/Flow/releases/tag/v26.1.4).
 Actualizar conserva las preferencias y vuelve a abrir MacFlow. La instalación
 es por usuario y el inicio con Windows es opcional.
+
+## Revisión visual y de interacción 26.1.4
+
+- El Dock usa la posición física del cursor: un hover retenido ya no lo mantiene
+  encima de otra app. La espera al ocultarse es menor y el escritorio lo conserva.
+- Barras auxiliares, como la de grabación, conservan el contexto de escritorio
+  cuando no hay aplicaciones normales visibles; los widgets pueden permanecer.
+- Configuración muestra una sola página desde el primer cuadro de cada cambio.
+- El cristal combina blur recortado con una pequeña parte del fondo nítido;
+  conserva reflejos y texto fuera del efecto, sin afirmar refracción real.
+- El contraste reacciona a cambios de ventana y al cursor, con menos sondeo en reposo.
+- Botones, notas del centro de control y calendario usan texto más legible.
+  El calendario distingue el día actual con una selección roja.
+- El volumen agrupa movimientos rápidos y conserva el último valor seleccionado.
+- Buscador y Actualizaciones vuelven de minimizado sin crear otra ventana.
+- Las piezas individuales sólo crean su lente y caché si existe una textura
+  para usarlas; el compositor nativo no necesita esas capas de captura.
+
+El inicio automático sigue usando un acceso por usuario. Su funcionamiento
+tras un reinicio real queda pendiente de confirmación. El fallo AMD al terminar
+la prueba aislada del Dock no se presenta como resuelto en esta revisión.
 
 ## Movimiento y cristal 26.1.3
 

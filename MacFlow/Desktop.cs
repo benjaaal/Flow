@@ -481,13 +481,13 @@ namespace MacFlow
         public void OpenSearch()
         {
             if(PresentationActive)return;
-            if(suspended)ToggleSuspend();if(Search!=null){Search.Activate();return;}Search=new Spotlight(this);PrepareTestWindow(Search);var size=ScreenSize();Search.Width=Math.Min(Search.Width,size.Width-40);Search.Height=Math.Min(Search.Height,size.Height-65);PlaceCenter(Search,.23);Search.Closed+=delegate{Search=null;};Search.Show();Design.Reveal(Search);
+            if(suspended)ToggleSuspend();if(Search!=null){RestoreFeature(Search);return;}Search=new Spotlight(this);PrepareTestWindow(Search);var size=ScreenSize();Search.Width=Math.Min(Search.Width,size.Width-40);Search.Height=Math.Min(Search.Height,size.Height-65);PlaceCenter(Search,.23);Search.Closed+=delegate{Search=null;};Search.Show();Design.Reveal(Search);
         }
         public void RefreshSearch() { if(Search!=null)((Spotlight)Search).Refresh(); }
         public void OpenControl()
         {
             if(PresentationActive)return;
-            if(Control!=null){if(Control.WindowState==WindowState.Minimized)Control.WindowState=WindowState.Normal;if(!Control.IsVisible)Control.Show();Control.Activate();return;}
+            if(Control!=null){RestoreFeature(Control);return;}
             Control=new ControlCenter(this);PrepareTestWindow(Control);var size=ScreenSize();Control.Height=Math.Min(Control.Height,size.Height-65);Control.Left=size.Width-Control.Width-16;Control.Top=46;Control.Closed+=delegate {Control=null;};Control.Show();Design.Reveal(Control);
         }
         public void OpenWifi(){OpenConnections(true);}
@@ -524,13 +524,13 @@ namespace MacFlow
         public void OpenBluetooth(){OpenConnections(false);}
         private void OpenConnections(bool wifi)
         {
-            if(connections!=null){if(connections.WifiMode==wifi)connections.Refresh();else connections.SwitchMode(wifi);if(connections.WindowState==WindowState.Minimized)connections.WindowState=WindowState.Normal;connections.Activate();return;}
+            if(connections!=null){if(connections.WifiMode==wifi)connections.Refresh();else connections.SwitchMode(wifi);RestoreFeature(connections);return;}
             connections=new ConnectivityPanel(wifi);PrepareTestWindow(connections);var size=ScreenSize();connections.Height=Math.Min(connections.Height,size.Height-65);connections.Left=size.Width-connections.Width-16;connections.Top=46;connections.Closed+=delegate{connections=null;};connections.Show();Design.Reveal(connections);
         }
         public void OpenSettings()
         {
             if(PresentationActive)return;
-            if (Settings != null) { if(Settings.WindowState==WindowState.Minimized)Settings.WindowState=WindowState.Normal;if(!Settings.IsVisible)Settings.Show();Settings.Activate(); return; }
+            if (Settings != null) { RestoreFeature(Settings); return; }
             Settings = new SettingsWindow(this, smoke);
             PrepareTestWindow(Settings);
             var size = ScreenSize(); Settings.Width = Math.Min(Settings.Width, size.Width - 40); Settings.Height = Math.Min(Settings.Height, size.Height - 60);
@@ -634,7 +634,7 @@ namespace MacFlow
         }
         public void OpenUpdates(string repository,string feed=null)
         {
-            if(disposed||suspended)return;if(updates!=null){updates.Activate();return;}updates=new UpdateWindow(repository,Preferences.LocalUpdateFolder,feed??Preferences.UpdateFeedUrl);var window=updates;window.Closed+=delegate{if(updates==window)updates=null;};PlaceCenter(window,.18);PrepareTestWindow(window);window.Show();Design.Reveal(window);
+            if(disposed||suspended)return;if(updates!=null){RestoreFeature(updates);return;}updates=new UpdateWindow(repository,Preferences.LocalUpdateFolder,feed??Preferences.UpdateFeedUrl);var window=updates;window.Closed+=delegate{if(updates==window)updates=null;};PlaceCenter(window,.18);PrepareTestWindow(window);window.Show();Design.Reveal(window);
         }
         private void WatchLocalUpdates()
         {
@@ -696,9 +696,9 @@ namespace MacFlow
             var cursor=Forms.Cursor.Position;var bounds=Forms.Screen.PrimaryScreen.Bounds;
             bool withinX=cursor.X>=bounds.Left&&cursor.X<bounds.Right,withinY=cursor.Y>=bounds.Top&&cursor.Y<bounds.Bottom;
             bool edge=Preferences.DockPosition=="Left"?withinY&&cursor.X>=bounds.Left&&cursor.X<=bounds.Left+8:Preferences.DockPosition=="Right"?withinY&&cursor.X<bounds.Right&&cursor.X>=bounds.Right-8:withinX&&cursor.Y<bounds.Bottom&&cursor.Y>=bounds.Bottom-8;
-            bool inside=Dock.IsVisible&&Dock.IsMouseOver,menu=GlassMenu.Current!=null&&GlassMenu.Current.Anchor==Dock;
+            Native.RECT dockBounds;bool inside=Dock.IsVisible&&Native.GetWindowRect(new WindowInteropHelper(Dock).Handle,out dockBounds)&&CursorInside(dockBounds,cursor.X,cursor.Y),menu=GlassMenu.Current!=null&&GlassMenu.Current.Anchor==Dock;
             if(!ShouldAutoHide(desktopForeground,automatic,inside||edge,menu)){dockLeaveAt=DateTime.UtcNow;dockVisibility.Show();dockHidden=false;return;}
-            if(DateTime.UtcNow-dockLeaveAt>TimeSpan.FromMilliseconds(codexForeground?1200:650)){dockVisibility.Hide();dockHidden=true;}
+            if(DateTime.UtcNow-dockLeaveAt>TimeSpan.FromMilliseconds(codexForeground?420:300)){dockVisibility.Hide();dockHidden=true;}
         }
         public static bool IsCodex(string executable)
         {
@@ -706,13 +706,18 @@ namespace MacFlow
         }
         internal static bool ShouldAutoHide(bool desktop,bool automatic,bool interacting,bool dockMenu)
         {return automatic&&!desktop&&!interacting&&!dockMenu;}
+        internal static bool CursorInside(Native.RECT bounds,int x,int y)
+        {return x>=bounds.Left&&x<bounds.Right&&y>=bounds.Top&&y<bounds.Bottom;}
         internal static bool AutomaticDockPolicy(bool explicitAutoHide,bool allApps,bool codexOnly,bool codex,bool testing)
         { return explicitAutoHide || (!testing && (allApps || codexOnly && codex)); }
-        private bool DesktopContextForForeground(IntPtr foreground)
+        internal bool DesktopContextForForeground(IntPtr foreground)
         {
             if (foreground == IntPtr.Zero || !Native.IsWindow(foreground) || Native.IsIconic(foreground) || !Native.IsWindowVisible(foreground))
                 return !Windows.Any(w => Native.IsWindow(w.Handle) && Native.IsWindowVisible(w.Handle) && !Native.IsIconic(w.Handle));
             var source=HwndSource.FromHwnd(foreground);if(source!=null&&source.RootVisual is DesktopWidget)return true;
+            uint pid;Native.GetWindowThreadProcessId(foreground,out pid);int flags=Native.GetWindowLong(foreground,-20);
+            if(pid==(uint)Process.GetCurrentProcess().Id||(flags&0x80)!=0||Native.GetWindow(foreground,4)!=IntPtr.Zero)
+                if(!Windows.Any(w=>Native.IsWindow(w.Handle)&&Native.IsWindowVisible(w.Handle)&&!Native.IsIconic(w.Handle)))return true;
             return Native.IsDesktopContext(foreground);
         }
         private void RegisterHotkey()
