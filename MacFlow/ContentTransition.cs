@@ -12,8 +12,8 @@ namespace MacFlow
         internal static void Show(Grid host,FrameworkElement previous,FrameworkElement incoming,int direction)
         {
             host.Children.Clear();host.ClipToBounds=true;incoming.IsHitTestVisible=true;
+            if(previous!=null)previous.IsHitTestVisible=false;
             if(previous==null||!Motion.Enabled){host.Children.Add(incoming);return;}
-            previous.IsHitTestVisible=false;
             host.Children.Add(incoming);
             var shift=new TranslateTransform(direction*10,0);var scale=new ScaleTransform(.985,.985);var transforms=new TransformGroup();transforms.Children.Add(scale);transforms.Children.Add(shift);incoming.RenderTransform=transforms;incoming.RenderTransformOrigin=new Point(.5,.35);
             Motion.To(scale,ScaleTransform.ScaleXProperty,1,Motion.Content);Motion.To(scale,ScaleTransform.ScaleYProperty,1,Motion.Content);
