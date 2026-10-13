@@ -17,7 +17,8 @@ namespace MacFlow
             incoming.Measure(new Size(Math.Max(1,host.ActualWidth),Double.PositiveInfinity));
             previous.MaxHeight=Math.Max(1,incoming.DesiredSize.Height);previous.ClipToBounds=true;
             host.Children.Add(previous);host.Children.Add(incoming);
-            var shift=new TranslateTransform(direction*10,0);incoming.RenderTransform=shift;
+            var shift=new TranslateTransform(direction*10,0);var scale=new ScaleTransform(.985,.985);var transforms=new TransformGroup();transforms.Children.Add(scale);transforms.Children.Add(shift);incoming.RenderTransform=transforms;incoming.RenderTransformOrigin=new Point(.5,.35);
+            Motion.To(scale,ScaleTransform.ScaleXProperty,1,Motion.Content);Motion.To(scale,ScaleTransform.ScaleYProperty,1,Motion.Content);
             var movement=new DoubleAnimation(direction*10,0,TimeSpan.FromMilliseconds(Motion.Content)){EasingFunction=Motion.Ease(),FillBehavior=FillBehavior.Stop};Timeline.SetDesiredFrameRate(movement,60);shift.BeginAnimation(TranslateTransform.XProperty,movement);
             Motion.Fade(incoming,.65,1,Motion.Content);
             var fade=new DoubleAnimation(previous.Opacity,0,TimeSpan.FromMilliseconds(Motion.Content*.65)){EasingFunction=Motion.Ease(true)};Timeline.SetDesiredFrameRate(fade,60);fade.Completed+=delegate{host.Children.Remove(previous);};previous.BeginAnimation(UIElement.OpacityProperty,fade);

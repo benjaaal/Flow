@@ -1,10 +1,27 @@
-# MacFlow 26.1.2
+# MacFlow 26.1.3
 
 Aplicación nativa para Windows 11 x64, con C# y WPF sobre .NET Framework 4.8.
 
-[Descargar instalador](https://github.com/benjaaal/Flow/releases/tag/v26.1.2).
+[Descargar instalador](https://github.com/benjaaal/Flow/releases/tag/v26.1.3).
 Actualizar conserva las preferencias y vuelve a abrir MacFlow. La instalación
 es por usuario y el inicio con Windows es opcional.
+
+## Movimiento y cristal 26.1.3
+
+- El Dock aparece con un único resorte continuo de rebote delicado. Se oculta sin
+  una sacudida previa, y conserva su destino al cambiar de dirección.
+- El resorte usa el tiempo real transcurrido: un cuadro tardío ya no ralentiza
+  artificialmente el movimiento. Se eliminaron consultas LINQ en cada cuadro.
+- Navegación con acercamiento del 1,5% y fundido suave sin recalcular el tamaño.
+- Dock, paneles, botones y tarjetas tienen menos tinte opaco; conservan el blur
+  recortado y los textos nítidos. No se agregan bordes ni se agrandan las ventanas.
+- La composición sólo vuelve a enviar tamaño, clip y posición si cambian.
+- Movimiento reducido de Windows también se respeta al pasar por los iconos.
+
+Referencias consultadas: [Motion para iOS/macOS](https://github.com/b3ll/Motion),
+[Sprung](https://github.com/heyadam/sprung) y
+[Composition para WPF/Win32](https://github.com/microsoft/Windows.UI.Composition-Win32-Samples).
+Implementación propia en C#/WPF, sin incorporar dependencias Swift o JavaScript.
 
 ## Correcciones 26.1.2
 

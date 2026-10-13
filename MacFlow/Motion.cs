@@ -28,7 +28,7 @@ namespace MacFlow
         internal static void Spring(ref double value,ref double velocity,double target,double seconds,double omega=25,double damping=.94)
         {
             if(seconds<=0){value=target;velocity=0;return;}
-            double rate=omega*damping,frequency=omega*Math.Sqrt(1-damping*damping),offset=value-target,b=(velocity+rate*offset)/frequency,t=Math.Min(.05,seconds);
+            double rate=omega*damping,frequency=omega*Math.Sqrt(1-damping*damping),offset=value-target,b=(velocity+rate*offset)/frequency,t=seconds;
             double decay=Math.Exp(-rate*t),cos=Math.Cos(frequency*t),sin=Math.Sin(frequency*t),wave=offset*cos+b*sin;
             value=target+decay*wave;velocity=decay*(-rate*wave-offset*frequency*sin+b*frequency*cos);
         }

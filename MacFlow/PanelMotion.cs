@@ -12,10 +12,12 @@ namespace MacFlow
         internal static double Progress(double time)
         {
             if(time<=0)return 0;if(time>=1)return 1;
-            const double damping=.86,frequency=11;
+            const double damping=.82,frequency=10;
             double damped=frequency*Math.Sqrt(1-damping*damping);
-            Func<double,double> response=t=>1-Math.Exp(-damping*frequency*t)*(Math.Cos(damped*t)+damping/Math.Sqrt(1-damping*damping)*Math.Sin(damped*t));
-            return response(time)/response(1);
+            double ratio=damping/Math.Sqrt(1-damping*damping);
+            double current=1-Math.Exp(-damping*frequency*time)*(Math.Cos(damped*time)+ratio*Math.Sin(damped*time));
+            double end=1-Math.Exp(-damping*frequency)*(Math.Cos(damped)+ratio*Math.Sin(damped));
+            return current/end;
         }
         protected override double EaseInCore(double time){return Progress(time);}
         protected override Freezable CreateInstanceCore(){return new SpringEase();}

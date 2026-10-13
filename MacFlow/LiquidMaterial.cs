@@ -172,7 +172,7 @@ namespace MacFlow
             if(materialFace!=null&&!SystemParameters.HighContrast)materialFace.Background=Design.MaterialTint(window.Title.Contains("Dock")||window.Title.Contains("barra superior"),whiteText);
             window.Resources["GlassInk"]=SystemParameters.HighContrast?SystemColors.WindowTextBrush:Design.Brush(whiteText?"#F8FAFF":"#19212D");
             window.Resources["GlassMuted"]=SystemParameters.HighContrast?SystemColors.WindowTextBrush:Design.Brush(whiteText?"#DCE4EF":"#303B4B");
-            window.Resources["GlassCardSurface"]=Design.Brush(whiteText?"#201C222B":"#30FFFFFF");window.Resources["GlassTileSurface"]=Design.Brush(whiteText?"#22141A23":"#32FFFFFF");
+            window.Resources["GlassCardSurface"]=Design.Brush(whiteText?"#161C222B":"#22FFFFFF");window.Resources["GlassTileSurface"]=Design.Brush(whiteText?"#16141A23":"#22FFFFFF");
             UpdateReadabilityLayer();if(BackdropChanged!=null)BackdropChanged();
         }
         internal static bool LightInkForLuminance(double average,bool known,bool wasLight)

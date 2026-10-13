@@ -63,15 +63,15 @@ namespace MacFlow
         public void Leave(){if(disposed||probing)return;hovering=false;Start();}
         private void Start()
         {
-            if(!Design.Animations){Step(0);Stop();return;}
+            if(!Motion.Enabled){Step(0);Stop();return;}
             if(listening)return;previous=-1;listening=true;CompositionTarget.Rendering+=Render;
         }
         private void Render(object sender,EventArgs args)
         {
             double now=((RenderingEventArgs)args).RenderingTime.TotalSeconds;
             if(previous>=0&&now<=previous)return;
-            double dt=previous<0?1.0/60:Math.Min(.05,now-previous);previous=now;
-            if(!Step(Design.Animations?dt:0))Stop();
+            double dt=previous<0?1.0/60:now-previous;previous=now;
+            if(!Step(Motion.Enabled?dt:0))Stop();
         }
         private bool Step(double seconds)
         {
@@ -92,7 +92,7 @@ namespace MacFlow
                 // Expand visual spacing without measuring or reflowing the row.
                 item.Extra=(next-1)*(item.Cell.Width-12);
             }
-            double total=items.Sum(item=>item.Extra),prefix=0;
+            double total=0,prefix=0,separatorExtra=0;foreach(var item in items){total+=item.Extra;if(item.Center<separatorCenter)separatorExtra+=item.Extra;}
             foreach(var item in items)
             {
                 double destination=prefix+item.Extra*.5-total*.5;prefix+=item.Extra;double position=vertical?item.Shift.Y:item.Shift.X,velocity=item.ShiftVelocity;
@@ -100,7 +100,7 @@ namespace MacFlow
                 if(Math.Abs(destination-position)<.015&&Math.Abs(velocity)<.05){position=destination;velocity=0;}else changing=true;
                 item.ShiftVelocity=velocity;if(vertical)item.Shift.Y=position;else item.Shift.X=position;
             }
-            if(separator!=null){double target=items.Where(item=>item.Center<separatorCenter).Sum(item=>item.Extra)-total*.5,position=vertical?separatorShift.Y:separatorShift.X;Motion.Spring(ref position,ref separatorVelocity,target,seconds,28,.97);if(Math.Abs(target-position)<.015&&Math.Abs(separatorVelocity)<.05){position=target;separatorVelocity=0;}else changing=true;if(vertical)separatorShift.Y=position;else separatorShift.X=position;}
+            if(separator!=null){double target=separatorExtra-total*.5,position=vertical?separatorShift.Y:separatorShift.X;Motion.Spring(ref position,ref separatorVelocity,target,seconds,28,.97);if(Math.Abs(target-position)<.015&&Math.Abs(separatorVelocity)<.05){position=target;separatorVelocity=0;}else changing=true;if(vertical)separatorShift.Y=position;else separatorShift.X=position;}
             return changing;
         }
         // Exact solution of a damped spring, retaining velocity across retargets.

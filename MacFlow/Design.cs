@@ -26,11 +26,11 @@ namespace MacFlow
             var resources = Application.Current.Resources;
             resources["GlassInk"]=Ink;resources["GlassMuted"]=Muted;
             resources["TextBrush"] = Ink; resources["AccentBrush"] = Brush(Accent);
-            resources["FieldBrush"] = Brush(Dark?"#553D3D40":"#14000000");
+            resources["FieldBrush"] = Brush(Dark?"#283D3D40":"#10000000");
             resources["EdgeBrush"] = Brush(Dark?"#28FFFFFF":"#20000000");
             resources["PanelBrush"] = Brush(Dark ? "#F028282A" : "#FAF7F7F8");
             resources["SelectionBrush"] = Brush(Dark ? "#556D9DEF" : "#306D9DEF");
-            resources["GlassCardSurface"]=CardSurface;resources["GlassTileSurface"]=Brush(Dark?"#22313942":"#40FFFFFF");
+            resources["GlassCardSurface"]=CardSurface;resources["GlassTileSurface"]=Brush(Dark?"#16313942":"#24FFFFFF");
             if (!loaded)
             {
                 using (var stream = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream("MacFlow.Theme.xaml"))
@@ -57,10 +57,10 @@ namespace MacFlow
         }
         internal static LinearGradientBrush MaterialTint(bool dock,bool dark)
         {
-            var colors=dock?dark?new[]{"#24151A22","#10151A22","#28121720"}:new[]{"#30FFFFFF","#18FFFFFF","#28F4F7FC"}
-                :dark?new[]{"#60131921","#54131921","#60131921"}:new[]{"#68FFFFFF","#58FFFFFF","#60F4F7FC"};
+            var colors=dock?dark?new[]{"#1E151A22","#0C151A22","#24121720"}:new[]{"#24FFFFFF","#12FFFFFF","#20F4F7FC"}
+                :dark?new[]{"#40131921","#30131921","#38131921"}:new[]{"#40FFFFFF","#30FFFFFF","#38F4F7FC"};
             var brush=new LinearGradientBrush{StartPoint=new Point(0,0),EndPoint=new Point(.8,1)};
-            for(int i=0;i<3;i++){var color=(Color)ColorConverter.ConvertFromString(colors[i]);color.A=(byte)Math.Min(220,color.A*Math.Max(.75,GlassOpacity/.18));brush.GradientStops.Add(new GradientStop(color,i==0?0:i==1?.48:1));}brush.Freeze();return brush;
+            for(int i=0;i<3;i++){var color=(Color)ColorConverter.ConvertFromString(colors[i]);color.A=(byte)Math.Min(220,color.A*Math.Max(.5,GlassOpacity/.18));brush.GradientStops.Add(new GradientStop(color,i==0?0:i==1?.48:1));}brush.Freeze();return brush;
         }
         public static TextBlock Text(string text, double size, bool bold)
         {
@@ -68,7 +68,7 @@ namespace MacFlow
         }
         public static Button Button(string text, Action action, bool prominent)
         {
-            var b = new Button { Content = text, HorizontalContentAlignment=HorizontalAlignment.Center,VerticalContentAlignment=VerticalAlignment.Center, Foreground = prominent ? Brushes.White : Ink, Background = prominent ? Brush("#007AFF") : Brush(Dark ? "#403D4655" : "#60FFFFFF"), BorderBrush = Brushes.Transparent, BorderThickness = new Thickness(0), Padding = new Thickness(12, 6, 12, 6), Margin = new Thickness(0, 3, 6, 3), Cursor = Cursors.Hand, FontSize = 12 };
+            var b = new Button { Content = text, HorizontalContentAlignment=HorizontalAlignment.Center,VerticalContentAlignment=VerticalAlignment.Center, Foreground = prominent ? Brushes.White : Ink, Background = prominent ? Brush("#007AFF") : Brush(Dark ? "#223D4655" : "#32FFFFFF"), BorderBrush = Brushes.Transparent, BorderThickness = new Thickness(0), Padding = new Thickness(12, 6, 12, 6), Margin = new Thickness(0, 3, 6, 3), Cursor = Cursors.Hand, FontSize = 12 };
             var template = new ControlTemplate(typeof(Button));
             var disabled=new Trigger{Property=UIElement.IsEnabledProperty,Value=false};disabled.Setters.Add(new Setter(UIElement.OpacityProperty,.42));template.Triggers.Add(disabled);
             var border = new FrameworkElementFactory(typeof(Border));border.Name="AnimatedFace";border.SetValue(UIElement.RenderTransformProperty,new ScaleTransform(1,1));border.SetValue(UIElement.RenderTransformOriginProperty,new Point(.5,.5));border.SetValue(Border.CornerRadiusProperty, new CornerRadius(8)); border.SetValue(Border.BackgroundProperty, new TemplateBindingExtension(Control.BackgroundProperty)); border.SetValue(Border.BorderBrushProperty,new TemplateBindingExtension(Control.BorderBrushProperty)); border.SetValue(Border.BorderThicknessProperty,new TemplateBindingExtension(Control.BorderThicknessProperty));

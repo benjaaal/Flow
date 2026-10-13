@@ -65,6 +65,9 @@ namespace MacFlow
         private IntPtr backgroundWindow;
         private HwndSource source;
         private bool disposed;
+        private float cachedWidth=-1,cachedHeight=-1,cachedRemaining=-1,cachedRadius=-1,cachedOpacity=-1;
+        private bool cachedVisible,cachedBackdrop,positionKnown;
+        private Native.RECT cachedBounds;
         private CompositorGlass(Window window)
         {
             this.window=window;
@@ -112,10 +115,15 @@ namespace MacFlow
         {
             if(disposed)return;lastFraction=fraction;var source=PresentationSource.FromVisual(window);if(source==null)return;
             double scale=source.CompositionTarget.TransformToDevice.M11;float width=(float)Math.Max(1,window.ActualWidth*scale),height=(float)Math.Max(1,window.ActualHeight*scale),remaining=(float)Math.Max(.001,Math.Min(1,fraction));
-            visual.Size=new Vector2(width,height);visual.IsVisible=LiquidMaterial.LiveBackdrop;visual.Opacity=(float)window.Opacity;
-            geometry.Offset=new Vector2(width*(1-remaining)/2,height*(1-remaining)/2);geometry.Size=new Vector2(width*remaining,height*remaining);
-            float radius=(float)Math.Min(Native.GlassRadius(window)*scale,Math.Min(width,height)*remaining/2);geometry.CornerRadius=new Vector2(radius,radius);
-            Native.RECT bounds;var h=new WindowInteropHelper(window).Handle;if(Native.GetWindowRect(h,out bounds))Native.SetWindowPos(backgroundWindow,h,bounds.Left,bounds.Top,bounds.Right-bounds.Left,bounds.Bottom-bounds.Top,window.IsVisible&&window.WindowState!=WindowState.Minimized?0x50u:0x90u);
+            float radius=(float)Math.Min(Native.GlassRadius(window)*scale,Math.Min(width,height)*remaining/2);
+            if(width!=cachedWidth||height!=cachedHeight||remaining!=cachedRemaining)
+            {visual.Size=new Vector2(width,height);geometry.Offset=new Vector2(width*(1-remaining)/2,height*(1-remaining)/2);geometry.Size=new Vector2(width*remaining,height*remaining);cachedWidth=width;cachedHeight=height;cachedRemaining=remaining;}
+            if(radius!=cachedRadius){geometry.CornerRadius=new Vector2(radius,radius);cachedRadius=radius;}
+            if(cachedOpacity!=(float)window.Opacity){cachedOpacity=(float)window.Opacity;visual.Opacity=cachedOpacity;}
+            if(cachedBackdrop!=LiquidMaterial.LiveBackdrop||!positionKnown){cachedBackdrop=LiquidMaterial.LiveBackdrop;visual.IsVisible=cachedBackdrop;}
+            Native.RECT bounds;var h=new WindowInteropHelper(window).Handle;bool visible=window.IsVisible&&window.WindowState!=WindowState.Minimized;
+            if(Native.GetWindowRect(h,out bounds)&&(!positionKnown||cachedVisible!=visible||bounds.Left!=cachedBounds.Left||bounds.Top!=cachedBounds.Top||bounds.Right!=cachedBounds.Right||bounds.Bottom!=cachedBounds.Bottom))
+            {Native.SetWindowPos(backgroundWindow,h,bounds.Left,bounds.Top,bounds.Right-bounds.Left,bounds.Bottom-bounds.Top,visible?0x50u:0x90u);cachedBounds=bounds;cachedVisible=visible;positionKnown=true;}
         }
         private IntPtr Hook(IntPtr h,int message,IntPtr w,IntPtr l,ref bool handled){if(message==0x47&&visual!=null&&!disposed)try{Update(PanelMotion.IsClosing(window)?lastFraction:1);QueueReorder();}catch(Exception ex){Log.Write("Cristal suspendido: "+ex.Message);}return IntPtr.Zero;}
         private double lastFraction=1;
