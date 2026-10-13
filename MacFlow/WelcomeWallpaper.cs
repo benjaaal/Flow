@@ -27,7 +27,11 @@ namespace MacFlow
                         var image=new BitmapImage();image.BeginInit();image.CacheOption=BitmapCacheOption.OnLoad;if((double)w/h>=1.6)image.DecodePixelWidth=Math.Min(w,1920);else image.DecodePixelHeight=Math.Min(h,1200);image.StreamSource=stream;image.EndInit();image.Freeze();return image;
                     }
                 }
-                catch(Exception ex){Log.Write("Imagen de bienvenida: "+ex.Message);}return null;
+                catch(Exception ex){Log.Write("Imagen de bienvenida: "+ex.Message);}
+                // A missing/solid system wallpaper or unavailable COM service
+                // must not leave a feature presentation on an empty black scene.
+                using(var stream=typeof(WelcomeWallpaper).Assembly.GetManifestResourceStream("MacFlow.Wallpaper.Sierra.png"))
+                {if(stream==null)return null;var fallback=new BitmapImage();fallback.BeginInit();fallback.CacheOption=BitmapCacheOption.OnLoad;fallback.DecodePixelWidth=1920;fallback.StreamSource=stream;fallback.EndInit();fallback.Freeze();return fallback;}
             });
         }
     }

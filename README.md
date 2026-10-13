@@ -1,19 +1,32 @@
-# MacFlow 26.1.1
+# MacFlow 26.1.2
 
 Aplicación nativa para Windows 11 x64, con C# y WPF sobre .NET Framework 4.8.
 
-[Descargar instalador](https://github.com/benjaaal/Flow/releases/tag/v26.1.1).
+[Descargar instalador](https://github.com/benjaaal/Flow/releases/tag/v26.1.2).
 Actualizar conserva las preferencias y vuelve a abrir MacFlow. La instalación
 es por usuario y el inicio con Windows es opcional.
 
-## Correcciones 26.1.1
+## Correcciones 26.1.2
 
-- El instalador cierra antes de iniciar MacFlow; elimina la pantalla final bloqueada.
-- Hola espera Continuar. La demostración espera Siguiente y añade Atrás y Ver de nuevo.
-- Configuración permite repetir Hola y la demostración. Una versión nueva los vuelve a mostrar.
-- Se eliminan el marco nativo y la sombra exterior adicional de las ventanas propias.
-  El desenfoque del compositor todavía puede extenderse a las esquinas del rectángulo;
-  no se afirma un recorte óptico completo. Se conserva el radio y tamaño del cristal.
+- Presentación completa: oculta barras, widgets y aplicaciones, con fondo continuo
+  entre Hola, los cuatro pasos manuales y Bienvenido. Avanza sólo con tus botones.
+- Letras de cristal con alfa real y reflejos neutros; sin relleno celeste.
+- Material recortado con Windows.UI.Composition: sin placa rectangular ni borde extra,
+  conserva tamaños y radios, desenfoca detrás y aparece en capturas de pantalla.
+- Wi-Fi redibujado con proporciones compactas, arcos redondeados y corte transparente.
+- Paneles propios, incluidos los del sistema y menús, cierran hacia el Dock.
+- Cerrar desde los controles de MacFlow pide el cierre normal de una aplicación y,
+  cuando se puede obtener una vista, anima una representación propia hacia el Dock.
+  Si la app pide guardar o cancela, permanece visible y no se muestra una despedida falsa.
+- El instalador cierra correctamente; no muestra una página final bloqueada.
+- Inicio automático: espera a Explorer y su primer cuadro antes de crear la interfaz,
+  con un límite de espera y registro de diagnóstico. La validación real de inicio
+  con Windows requiere reiniciar después de actualizar.
+
+Referencias visuales: [bienvenida de macOS Tahoe](https://support.apple.com/es-es/guide/mac-help/apd07d671600/mac)
+y [sistema de símbolos de Apple](https://developer.apple.com/sf-symbols/).
+Los controles y vectores de MacFlow son reales; no se distribuyen imágenes de interfaz
+ni una fuente SF Symbols.
 
 ## Novedades
 
@@ -38,8 +51,10 @@ El material reutiliza el sistema Liquid Glass existente, sin agregar una imagen 
 
 MacFlow no inyecta código en Explorer ni modifica archivos críticos o barras de título
 externas. Abrir, activar, minimizar y cerrar aplicaciones utiliza las API de Windows.
-Las ventanas externas mantienen su animación nativa; los paneles propios de sistema
-se desplazan desde arriba. Las demás ventanas propias conservan su recorrido hacia el Dock.
+Los paneles propios de sistema aparecen desde arriba y todos los paneles propios
+cierran hacia el Dock. Desde los controles de MacFlow, una vista temporal de la
+ventana externa puede acompañar el cierre exitoso hacia el Dock; cerrar con su X
+nativa conserva la animación de Windows. Apps protegidas usan el cierre normal.
 
 El brillo directo requiere WMI compatible. Los reproductores deben ofrecer sesiones
 multimedia de Windows. Algunas aplicaciones protegidas no permiten miniaturas DWM.

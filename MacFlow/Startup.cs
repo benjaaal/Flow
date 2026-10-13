@@ -14,6 +14,12 @@ namespace MacFlow
     // write StartupApproved flags, schedules, services or machine-wide keys.
     public static class Startup
     {
+        internal static async System.Threading.Tasks.Task WaitForDesktop(Func<bool> ready,Func<int,System.Threading.Tasks.Task> delay)
+        {
+            int checks=0;while(!ready()&&checks++<60)await delay(250);
+            // Explorer's HWND can precede its first composed frame at logon.
+            await delay(750);
+        }
         private const string RunKey="Software\\Microsoft\\Windows\\CurrentVersion\\Run";
         private static string LinkPath {get{return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Startup),"MacFlow.lnk");}}
         public static bool Enabled {get{bool enabled;TryRead(out enabled);return enabled;}set{Configure(value,ResolveExecutable());}}

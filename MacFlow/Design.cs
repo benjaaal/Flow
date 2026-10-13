@@ -108,7 +108,7 @@ namespace MacFlow
         {
             if((bool)window.GetValue(DismissingProperty))return;window.SetValue(DismissingProperty,true);window.IsHitTestVisible=false;
             if(!Motion.Enabled){window.Close();if(after!=null)after();return;}
-            int duration=window.Title=="MacFlow · Menú"?Motion.Menu:Motion.WindowClose+10;bool finished=false;var fallback=new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Background){Interval=TimeSpan.FromMilliseconds(duration+80)};
+            int duration=Motion.WindowClose+10;bool finished=false;var fallback=new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Background){Interval=TimeSpan.FromMilliseconds(duration+80)};
             Action finish=delegate{if(finished)return;finished=true;fallback.Stop();window.Close();if(after!=null)after();};
             fallback.Tick+=delegate{finish();};window.Closed+=delegate{finished=true;fallback.Stop();};fallback.Start();
             PanelMotion.Close(window);

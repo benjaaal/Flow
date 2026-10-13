@@ -42,6 +42,7 @@ namespace MacFlow
             if (args.Length == 2 && args[0] == "--features-smoke") return NewFeaturesVisual.Run(args[1]);
             if (args.Length == 2 && args[0] == "--modules-smoke") return ModulesVisual.Run(args[1]);
             if (args.Length == 2 && args[0] == "--edges-smoke") return GlassEdgesVisual.Run(args[1]);
+            if (args.Length == 2 && args[0] == "--close-transition-smoke") return CloseTransitionVisual.Run(args[1]);
             if (args.Length == 2 && args[0] == "--weather-test") return WeatherProbe.Run(args[1]);
             if (args.Length == 2 && args[0] == "--panel-dock-smoke") return PanelDockVisual.Run(args[1]);
             if (args.Length == 2 && args[0] == "--glass-smoke") return GlassVisual.Run(args[1]);
@@ -73,8 +74,14 @@ namespace MacFlow
                     var wait = ThreadPool.RegisterWaitForSingleObject(stop, delegate(object state, bool timeout) { app.Dispatcher.BeginInvoke(new Action(delegate { app.Shutdown(); })); }, null, Timeout.Infinite, true);
                     var settingsWait=ThreadPool.RegisterWaitForSingleObject(settings,delegate(object state,bool timeout){if(!app.Dispatcher.HasShutdownStarted)app.Dispatcher.BeginInvoke(new Action(delegate{if(desktop!=null)desktop.OpenSettings();}));},null,Timeout.Infinite,false);
                     var greetingWait=ThreadPool.RegisterWaitForSingleObject(greeting,delegate(object state,bool timeout){if(!app.Dispatcher.HasShutdownStarted)app.Dispatcher.BeginInvoke(new Action(delegate{if(desktop!=null)desktop.OpenWelcome();}));},null,Timeout.Infinite,false);
-                    app.Startup += delegate
+                    app.Startup += async delegate
                     {
+                        if(!smoke&&args.Length>0&&args[0]=="--background")
+                        {
+                            Log.Write("Inicio automático recibido: "+Product.VersionText);
+                            await Startup.WaitForDesktop(delegate{return Native.GetShellWindow()!=IntPtr.Zero&&Native.FindWindow("Shell_TrayWnd",null)!=IntPtr.Zero;},delegate(int delay){return Task.Delay(delay);});
+                            if(app.Dispatcher.HasShutdownStarted)return;
+                        }
                         if(smoke&&!preview){var fixture=new VisualTestBackground {WindowState=WindowState.Normal,Width=SystemParameters.PrimaryScreenWidth,Height=SystemParameters.PrimaryScreenHeight,Left=0,Top=0,ShowActivated=false,IsHitTestVisible=false};fixture.SourceInitialized+=delegate {Native.NoActivate(fixture);};fixture.Show();}
                         if(!smoke)Log.Write((args.Length>0&&args[0]=="--background"?"Inicio automático solicitado: ":"Inicio manual solicitado: ")+Product.VersionText);
                         desktop = new Desktop(smoke ? Path.Combine(Path.GetFullPath(args[1]), "profile") : data, smoke,smoke&&!preview,args.Length>0&&args[0]=="--background");
@@ -274,7 +281,7 @@ namespace MacFlow
                 var closePanel=Design.Panel("MacFlow · Prueba de cierre",100,80);closePanel.Left=closePanel.Top=-2000;closePanel.ShowActivated=false;closePanel.Content=Design.Glass(new System.Windows.Controls.Border(),22,false);closePanel.Show();int nativeClosed=0;closePanel.Closed+=delegate{nativeClosed++;};Design.Reveal(closePanel);Pump(60);Design.Dismiss(closePanel);
                 // Assert at the action boundary. A background timer can run
                 // late on offscreen windows, past the entire close duration.
-                Assert(closePanel.IsVisible&&!closePanel.IsHitTestVisible&&DependencyPropertyHelper.GetValueSource(closePanel,UIElement.OpacityProperty).IsAnimated,"Paneles: cerrar durante apertura conserva la transición y bloquea acciones duplicadas",results);Pump(430);Assert(!closePanel.IsVisible&&nativeClosed==1,"Paneles: cierre de cristal nativo finaliza una vez",results);
+                Assert(closePanel.IsVisible&&!closePanel.IsHitTestVisible&&PanelMotion.IsClosing(closePanel),"Paneles: cerrar durante apertura conserva la transición y bloquea acciones duplicadas [visible="+closePanel.IsVisible+", entrada="+closePanel.IsHitTestVisible+", animado="+DependencyPropertyHelper.GetValueSource(closePanel,UIElement.OpacityProperty).IsAnimated+"]",results);Pump(430);Assert(!closePanel.IsVisible&&nativeClosed==1,"Paneles: cierre de cristal nativo finaliza una vez",results);
                 var actionHost=DockAppMotion.Host(new System.Windows.Controls.Border());var hoverScale=new ScaleTransform(1.27,1.27);
                 var appIcon=new System.Windows.Controls.Border{Child=actionHost,RenderTransform=hoverScale};var appFixture=TestWindow();appFixture.Content=appIcon;appFixture.Show();
                 var actionTransforms=(TransformGroup)actionHost.RenderTransform;var actionScale=(ScaleTransform)actionTransforms.Children[0];var actionShift=(TranslateTransform)actionTransforms.Children[1];

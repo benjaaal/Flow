@@ -1,17 +1,19 @@
-MacFlow 26.1.1 — Windows 11 x64
+MacFlow 26.1.2 — Windows 11 x64
 
-Descarga oficial: https://github.com/benjaaal/Flow/releases/tag/v26.1.1
-Ejecutá MacFlow-Setup-26.1.1.exe. Si MacFlow ya está instalado, elegí Actualizar.
+Descarga oficial: https://github.com/benjaaal/Flow/releases/tag/v26.1.2
+Ejecutá MacFlow-Setup-26.1.2.exe. Si MacFlow ya está instalado, elegí Actualizar.
 Conserva tus preferencias y vuelve a abrir la aplicación automáticamente.
 También podés buscarla en Configuración → Sistema → Actualizaciones.
 
 BIENVENIDA DESPUÉS DE ACTUALIZAR
 Manzanita y Hola de cristal → demostración guiada → Bienvenido → Iniciar.
 Hola espera Continuar. Cada paso espera Siguiente; Atrás y Ver de nuevo permiten revisarlo.
-La demostración usa el Dock real y un cursor ilustrado: no mueve tu mouse.
+La demostración usa controles reales en su propio Dock y un cursor ilustrado: no mueve tu mouse.
 Muestra Widgets, Centro de control y Stage Manager sin cambiar preferencias.
 Podés avanzar u omitirla. Iniciar en Bienvenido deja el escritorio listo.
 Se muestra una vez por versión nueva y respeta desactivar la bienvenida.
+Toda la presentación cubre la pantalla con el fondo y oculta las barras y widgets.
+Hola usa transparencia real y reflejos neutros, sin teñirlo de celeste.
 El saludo manual conserva 30 idiomas. Escape permite salir.
 Usa el fondo de Windows; si no puede leerlo, intenta tu fondo de MacFlow.
 
@@ -59,9 +61,9 @@ Los controles de MacFlow adaptan su contraste para seguir siendo legibles.
 
 INTEGRACIÓN Y ANIMACIONES
 Dock: fijar, abrir, activar, minimizar y cerrar ventanas mediante Windows.
-Los paneles de sistema propios entran y salen hacia arriba con movimiento suave.
+Los paneles de sistema propios aparecen desde arriba y cierran hacia el Dock.
 Las demás ventanas propias conservan el cierre y minimización hacia el Dock.
-Las aplicaciones externas usan su transición de Windows y respuesta del Dock.
+Cerrar una app desde MacFlow puede animar una vista temporal hacia el Dock; su X nativa conserva la transición de Windows.
 MacFlow no sustituye las barras de título externas ni inyecta código en Explorer.
 El cristal reutiliza el compositor y shaders: no refracción óptica real del escritorio.
 Reducir movimiento respeta Windows y la configuración de MacFlow.

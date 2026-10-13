@@ -35,7 +35,7 @@ namespace MacFlow
         internal void Sync()
         {
             if(disposed)return;
-            foreach(var id in windows.Keys.Where(id=>!State.Items.Any(x=>x.Id==id)).ToList()){windows[id].Close();windows.Remove(id);}
+            foreach(var id in windows.Keys.Where(id=>!State.Items.Any(x=>x.Id==id)).ToList()){Design.Dismiss(windows[id]);windows.Remove(id);}
             foreach(var x in State.Items){DesktopWidget window;if(!windows.TryGetValue(x.Id,out window)){window=new DesktopWidget(this,x);windows.Add(x.Id,window);}window.Place();window.RefreshAppearance();}
             SetVisible(visible);
         }

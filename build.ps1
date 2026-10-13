@@ -25,12 +25,13 @@ $icon = [System.Drawing.Icon]::FromHandle($bitmap.GetHicon())
 $iconPath = Join-Path $bin 'MacFlow.ico'
 $stream = [System.IO.File]::Create($iconPath)
 $icon.Save($stream); $stream.Dispose(); $icon.Dispose(); $pen.Dispose(); $graphics.Dispose(); $bitmap.Dispose()
-$references = @('System.dll','System.Core.dll','System.Management.dll','System.Drawing.dll','System.Windows.Forms.dll','System.Runtime.Serialization.dll','System.IO.Compression.dll','System.IO.Compression.FileSystem.dll','Microsoft.CSharp.dll','WPF\WindowsBase.dll','WPF\PresentationCore.dll','WPF\PresentationFramework.dll','System.Xaml.dll') | ForEach-Object { '/reference:' + (Join-Path $framework $_) }
+$references = @('System.dll','System.Core.dll','System.Numerics.dll','System.Management.dll','System.Drawing.dll','System.Windows.Forms.dll','System.Runtime.Serialization.dll','System.IO.Compression.dll','System.IO.Compression.FileSystem.dll','Microsoft.CSharp.dll','WPF\WindowsBase.dll','WPF\PresentationCore.dll','WPF\PresentationFramework.dll','System.Xaml.dll') | ForEach-Object { '/reference:' + (Join-Path $framework $_) }
 $common = @('/nologo','/target:winexe','/platform:x64','/optimize+','/langversion:5','/utf8output',('/resource:' + (Join-Path $root 'MacFlow\Theme.xaml') + ',MacFlow.Theme.xaml'),('/win32manifest:' + (Join-Path $root 'MacFlow\app.manifest')),('/win32icon:' + $iconPath)) + $references
 $common+=('/resource:'+$channelFile+',MacFlow.Channel.json')
 $radioRuntime = Get-ChildItem -LiteralPath (Join-Path $env:WINDIR 'Microsoft.NET/assembly/GAC_MSIL/System.Runtime') -Filter System.Runtime.dll -Recurse | Select-Object -First 1
 if (!$radioRuntime) { throw 'No se encontró la proyección WinRT de .NET Framework.' }
 $common += @(('/reference:'+$radioRuntime.FullName),('/reference:'+(Join-Path $env:WINDIR 'System32/WinMetadata/Windows.Devices.winmd')),('/reference:'+(Join-Path $env:WINDIR 'System32/WinMetadata/Windows.Foundation.winmd')),('/reference:'+(Join-Path $env:WINDIR 'System32/WinMetadata/Windows.Media.winmd')))
+$common += @(('/reference:'+(Join-Path $env:WINDIR 'System32/WinMetadata/Windows.UI.winmd')),('/reference:'+(Join-Path $env:WINDIR 'System32/WinMetadata/Windows.System.winmd'))); $vectorRuntime=Get-ChildItem -LiteralPath (Join-Path $env:WINDIR 'Microsoft.NET/assembly/GAC_MSIL/System.Numerics.Vectors') -Filter System.Numerics.Vectors.dll -Recurse | Select-Object -First 1; $common += ('/reference:'+$vectorRuntime.FullName)
 $winrtInterop = Get-ChildItem -LiteralPath (Join-Path $env:WINDIR 'Microsoft.NET/assembly/GAC_MSIL/System.Runtime.InteropServices.WindowsRuntime') -Filter System.Runtime.InteropServices.WindowsRuntime.dll -Recurse | Select-Object -First 1
 $common += ('/reference:'+$winrtInterop.FullName)
 $shaderCompiler = Join-Path $build 'CompileShader.exe'
@@ -55,7 +56,7 @@ Copy-Item -LiteralPath (Join-Path $root 'THIRD-PARTY-NOTICES.md') -Destination (
 $payload = Join-Path $build 'payload.zip'
 if (Test-Path -LiteralPath $payload) { Remove-Item -LiteralPath $payload }
 Compress-Archive -LiteralPath @((Join-Path $bin 'MacFlow.exe'),(Join-Path $bin 'MacFlow.exe.config'),$iconPath,(Join-Path $bin 'README.txt'),(Join-Path $bin 'LICENSE.txt'),(Join-Path $bin 'THIRD-PARTY-NOTICES.md')) -DestinationPath $payload
-$shared = @('Models.cs','Native.cs','Services.cs','Startup.cs','TaskbarSurfaces.cs','Design.cs','Motion.cs','SystemSymbols.cs','FeatureIcons.cs','IconThemes.cs','PanelMotion.cs','GlassPiece.cs','LiquidMaterial.cs','CrystalLight.cs','WallpaperLibrary.cs','SystemFeatures.cs','UpdateService.cs','AssemblyInfo.cs','WindowsMenuKey.cs') | ForEach-Object { Join-Path $root ('MacFlow\' + $_) }
+$shared = @('Models.cs','CompositorGlass.cs','Native.cs','Services.cs','Startup.cs','TaskbarSurfaces.cs','Design.cs','Motion.cs','SystemSymbols.cs','FeatureIcons.cs','IconThemes.cs','PanelMotion.cs','GlassPiece.cs','LiquidMaterial.cs','CrystalLight.cs','WallpaperLibrary.cs','SystemFeatures.cs','UpdateService.cs','AssemblyInfo.cs','WindowsMenuKey.cs') | ForEach-Object { Join-Path $root ('MacFlow\' + $_) }
 $versionSource=[System.IO.File]::ReadAllText((Join-Path $root 'MacFlow/AssemblyInfo.cs'))
 $versionMatch=[regex]::Match($versionSource,'AssemblyFileVersion\("(\d+\.\d+\.\d+)\.0"\)')
 if(!$versionMatch.Success){throw 'La versión del producto no es válida.'}
@@ -65,7 +66,7 @@ $setup = Join-Path $deliverables ('MacFlow-Setup-'+$packageVersion+'.exe')
 if ($LASTEXITCODE -ne 0) { throw 'Falló la compilación del instalador.' }
 Copy-Item -LiteralPath (Join-Path $root 'MacFlow\App.config') -Destination ($setup + '.config') -Force
 $packageInfo=Get-Item -LiteralPath $setup
-$packageJson=@{Product='MacFlow';Architecture='x64';Version=$packageVersion;Installer=$packageInfo.Name;Sha256=(Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash;Size=$packageInfo.Length;FeedUrl=$UpdateFeedUrl;Notes='26.1.1: el instalador cierra correctamente sin pantalla final. Hola espera Continuar; demostracion manual con Siguiente, Atras y Ver de nuevo; se repite al actualizar. Sin marco ni sombra exterior adicional; el desenfoque nativo aun puede cubrir las esquinas del rectangulo.'} | ConvertTo-Json
+$packageJson=@{Product='MacFlow';Architecture='x64';Version=$packageVersion;Installer=$packageInfo.Name;Sha256=(Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash;Size=$packageInfo.Length;FeedUrl=$UpdateFeedUrl;Notes='26.1.2: presentacion completa con fondo, Hola transparente sin tinte celeste y avance manual. Cristal recortado sin placa ni borde extra. Nuevo simbolo Wi-Fi. Paneles hacia el Dock y cierre de programas desde MacFlow con transicion propia cuando Windows permite obtener la vista; respeta guardar o cancelar.'} | ConvertTo-Json
 [System.IO.File]::WriteAllText((Join-Path $deliverables 'MacFlow-update.json'),$packageJson,[System.Text.UTF8Encoding]::new($false))
 if ($RunTests) {
     $tests = Join-Path $deliverables 'verification'

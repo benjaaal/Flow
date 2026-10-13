@@ -28,6 +28,10 @@ float4 main(float2 uv : TEXCOORD) : COLOR
     color=lerp(color,float3(.13,.13,.13),darkInk*.90);
     float2 sourceUV=saturate(offset+uv*extent+normal*edge*extent*.018);
     float3 photo=tex2D(wallpaper,sourceUV).rgb;
-    float3 imageGlass=lerp(photo,color,saturate(frost+reflection+edge*.12+fine*.30));
-    return lerp(float4(color*alpha,alpha),float4(imageGlass*a,a),hasWallpaper);
+    // Use the photo's light only, never paint its blue/green hue into the
+    // lettering. The actual wallpaper remains visible through the alpha.
+    float light=dot(photo,float3(.2126,.7152,.0722));
+    float3 imageGlass=saturate(color*lerp(.86,1.05,light));
+    float clearAlpha=saturate(.22+frost*.30+reflection+edge*(.30*crown+.12*foot)+fine*(.48*crown+.20*foot))*a;
+    return lerp(float4(color*alpha,alpha),float4(imageGlass*clearAlpha,clearAlpha),hasWallpaper);
 }

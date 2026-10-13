@@ -43,7 +43,7 @@ namespace MacFlow
         private static void ExitChanged(DependencyObject target,DependencyPropertyChangedEventArgs args)
         {
             var window=(Window)target;if(!IsClosing(window))return;double remaining=Math.Max(.001,1-(double)args.NewValue);
-            bool menu=window.Title=="MacFlow · Menú";var content=window.Content as FrameworkElement;
+            bool menu=false;var content=window.Content as FrameworkElement;
             if(content!=null&&!menu){var transform=content.RenderTransform as ScaleTransform;if(transform!=null)transform.ScaleX=transform.ScaleY=remaining;}
             // Apply the native crop after WPF has submitted the matching scaled
             // content. Cropping first reveals an unscaled, cut-off text frame.
@@ -73,11 +73,6 @@ namespace MacFlow
         internal static void Close(Window window)
         {
             if(window.WindowState==WindowState.Minimized)return;
-            if(FromTop(window))
-            {
-                double current=window.Top;window.SetValue(BaseTop,current);window.SetValue(BaseLeft,window.Left);window.SetValue(Closing,true);
-                var lift=new DoubleAnimation(current,current-14,TimeSpan.FromMilliseconds(Motion.WindowClose)){EasingFunction=new CubicEase{EasingMode=EasingMode.EaseInOut}};Timeline.SetDesiredFrameRate(lift,60);window.BeginAnimation(Window.TopProperty,lift);return;
-            }
             double start=window.Top;if(Double.IsNaN((double)window.GetValue(BaseTop)))window.SetValue(BaseTop,start);
             double left=window.Left;if(Double.IsNaN((double)window.GetValue(BaseLeft)))window.SetValue(BaseLeft,left);
             window.SetValue(ExitState,window.WindowState);
@@ -87,7 +82,7 @@ namespace MacFlow
             if(window.WindowState==WindowState.Normal){window.Top=start;window.Left=left;}
             if(!IsClosing(window)){var content=window.Content as FrameworkElement;if(content!=null){window.SetValue(OriginalTransform,content.RenderTransform);window.SetValue(OriginalOrigin,content.RenderTransformOrigin);content.RenderTransformOrigin=new Point(.5,.5);content.RenderTransform=new ScaleTransform(1,1);}window.SetValue(Closing,true);}
             Native.RECT bounds;Native.GetWindowRect(new System.Windows.Interop.WindowInteropHelper(window).Handle,out bounds);window.SetValue(ExitStart,bounds);
-            bool menu=window.Title=="MacFlow · Menú";var destination=menu?(Point?)new Point((bounds.Left+bounds.Right)/2.0,(bounds.Top+bounds.Bottom)/2.0-4):DockDestination==null?null:DockDestination(window);window.SetValue(HasTarget,destination.HasValue);if(destination.HasValue)window.SetValue(ExitTarget,destination.Value);
+            bool menu=false;var destination=menu?(Point?)new Point((bounds.Left+bounds.Right)/2.0,(bounds.Top+bounds.Bottom)/2.0-4):DockDestination==null?null:DockDestination(window);window.SetValue(HasTarget,destination.HasValue);if(destination.HasValue)window.SetValue(ExitTarget,destination.Value);
             var collapse=new DoubleAnimation((double)window.GetValue(ExitProgress),.999,TimeSpan.FromMilliseconds(menu?Motion.Menu:Motion.WindowClose)){EasingFunction=new CubicEase{EasingMode=EasingMode.EaseInOut}};Timeline.SetDesiredFrameRate(collapse,60);window.BeginAnimation(ExitProgress,collapse);
         }
         internal static void Reset(Window window)

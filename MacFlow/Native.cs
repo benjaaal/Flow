@@ -106,6 +106,7 @@ namespace MacFlow
         }
         internal static void SetGlassClip(Window window,double fraction)
         {
+            CompositorGlass.Resize(window,fraction);
             var source=PresentationSource.FromVisual(window);if(source==null||window.ActualWidth<=0)return;
             double scale=source.CompositionTarget.TransformToDevice.M11,remaining=Math.Max(0,Math.Min(1,fraction));
             double width=window.ActualWidth*scale,height=window.ActualHeight*scale,left=width*(1-remaining)/2,top=height*(1-remaining)/2;
@@ -234,7 +235,12 @@ namespace MacFlow
                 window.SetCurrentValue(System.Windows.Controls.Control.BackgroundProperty,Brushes.Transparent);
                 if(source!=null&&source.CompositionTarget!=null)source.CompositionTarget.BackgroundColor=Colors.Transparent;
                 window.Tag=LiquidMaterial.LiveBackdrop?"Native Desktop Acrylic":"Clear glass fallback";
-                if(ClearCompositorGlass(h,dark))window.Tag=LiquidMaterial.LiveBackdrop?"Compositor glass · recordable":"Clear glass fallback";
+                int none=1,host=1;DwmSetWindowAttribute(h,38,ref none,4);
+                IntPtr clear=Marshal.AllocHGlobal(Marshal.SizeOf(typeof(ACCENT)));
+                try{Marshal.StructureToPtr(new ACCENT(),clear,false);var policy=new COMPOSITION{Attribute=19,Data=clear,Size=Marshal.SizeOf(typeof(ACCENT))};SetWindowCompositionAttribute(h,ref policy);}finally{Marshal.FreeHGlobal(clear);}
+                DwmSetWindowAttribute(h,17,ref host,4);
+                if(CompositorGlass.Apply(window))window.Tag="Clipped composition glass · recordable";
+                else window.Tag="Clear glass fallback · no rectangular backdrop";
             }
             else {value=1;DwmSetWindowAttribute(h,38,ref value,4);var empty=new MARGINS();DwmExtendFrameIntoClientArea(h,ref empty);window.Background=Design.Brush(dark?"#28282A":"#F5F5F7");window.Tag="Solid fallback";}
             LiquidMaterial.Apply(window,dark);RoundGlass(window);
@@ -254,6 +260,14 @@ namespace MacFlow
             int noBorder=unchecked((int)0xFFFFFFFE);DwmSetWindowAttribute(h,34,ref noBorder,4);
             window.Tag="Welcome live compositor · recordable";
         }
+        internal static void OpaquePresentation(Window window)
+        {
+            var h=new WindowInteropHelper(window).Handle;RemoveGlassFrame(window);
+            int none=1;DwmSetWindowAttribute(h,38,ref none,4);DwmSetWindowAttribute(h,33,ref none,4);DwmSetWindowAttribute(h,2,ref none,4);
+            var empty=new MARGINS();DwmExtendFrameIntoClientArea(h,ref empty);
+            window.Background=Brushes.Black;var source=HwndSource.FromHwnd(h);if(source!=null){source.CompositionTarget.BackgroundColor=Colors.Black;source.AddHook(PresentationHook);}
+        }
+        private static IntPtr PresentationHook(IntPtr h,int message,IntPtr w,IntPtr l,ref bool handled){if(message==0x47)CompositorGlass.QueueReorder();return IntPtr.Zero;}
         public static void NoActivate(Window window)
         {
             var h = new WindowInteropHelper(window).Handle; SetWindowLong(h, -20, GetWindowLong(h, -20) | 0x08000000 | 0x80);

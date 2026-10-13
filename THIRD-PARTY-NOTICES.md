@@ -94,3 +94,5 @@ Included: Google Chrome, WhatsApp, Roblox, Spotify, Firefox Browser, VLC media p
 ## Weather data
 Weather: https://open-meteo.com/ — CC BY 4.0 data. Geocoding: GeoNames, CC BY 4.0.
 The bundled free endpoint is for non-commercial use, is contacted only after selecting a city, and can be unavailable. A commercial distribution must configure an appropriate licensed service. No location is inferred automatically.
+
+MacFlow 26.1.2 adds an original clipped Windows.UI.Composition host-backdrop implementation using documented Microsoft APIs. No desktop texture is captured for this material. Welcome letter shaders use wallpaper luminance for neutral reflections and output translucent alpha; no wallpaper hue is painted into the glyphs. App closing previews take at most one requested-window frame with PrintWindow, keep it briefly in memory, never persist or upload it, and do not restyle, hide, cloak, resize or inject into the source app. Native external X buttons retain Windows behavior. Apple welcome and SF Symbols pages were reviewed for visual proportions; no proprietary SF Symbols artwork or font is redistributed.

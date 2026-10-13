@@ -120,6 +120,7 @@ namespace MacFlow
         private readonly Image wallpaperImage=new Image{Stretch=Stretch.UniformToFill,IsHitTestVisible=false};
         private ImageBrush wallpaperSampler;private bool wallpaperRendering;private DateTime wallpaperDeadline;
         internal bool WallpaperVisible{get{return wallpaperImage.Source!=null;}}
+        internal BitmapSource WallpaperImageSource{get{return wallpaperImage.Source as BitmapSource;}}
         private readonly Grid greetings;
         private readonly TextBlock translatedGreeting;
         private TextBlock subtitleLabel,startLabel;
@@ -139,6 +140,7 @@ namespace MacFlow
         private readonly bool showNews;internal bool NewsVisible{get;private set;}internal Button ContinueButton{get;private set;}
         private readonly bool finalGreeting;
         internal Action EnterDesktop;
+        internal bool Advancing{get;private set;}
         internal string PreferredWallpaper;
         private readonly Action afterHello;
         internal WelcomeWindow(System.Drawing.Rectangle? testBounds=null,bool showNews=false,BitmapSource wallpaper=null,Action afterHello=null,bool finalGreeting=false)
@@ -147,7 +149,7 @@ namespace MacFlow
             bounds=testBounds??System.Windows.Forms.Screen.PrimaryScreen.Bounds;
             animated=Design.Animations&&SystemParameters.ClientAreaAnimation&&!SystemParameters.HighContrast;
             Title="MacFlow · Hola";Width=bounds.Width;Height=bounds.Height;Left=bounds.Left;Top=bounds.Top;WindowStyle=WindowStyle.None;ResizeMode=ResizeMode.NoResize;
-            AllowsTransparency=false;Background=Brushes.Transparent;ShowInTaskbar=false;Topmost=true;
+            AllowsTransparency=false;Background=Brushes.Black;ShowInTaskbar=false;Topmost=true;
             surface=new Grid{Opacity=animated?0:1};surface.Children.Add(wallpaperImage);surface.Children.Add(new Border{Background=SceneBackdrop(),IsHitTestVisible=false});
             if(wallpaper!=null)SetWallpaper(wallpaper);
             scene=new Grid{Width=580,Height=450};
@@ -171,14 +173,15 @@ namespace MacFlow
             if(finalGreeting){subtitleLabel.Text="Tu escritorio está listo.";if(!Lettering.SetWord("Bienvenido")){Lettering.Visibility=Visibility.Collapsed;translatedGreeting.Visibility=Visibility.Visible;translatedGreeting.Text="Bienvenido";}}
             if(afterHello!=null){startLabel.Text="Continuar  →";subtitleLabel.Text="Descubrí las novedades a tu ritmo.";System.Windows.Automation.AutomationProperties.SetName(StartButton,"Continuar a la demostración");}
             content=new Viewbox{Stretch=Stretch.Uniform,StretchDirection=StretchDirection.DownOnly,HorizontalAlignment=HorizontalAlignment.Center,VerticalAlignment=VerticalAlignment.Center,Margin=new Thickness(24),Child=scene};surface.Children.Add(content);Content=surface;
-            SourceInitialized+=delegate{Native.WelcomeBackdrop(this);RemoveFrame(this);};
+            SourceInitialized+=delegate{Native.OpaquePresentation(this);RemoveFrame(this);if(testBounds.HasValue)Native.NoActivate(this);};
+            if(testBounds.HasValue){ShowActivated=false;IsHitTestVisible=false;}
             Loaded+=delegate
             {
                 if(!testBounds.HasValue)foreach(var screen in System.Windows.Forms.Screen.AllScreens)
                 {
                     if(screen.Primary)continue;var rect=screen.Bounds;
                     var companion=new Window{Title="MacFlow · Hola",Width=rect.Width,Height=rect.Height,Left=rect.Left,Top=rect.Top,Background=Brushes.Transparent,Content=new Grid{Background=SceneBackdrop()},WindowStyle=WindowStyle.None,ResizeMode=ResizeMode.NoResize,ShowInTaskbar=false,Topmost=true,ShowActivated=false};
-                    companion.SourceInitialized+=delegate{Native.WelcomeBackdrop(companion);RemoveFrame(companion);Native.NoActivate(companion);};companion.Loaded+=delegate{Cover(companion,rect);};if(WallpaperVisible)((Grid)companion.Content).Children.Insert(0,new Image{Source=wallpaperImage.Source,Stretch=Stretch.UniformToFill,IsHitTestVisible=false});companions.Add(companion);companion.Show();
+                    companion.SourceInitialized+=delegate{Native.OpaquePresentation(companion);RemoveFrame(companion);Native.NoActivate(companion);};companion.Loaded+=delegate{Cover(companion,rect);};if(WallpaperVisible)((Grid)companion.Content).Children.Insert(0,new Image{Source=wallpaperImage.Source,Stretch=Stretch.UniformToFill,IsHitTestVisible=false});companions.Add(companion);companion.Show();
                 }
                 Cover(this,bounds);Play();if(finalGreeting)languageTimer.Stop();RefreshInk();if(WallpaperVisible){UpdateWallpaperMapping();if(animated)StartWallpaperMapping();}else if(!testBounds.HasValue)LoadWallpaper();
             };
@@ -297,6 +300,7 @@ namespace MacFlow
         private void ContinueWelcome()
         {
             if(dismissing)return;
+            Advancing=true;
             if(finalGreeting){var enter=EnterDesktop;EnterDesktop=null;if(enter!=null)Closed+=delegate{enter();};DismissWelcome();return;}
             if(afterHello!=null){Closed+=delegate{afterHello();};DismissWelcome();return;}
             if(!showNews||NewsVisible){DismissWelcome();return;}

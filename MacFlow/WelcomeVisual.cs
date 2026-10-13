@@ -29,7 +29,7 @@ namespace MacFlow
                     Check(panel.LogoVisible&&panel.Lettering.Progress==0&&!panel.StartButton.IsEnabled,"La manzanita aparece antes de dibujar Hola.",report);await Task.Delay(900);Check(panel.Lettering.Progress>0&&panel.Lettering.Progress<1,"Hola se dibuja después de la transición de la manzanita.",report);
                     await Program.CaptureOwnWindow(panel,Path.Combine(directory,"02-hola-writing.png"));
                     await Task.Delay(1050);Check(panel.ContentFits&&panel.Ready,"Contenido contenido y animación inicial en reposo; Iniciar disponible.",report);
-                    Check((string)panel.Tag=="Welcome live compositor · recordable","El fondo proviene del compositor vivo; no se captura ni excluye la ventana de grabaciones.",report);
+                    Check(panel.Background==Brushes.Black,"La presentación es opaca y oculta el escritorio sin excluirse de grabaciones.",report);
                     await Program.CaptureOwnWindow(panel,Path.Combine(directory,"03-hola-glass.png"));
                     await Task.Delay(1700);Check(panel.GreetingIndex==1&&panel.StartButton.IsEnabled,"Cambio automático a Hello conserva disponible Iniciar.",report);
                     await Program.CaptureOwnWindow(panel,Path.Combine(directory,"04-hello.png"));
@@ -41,7 +41,7 @@ namespace MacFlow
                     await Task.Delay(110);Native.GetWindowRect(new WindowInteropHelper(panel).Handle,out during);Check(panel.IsVisible&&during.Top==rect.Top&&during.Bottom-during.Top==rect.Height&&panel.ContentOpacity>0&&panel.ContentOpacity<1,"Iniciar desvanece manteniendo geometría completa.",report);
                     await Task.Delay(420);Check(!panel.IsVisible&&closed==1&&!panel.LanguageTimerRunning,"Cierra una vez y detiene el temporizador de idiomas.",report);
                     panel=new WelcomeWindow(rect){ShowActivated=false};panel.Show();await Task.Delay(250);panel.DismissWelcome();await Task.Delay(500);Check(!panel.IsVisible&&!panel.LanguageTimerRunning,"Se puede salir durante la entrada sin callbacks pendientes.",report);
-                    backdrop.Content=new Grid{Background=Brushes.White};await Task.Delay(200);Design.Animations=false;Design.Dark=false;panel=new WelcomeWindow(new System.Drawing.Rectangle(120,90,420,320)){ShowActivated=false};panel.Show();await Task.Delay(500);
+                    backdrop.Content=new Grid{Background=Brushes.White};await Task.Delay(200);Design.Animations=false;Design.Dark=false;var white=System.Windows.Media.Imaging.BitmapSource.Create(1,1,96,96,PixelFormats.Bgra32,null,new byte[]{255,255,255,255},4);white.Freeze();panel=new WelcomeWindow(new System.Drawing.Rectangle(120,90,420,320),false,white){ShowActivated=false};panel.Show();await Task.Delay(500);
                     Check(panel.Ready&&panel.ContentFits&&!panel.LanguageTimerRunning,"Sin animaciones: Hola inmediato, sin ciclo de idiomas ni contenido recortado en pantalla pequeña.",report);
                     await Program.CaptureOwnWindow(panel,Path.Combine(directory,"07-reduced-motion.png"));Check(!panel.Lettering.LightInk,"La tinta se adapta al fondo claro sin una capa opaca detrás del texto. "+LiquidMaterial.WelcomeToneDiagnostic,report);
                     panel.DismissWelcome();Check(!panel.IsVisible,"Cierre inmediato con movimiento desactivado.",report);

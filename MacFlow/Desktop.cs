@@ -47,6 +47,8 @@ namespace MacFlow
         internal StageController Stage;
         private WidgetGallery widgetGallery;
         private UpdateTour tour;
+        internal bool PresentationActive{get;private set;}
+        internal System.Windows.Media.Imaging.BitmapSource PresentationWallpaper;
         private DispatcherTimer edgeTimer;
         private ForegroundEvents foregroundEvents;
         private IntPtr materialForeground;
@@ -232,7 +234,7 @@ namespace MacFlow
         {
             var target=pressedTarget??activeTarget;pressedTarget=null;
             if(target==null||activeTarget==null||target.Handle!=activeTarget.Handle||target.ProcessId!=activeTarget.ProcessId||Native.GetForegroundWindow()!=target.Handle||!Native.Matches(target))return;
-            bool result=action==0?Native.RequestClose(target):action==1?Native.RequestMinimize(target):Native.RequestZoom(target);
+            bool result=action==0?CloseWindow(target):action==1?Native.RequestMinimize(target):Native.RequestZoom(target);
             if(!result)Notify("Windows no permitió la acción sobre esa ventana.");
         }
         public void PreviewLidAnimation(){if(lidTransition!=null)lidTransition.Preview();}
@@ -323,7 +325,7 @@ namespace MacFlow
         }
         public bool CloseWindow(WindowEntry window)
         {
-            if(!Native.RequestClose(window)){Notify("Windows no permitió cerrar esta ventana. Podés usar su botón de cierre o Alt+F4.");return false;}
+            if(!WindowCloseTransition.Request(window,delegate{if(!disposed)Notify("Windows no permitió cerrar esta ventana. Podés usar su botón de cierre o Alt+F4.");})){Notify("Windows no permitió cerrar esta ventana. Podés usar su botón de cierre o Alt+F4.");return false;}
             var confirmation=new DispatcherTimer{Interval=TimeSpan.FromMilliseconds(150)};int checks=0;
             confirmation.Tick+=delegate{if(disposed||!Native.Matches(window)){confirmation.Stop();if(!disposed){FrameworkElement icon;if(Preferences.Animations&&Dock.IsVisible&&Windows.Any(w=>w.Key==window.Key)&&dockIcons.TryGetValue(window.Key,out icon)){DockAppMotion.Play(icon,true,!Preferences.Pins.Any(p=>p.Key==window.Key)&&!Windows.Any(w=>w.Key==window.Key&&Native.Matches(w)));closeFeedback.Add(window.Key);}Refresh();}}else if(++checks>=20)confirmation.Stop();};confirmation.Start();return true;
         }
@@ -455,7 +457,7 @@ namespace MacFlow
                     if(foreground!=Native.FindWindow("Progman",null)&&Native.GetWindowRect(foreground,out rect))fullscreen=(style&0x00C00000)==0&&(style&0x01000000)==0&&rect.Left<=b.Left&&rect.Top<=b.Top&&rect.Right>=b.Right&&rect.Bottom>=b.Bottom;
                 }
                 fullscreenNow=fullscreen && !Native.IsDesktopContext(foreground) && Windows.Any(w=>w.Handle==foreground);
-                if (!suspended) { if(fullscreenNow){dockVisibility.HideImmediately();dockHidden=true;TopBar.Hide();if(widget!=null)widget.Hide();}else{if(Preferences.ShowTopBar&&!TopBar.IsVisible)TopBar.Show();if(widget!=null&&!widget.IsVisible)widget.Show();UpdateDockVisibility();} }
+                if (!suspended&&!PresentationActive) { if(fullscreenNow){dockVisibility.HideImmediately();dockHidden=true;TopBar.Hide();if(widget!=null)widget.Hide();}else{if(Preferences.ShowTopBar&&!TopBar.IsVisible)TopBar.Show();if(widget!=null&&!widget.IsVisible)widget.Show();UpdateDockVisibility();} }
             }
             catch (Exception ex) { Log.Write("Actualización: " + ex.Message); }
         }
@@ -478,11 +480,13 @@ namespace MacFlow
         }
         public void OpenSearch()
         {
+            if(PresentationActive)return;
             if(suspended)ToggleSuspend();if(Search!=null){Search.Activate();return;}Search=new Spotlight(this);PrepareTestWindow(Search);var size=ScreenSize();Search.Width=Math.Min(Search.Width,size.Width-40);Search.Height=Math.Min(Search.Height,size.Height-65);PlaceCenter(Search,.23);Search.Closed+=delegate{Search=null;};Search.Show();Design.Reveal(Search);
         }
         public void RefreshSearch() { if(Search!=null)((Spotlight)Search).Refresh(); }
         public void OpenControl()
         {
+            if(PresentationActive)return;
             if(Control!=null){if(Control.WindowState==WindowState.Minimized)Control.WindowState=WindowState.Normal;if(!Control.IsVisible)Control.Show();Control.Activate();return;}
             Control=new ControlCenter(this);PrepareTestWindow(Control);var size=ScreenSize();Control.Height=Math.Min(Control.Height,size.Height-65);Control.Left=size.Width-Control.Width-16;Control.Top=46;Control.Closed+=delegate {Control=null;};Control.Show();Design.Reveal(Control);
         }
@@ -525,37 +529,60 @@ namespace MacFlow
         }
         public void OpenSettings()
         {
+            if(PresentationActive)return;
             if (Settings != null) { if(Settings.WindowState==WindowState.Minimized)Settings.WindowState=WindowState.Normal;if(!Settings.IsVisible)Settings.Show();Settings.Activate(); return; }
             Settings = new SettingsWindow(this, smoke);
             PrepareTestWindow(Settings);
             var size = ScreenSize(); Settings.Width = Math.Min(Settings.Width, size.Width - 40); Settings.Height = Math.Min(Settings.Height, size.Height - 60);
             Settings.Closed += delegate { Settings = null; }; PlaceCenter(Settings, .08); Settings.Show(); Design.Reveal(Settings);
         }
+        private readonly List<Window> presentationCovers=new List<Window>();
+        internal int PresentationCoverCount{get{return presentationCovers.Count;}}
+        internal void BeginPresentation()
+        {
+            if(PresentationActive)return;PresentationActive=true;
+            var screens=smoke?new[]{new System.Drawing.Rectangle(100,50,1000,850)}:Forms.Screen.AllScreens.Select(s=>s.Bounds).ToArray();
+            foreach(var rect in screens)
+            {
+                var image=new Image{Source=PresentationWallpaper,Stretch=Stretch.UniformToFill};
+                var cover=new Window{Title="MacFlow · Fondo de presentación",WindowStyle=WindowStyle.None,ResizeMode=ResizeMode.NoResize,Background=Brushes.Black,Content=image,ShowInTaskbar=false,Topmost=true,ShowActivated=false,IsHitTestVisible=false};
+                cover.SourceInitialized+=delegate{Native.OpaquePresentation(cover);Native.NoActivate(cover);};cover.Loaded+=delegate{Native.SetWindowPos(new WindowInteropHelper(cover).Handle,new IntPtr(-1),rect.Left,rect.Top,rect.Width,rect.Height,0x50);};presentationCovers.Add(cover);cover.Show();
+            }
+            ClosePanels();HidePresentationSurfaces();LoadPresentationWallpaper();
+        }
+        private async void LoadPresentationWallpaper()
+        {
+            var image=await WelcomeWallpaper.Load(Preferences.WallpaperPath);if(disposed||!PresentationActive||image==null)return;
+            PresentationWallpaper=image;foreach(var cover in presentationCovers)((Image)cover.Content).Source=image;
+        }
+        private void ClosePresentationCovers(){foreach(var cover in presentationCovers)cover.Close();presentationCovers.Clear();}
+        private void HidePresentationSurfaces(){dockVisibility.HideImmediately();dockHidden=true;TopBar.Hide();if(widget!=null)widget.Hide();if(Widgets!=null)Widgets.SetVisible(false);if(Stage!=null)Stage.Update(Windows,Native.GetForegroundWindow(),true);if(dockEdge!=null)dockEdge.Hide();}
+        internal void EndPresentation(){if(!PresentationActive)return;PresentationActive=false;ClosePresentationCovers();if(disposed||suspended)return;if(Preferences.ShowTopBar)TopBar.Show();UpdateDockVisibility();}
         public void ReplayWelcome(){OpenWelcome(true);}
         public void OpenWelcome()
         {OpenWelcome(false);}
         private void OpenWelcome(bool afterUpdate)
         {
             if(disposed||suspended)return;
-            if(welcome!=null){welcome.Activate();return;}
-            welcome=new WelcomeWindow(smoke?(System.Drawing.Rectangle?)new System.Drawing.Rectangle(40,40,600,420):null,afterUpdate,null,afterUpdate?(Action)OpenUpdateTour:null){PreferredWallpaper=Preferences.WallpaperPath};var window=welcome;window.Closed+=delegate{if(welcome==window)welcome=null;if(afterUpdate){Preferences.LastWelcomedVersion=Product.VersionText;if(!smoke)Save();}};PrepareTestWindow(window);window.Show();
+            if(welcome!=null){welcome.Activate();return;}BeginPresentation();
+            welcome=new WelcomeWindow(smoke?(System.Drawing.Rectangle?)new System.Drawing.Rectangle(40,40,600,420):null,afterUpdate,PresentationWallpaper,afterUpdate?(Action)OpenUpdateTour:null){PreferredWallpaper=Preferences.WallpaperPath};var window=welcome;window.Closed+=delegate{if(window.Advancing)PresentationWallpaper=window.WallpaperImageSource;if(welcome==window)welcome=null;if(!afterUpdate||!window.Advancing)EndPresentation();if(afterUpdate){Preferences.LastWelcomedVersion=Product.VersionText;if(!smoke)Save();}};PrepareTestWindow(window);window.Show();
         }
         internal void OpenUpdateTour()
-        {if(disposed||suspended||tour!=null)return;tour=new UpdateTour(this);var presentation=tour;tour.Closed+=delegate{tour=null;if(presentation.Completed)OpenCompletedWelcome();};tour.Loaded+=delegate{Preferences.LastWelcomedVersion=Product.VersionText;if(!smoke)Save();};tour.Show();}
-        internal void OpenCompletedWelcome(){if(disposed||suspended||welcome!=null)return;welcome=new WelcomeWindow(smoke?(System.Drawing.Rectangle?)new System.Drawing.Rectangle(40,40,600,420):null,false,null,null,true){PreferredWallpaper=Preferences.WallpaperPath,EnterDesktop=EnterUpdatedDesktop};var final=welcome;final.Closed+=delegate{if(welcome==final)welcome=null;};PrepareTestWindow(final);final.Show();}
+        {if(disposed||suspended||tour!=null)return;tour=new UpdateTour(this);var presentation=tour;tour.Closed+=delegate{tour=null;if(presentation.Completed)OpenCompletedWelcome();else EndPresentation();};tour.Loaded+=delegate{Preferences.LastWelcomedVersion=Product.VersionText;if(!smoke)Save();};tour.Show();}
+        internal void OpenCompletedWelcome(){if(disposed||suspended||welcome!=null)return;welcome=new WelcomeWindow(smoke?(System.Drawing.Rectangle?)new System.Drawing.Rectangle(40,40,600,420):null,false,PresentationWallpaper,null,true){PreferredWallpaper=Preferences.WallpaperPath,EnterDesktop=EnterUpdatedDesktop};var final=welcome;final.Closed+=delegate{if(welcome==final)welcome=null;if(!final.Advancing)EndPresentation();};PrepareTestWindow(final);final.Show();}
         internal bool EnteredUpdatedDesktop{get;private set;}
         private void EnterUpdatedDesktop()
         {
-            if(disposed||suspended)return;EnteredUpdatedDesktop=true;startupDockUntil=DateTime.UtcNow.AddSeconds(3);TourDock(true);if(smoke)return;
+            if(disposed||suspended)return;EnteredUpdatedDesktop=true;startupDockUntil=DateTime.UtcNow.AddSeconds(3);if(smoke){EndPresentation();return;}
             var worker=new Thread(delegate()
             {
                 object shell=null;try{shell=Activator.CreateInstance(Type.GetTypeFromProgID("Shell.Application"));((dynamic)shell).MinimizeAll();}
                 catch(Exception ex){Log.Write("Mostrar escritorio: "+ex.Message);foreach(var w in Native.Windows())if(Native.Matches(w)&&!Native.IsIconic(w.Handle))Native.RequestMinimize(w);}
                 finally{if(shell!=null&&Marshal.IsComObject(shell))Marshal.ReleaseComObject(shell);}
-                if(!Application.Current.Dispatcher.HasShutdownStarted)Application.Current.Dispatcher.BeginInvoke(new Action(delegate{if(disposed||suspended)return;var h=Native.GetShellWindow();if(h!=IntPtr.Zero&&Native.IsDesktopWindow(h))Native.SetForegroundWindow(h);dockVisibility.ShowImmediately();dockHidden=false;Widgets.SetVisible(true);if(Preferences.ShowTopBar&&!TopBar.IsVisible)TopBar.Show();}));
+                if(!Application.Current.Dispatcher.HasShutdownStarted)Application.Current.Dispatcher.BeginInvoke(new Action(delegate{if(disposed||suspended)return;EndPresentation();var h=Native.GetShellWindow();if(h!=IntPtr.Zero&&Native.IsDesktopWindow(h))Native.SetForegroundWindow(h);dockVisibility.ShowImmediately();dockHidden=false;Widgets.SetVisible(true);if(Preferences.ShowTopBar&&!TopBar.IsVisible)TopBar.Show();}));
             });worker.IsBackground=true;worker.SetApartmentState(ApartmentState.STA);worker.Start();
         }
-        internal void TourDock(bool show){if(show){dockVisibility.ShowImmediately();dockHidden=false;}else StopDockProbe();}
+        internal void TourDock(bool show){StopDockProbe();}
         internal bool WelcomeForNewVersion()
         {
             bool show=Preferences.NeedsUpdateWelcome(Product.Version);if(show)OpenWelcome(true);else if(Preferences.LastWelcomedVersion!=Product.VersionText){Preferences.LastWelcomedVersion=Product.VersionText;if(!smoke)Save();}return show;
@@ -579,6 +606,7 @@ namespace MacFlow
         public void OpenPowerMenu(){GlassMenu.Open(Dock,"Energía",PowerCommands(),nonInteractiveTest);}
         public void OpenWindowsMenu()
         {
+            if(PresentationActive)return;
             if(disposed)return;if(GlassMenu.Current!=null&&GlassMenu.Current.Title=="MacFlow · Inicio"){GlassMenu.Current.Close();return;}
             var commands=new List<GlassCommand>{new GlassCommand("Aplicaciones",OpenLaunchpad),new GlassCommand("Buscar",OpenSearch),new GlassCommand("Configuración de MacFlow",OpenSettings)};commands.AddRange(PowerCommands());
             GlassMenu.Open(Dock,"Tu Windows · MacFlow",commands,nonInteractiveTest);if(GlassMenu.Current!=null){var menu=GlassMenu.Current;menu.Title="MacFlow · Inicio";var source=PresentationSource.FromVisual(Dock);var matrix=source==null?Matrix.Identity:source.CompositionTarget.TransformFromDevice;var screen=Forms.Screen.PrimaryScreen.WorkingArea;var top=matrix.Transform(new Point(screen.Left,screen.Top));var bottom=matrix.Transform(new Point(screen.Right,screen.Bottom));menu.Left=top.X+18;menu.Top=Math.Max(top.Y+8,bottom.Y-menu.Height-18);}
@@ -629,12 +657,12 @@ namespace MacFlow
         {
             ApplyDesign(); DrawDock(); DrawTopBar(); Native.Glass(Dock, Design.Dark);
             RegisterHotkey();ConfigureWindowsKey(); if(timer!=null)timer.Interval=TimeSpan.FromSeconds(Preferences.LowPower?2:1);
-            if (Preferences.ShowTopBar && !suspended) { TopBar.Show(); Native.Glass(TopBar, Design.Dark); RegisterAppbar(); } else { UnregisterAppbar(); TopBar.Hide(); }
+            if (Preferences.ShowTopBar && !suspended&&!PresentationActive) { TopBar.Show(); Native.Glass(TopBar, Design.Dark); RegisterAppbar(); } else { UnregisterAppbar(); TopBar.Hide(); }
             RebuildWidget(); Position(); Refresh();
         }
         private void UpdateDockEdge()
         {
-            bool enabled=!smoke&&!disposed&&!suspended&&(!fullscreenNow||desktopForeground)&&shellRecovery.Acquired&&Preferences.AutoHideTaskbar&&Preferences.ProtectDockEdge&&Preferences.DockPosition=="Bottom";
+            bool enabled=!smoke&&!disposed&&!suspended&&!PresentationActive&&(!fullscreenNow||desktopForeground)&&shellRecovery.Acquired&&Preferences.AutoHideTaskbar&&Preferences.ProtectDockEdge&&Preferences.DockPosition=="Bottom";
             if(!enabled){if(dockEdge!=null&&dockEdge.IsVisible)dockEdge.Hide();return;}
             if(dockEdge==null){dockEdge=new DockEdge(delegate{if(disposed||suspended||fullscreenNow)return;dockLeaveAt=DateTime.UtcNow;dockVisibility.Show();dockHidden=false;});dockEdge.Position(Dock);}
             if(!dockEdge.IsVisible)dockEdge.Show();
@@ -642,24 +670,25 @@ namespace MacFlow
         }
         private void RebuildWidget()
         {
-            if(widget!=null){widget.Close();widget=null;}if(Widgets!=null){Widgets.Sync();Widgets.SetVisible(!suspended&&!fullscreenNow&&desktopForeground);}
+            if(widget!=null){widget.Close();widget=null;}if(Widgets!=null){Widgets.Sync();Widgets.SetVisible(!suspended&&!PresentationActive&&!fullscreenNow&&desktopForeground);}
         }
         private void UpdateDockVisibility()
         {
+            if(PresentationActive){HidePresentationSurfaces();return;}
             if(dockRebuildPending&&!disposed&&Mouse.LeftButton==MouseButtonState.Released)DrawDock();
             if(!smoke&&!disposed&&!suspended&&Preferences.AutoHideTaskbar){if(!shellRecovery.Acquired){TryAcquire();if(shellRecovery.Acquired)Position();}if(shellRecovery.Acquired)lease.Maintain();}
-            var foreground=Native.GetForegroundWindow();desktopForeground=DesktopContextForForeground(foreground);if(foreground!=materialForeground){materialForeground=foreground;LiquidMaterial.DesktopChanged();}
+            var foreground=Native.GetForegroundWindow();desktopForeground=DesktopContextForForeground(foreground);if(foreground!=materialForeground){materialForeground=foreground;LiquidMaterial.DesktopChanged();CompositorGlass.Reorder();}
             UpdateActiveWindow(foreground);
             uint foregroundPid;Native.GetWindowThreadProcessId(foreground,out foregroundPid);
             bool ours=foregroundPid==(uint)Process.GetCurrentProcess().Id;
-            if(Widgets!=null&&!ours)Widgets.SetVisible(!suspended&&!fullscreenNow&&desktopForeground);
+            if(Widgets!=null&&!ours)Widgets.SetVisible(!suspended&&!PresentationActive&&!fullscreenNow&&desktopForeground);
             if(Stage!=null)Stage.Update(Windows,foreground,suspended||fullscreenNow||desktopForeground);
             // External caption overlays were removed: never cover another app's
             // native controls. Traffic lights belong only to MacFlow windows.
             if(captionButtons!=null){captionButtons.Dispose();captionButtons=null;}
             UpdateDockEdge();
             if(disposed||suspended||fullscreenNow&&!desktopForeground)return;
-            if(tour!=null){dockVisibility.ShowImmediately();dockHidden=false;return;}
+            if(tour!=null){HidePresentationSurfaces();return;}
             if(desktopForeground){fullscreenNow=false;dockLeaveAt=DateTime.UtcNow;dockVisibility.ShowImmediately();dockHidden=false;if(Preferences.ShowTopBar&&!TopBar.IsVisible)TopBar.Show();if(widget!=null&&!widget.IsVisible)widget.Show();return;}
             if(DateTime.UtcNow<startupDockUntil){dockVisibility.ShowImmediately();dockHidden=false;return;}
             bool automatic=AutomaticDockPolicy(Preferences.DockAutoHide,Preferences.HideDockInApps,Preferences.HideDockInCodex,codexForeground,smoke);
@@ -704,7 +733,7 @@ namespace MacFlow
             if(lidTransition!=null)lidTransition.Dispose();
             Focus.Dispose();
             if(foregroundEvents!=null)foregroundEvents.Dispose();
-            if (disposed) return; disposed = true;if(tour!=null)tour.Close();if(Widgets!=null)Widgets.Dispose();if(Stage!=null)Stage.Dispose();if(dockRedraw!=null)dockRedraw.Stop();if(captionButtons!=null)captionButtons.Dispose();if(dockEdge!=null)dockEdge.Close();if(windowsKey!=null)windowsKey.Dispose();if(dockMotion!=null)dockMotion.Dispose();if (timer != null) timer.Stop();if(edgeTimer!=null)edgeTimer.Stop();if(widget!=null)widget.Close();
+            if (disposed) return; disposed = true;ClosePresentationCovers();if(tour!=null)tour.Close();if(Widgets!=null)Widgets.Dispose();if(Stage!=null)Stage.Dispose();if(dockRedraw!=null)dockRedraw.Stop();if(captionButtons!=null)captionButtons.Dispose();if(dockEdge!=null)dockEdge.Close();if(windowsKey!=null)windowsKey.Dispose();if(dockMotion!=null)dockMotion.Dispose();if (timer != null) timer.Stop();if(edgeTimer!=null)edgeTimer.Stop();if(widget!=null)widget.Close();
             UnregisterAppbar(); if (!smoke) {lease.Restore();try{Wallpapers.Restore(Store.DirectoryPath);}catch(Exception ex){Log.Write(ex.Message);}}
             if (Dock != null) Native.UnregisterHotKey(new WindowInteropHelper(Dock).Handle, 1);
             if (Dock != null) Native.UnregisterHotKey(new WindowInteropHelper(Dock).Handle, 2);

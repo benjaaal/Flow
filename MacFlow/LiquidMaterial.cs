@@ -236,6 +236,7 @@ namespace MacFlow
                 if(fixture!=null){Native.SetWindowPos(h,new IntPtr(-1),0,0,0,0,0x13);Native.SetWindowPos(new WindowInteropHelper(fixture).Handle,h,0,0,0,0,0x13);if(material!=null)material.Refresh();await System.Threading.Tasks.Task.Delay(600);}
                 captureSuspended=true;
                 lock(CaptureGate){SetWindowDisplayAffinity(h,0);Native.SetWindowPos(h,new IntPtr(-1),0,0,0,0,0x13);}
+                CompositorGlass.Resize(window,1);CompositorGlass.Reorder();
                 await System.Threading.Tasks.Task.Delay(100);
                 lock(CaptureGate){DwmFlush();Native.RECT r;if(!Native.GetWindowRect(h,out r))throw new System.ComponentModel.Win32Exception();using(var bitmap=new System.Drawing.Bitmap(r.Right-r.Left,r.Bottom-r.Top))using(var g=System.Drawing.Graphics.FromImage(bitmap)){g.CopyFromScreen(r.Left,r.Top,0,0,bitmap.Size);bitmap.Save(path,System.Drawing.Imaging.ImageFormat.Png);}}
             }

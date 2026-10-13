@@ -21,6 +21,9 @@ namespace MacFlow
             string link=Path.Combine(directory,"MacFlow-test.lnk");Startup.CreateShortcut(link,executable);string arguments;string target=Startup.ReadShortcut(link,out arguments);
             Check(File.Exists(link)&&String.Equals(target,executable,StringComparison.OrdinalIgnoreCase)&&arguments=="--background","crea y vuelve a leer un acceso nativo real; no modifica el inicio de Windows",results);
             bool rejected=false;try{Startup.CreateShortcut(Path.Combine(directory,"invalid.lnk"),missing);}catch(IOException){rejected=true;}Check(rejected&&!File.Exists(Path.Combine(directory,"invalid.lnk")),"no genera accesos a rutas inexistentes",results);
+            int attempts=0,waited=0;Startup.WaitForDesktop(delegate{return ++attempts>=4;},delegate(int ms){waited+=ms;return System.Threading.Tasks.Task.FromResult(0);}).GetAwaiter().GetResult();Check(attempts==4&&waited==1500,"espera Explorer y su primer cuadro sin bloquear el hilo de interfaz",results);
+            attempts=waited=0;Startup.WaitForDesktop(delegate{attempts++;return false;},delegate(int ms){waited+=ms;return System.Threading.Tasks.Task.FromResult(0);}).GetAwaiter().GetResult();Check(attempts==61&&waited==15750,"Explorer ausente no impide iniciar indefinidamente",results);
+            waited=0;Startup.WaitForDesktop(delegate{return true;},delegate(int ms){waited+=ms;return System.Threading.Tasks.Task.FromResult(0);}).GetAwaiter().GetResult();Check(waited==750,"escritorio disponible evita una espera larga al iniciar",results);
         }
         private static void Check(bool condition,string message,List<string> results){if(!condition)throw new Exception("Inicio: "+message);results.Add("PASS Inicio: "+message);}
     }

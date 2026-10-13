@@ -22,9 +22,13 @@ namespace MacFlow
             var ink=(Brush)GetValue(InkProperty);var pen=new Pen(ink,1.75){StartLineCap=PenLineCap.Round,EndLineCap=PenLineCap.Round,LineJoin=PenLineJoin.Round};dc.PushTransform(new ScaleTransform(ActualWidth/24,ActualHeight/24));
             if(kind.StartsWith("wifi",StringComparison.Ordinal))
             {
-                if(kind!="wifi-low")dc.DrawGeometry(ink,null,Shape("M2,7.8 C7.5,2.7 16.5,2.7 22,7.8 L20.3,9.5 C15.7,5.2 8.3,5.2 3.7,9.5 Z"));
-                dc.DrawGeometry(ink,null,Shape("M5.2,11.4 C9,7.9 15,7.9 18.8,11.4 L17.1,13.1 C14.3,10.5 9.7,10.5 6.9,13.1 Z M8.5,15 C10.4,13.2 13.6,13.2 15.5,15 L13.8,16.7 C12.8,15.8 11.2,15.8 10.2,16.7 Z"));dc.DrawEllipse(ink,null,new Point(12,19),1.35,1.35);
-                if(kind=="wifi-off"){var cut=new Pen(Design.Brush(Design.Dark?"#18212D":"#EDF2F7"),4){StartLineCap=PenLineCap.Round,EndLineCap=PenLineCap.Round};dc.DrawLine(cut,new Point(4,3),new Point(21,20));dc.DrawLine(pen,new Point(4,3),new Point(21,20));}
+                // Original redraw inspired by Apple's compact optical Wi-Fi
+                // proportions; no SF Symbols font or proprietary asset.
+                var arc=new Pen(ink,2.25){StartLineCap=PenLineCap.Round,EndLineCap=PenLineCap.Round};
+                if(kind=="wifi-off")dc.PushClip(new CombinedGeometry(GeometryCombineMode.Exclude,new RectangleGeometry(new Rect(0,0,24,24)),Shape("M2,0 L24,22 22,24 0,2 Z")));
+                if(kind!="wifi-low")dc.DrawGeometry(null,arc,Shape("M2.4,7.5 C7.8,2.8 16.2,2.8 21.6,7.5"));
+                dc.DrawGeometry(null,arc,Shape("M5.7,11.3 C9.2,8.3 14.8,8.3 18.3,11.3 M9,15.1 C10.7,13.6 13.3,13.6 15,15.1"));dc.DrawEllipse(ink,null,new Point(12,19),1.4,1.4);
+                if(kind=="wifi-off"){dc.Pop();dc.DrawLine(pen,new Point(3,2),new Point(21,20));}
             }
             else if(kind.StartsWith("volume",StringComparison.Ordinal))
             {
