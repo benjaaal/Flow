@@ -1,12 +1,24 @@
-# MacFlow 26.2.0
+# MacFlow 26.3.0
 
 Aplicación nativa para Windows 11 x64, con C# y WPF sobre .NET Framework 4.8.
 
-[Descargar instalador](https://github.com/benjaaal/Flow/releases/tag/v26.2.0).
+[Descargar instalador](https://github.com/benjaaal/Flow/releases/tag/v26.3.0).
 Actualizar conserva las preferencias y vuelve a abrir MacFlow. La instalación
 es por usuario y el inicio con Windows es opcional.
 
-## Renovación 26.2.0
+## Renovación 26.3.0
+
+Centro de control con reguladores verticales, gesto con ambos botones y salida
+hacia arriba con rebote. Avisos desde la manzana, widgets compactos y barra/Dock
+por monitor con DPI independiente. Spotlight corrige iconos desbordados.
+
+Windows sola abre búsqueda escrita con un contorno de luz multicolor que deja
+pasar los clics. El asistente local abre apps, busca en Chrome, lee texto accesible
+y admite acciones con confirmación; no usa una API de IA. Hey Siri es opcional y
+requiere reconocimiento español instalado. Lente, partículas blancas y reflexión
+de respuesta siguen las referencias de movimiento aportadas, con gráficos propios.
+El micrófono se indica en la barra y se pausa al bloquear, escribir o suspender.
+No se validó la activación acústica en este entorno, que no dispone del motor español.
 
 Materiales de cristal diferenciados para Dock y paneles, centro de control más
 compacto, tema automático, centro de actividad local y bienvenida opcional después
@@ -16,8 +28,8 @@ Preferencias con copia de recuperación y diagnóstico del tiempo hasta el prime
 
 Configuración tiene búsqueda y una nueva jerarquía visual. Un clic en la manzana
 abre el menú y dos abren Configuración. IOS es una etiqueta. La tecla Windows sola
-queda sin acción por defecto; sus combinaciones se conservan y el modo es configurable.
-Mantené clic derecho en los últimos 300 puntos de la barra superior y arrastrá hacia
+abre la búsqueda escrita sin dictado; sus combinaciones se conservan y el modo es configurable.
+Mantené clic izquierdo o derecho desde la batería o los indicadores de la barra superior y arrastrá hacia
 abajo para desplegar el Centro de control; un gesto corto lo cancela.
 
 Después de Hola, la demostración manual muestra el Dock, el gesto, Configuración,
@@ -26,7 +38,7 @@ energía ni cambia preferencias. Bienvenido espera Iniciar para revelar el escri
 
 La cápsula negra muestra música, temporizadores y acciones recientes. Se expande
 con un clic y se puede quitar desde su ×, con salida suave hacia arriba; se reactiva
-en Barra superior. Los avisos propios entran desde el borde derecho.
+en Barra superior. Los avisos propios bajan desde la manzana.
 El menú de la manzana y Sistema permiten abrir el Administrador de tareas de Windows.
 El panel de energía tiene símbolos propios y confirmación explícita; Configuración
 conserva su barra lateral abierta, con selección suave e iconos uniformes.
@@ -34,7 +46,7 @@ Los widgets tienen materiales transparente, oscuro y claro por separado.
 El cierre curvo usa una malla y una textura transitoria de una ventana propia,
 liberada al terminar. La X de otros programas conserva la animación de Windows.
 
-[Decisiones, referencias, pruebas y límites](docs/RENOVACION-26.2.0.md).
+[Decisiones, referencias, pruebas y límites](docs/RENOVACION-26.3.0.md).
 El acceso remoto quedó fuera de esta versión por elección del usuario.
 La bienvenida de MacFlow no reemplaza el inicio de sesión protegido de Windows.
 

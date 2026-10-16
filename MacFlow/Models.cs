@@ -37,6 +37,7 @@ namespace MacFlow
         [DataMember] public bool HideInFullscreen = true;
         [DataMember] public double GlassOpacity = .09;
         [DataMember] public bool LiveGlass = true;
+        [DataMember] public bool? Sounds=true;
         [DataMember] public bool DockAutoHide = false;
         [DataMember] public bool HideDockInApps = true;
         [DataMember] public string DockPosition = "Bottom";
@@ -45,7 +46,10 @@ namespace MacFlow
         [DataMember] public bool ShowVolume = true;
         [DataMember] public bool LowPower = true;
         [DataMember] public bool WindowsMenu = true;
-        [DataMember] public string WindowsKeyAction="Disabled";
+        [DataMember] public string WindowsKeyAction="Search";
+        [DataMember] public bool KeyboardSearchApplied;
+        [DataMember] public bool? VoiceWakeEnabled=true;
+        internal bool UpgradeKeyboardSearch(){if(KeyboardSearchApplied)return false;KeyboardSearchApplied=true;WindowsKeyAction="Search";return true;}
         [DataMember] public bool? ControlCenterGesture=true;[DataMember]public bool? ShowActivityIsland=true;
         [DataMember] public bool ProtectDockEdge = true;
         [DataMember] public bool HideDockInCodex = true;
@@ -72,7 +76,7 @@ namespace MacFlow
         public void Validate()
         {
             if (Theme != "Dark" && Theme != "Light" && Theme != "Auto") Theme = "Dark";
-            if(WindowsKeyAction!="Disabled"&&WindowsKeyAction!="MacFlow"&&WindowsKeyAction!="Windows")WindowsKeyAction="Disabled";
+            if(WindowsKeyAction!="Disabled"&&WindowsKeyAction!="MacFlow"&&WindowsKeyAction!="Windows"&&WindowsKeyAction!="Search")WindowsKeyAction="Search";
             IconSize = Math.Max(32, Math.Min(72, IconSize));
             if(IconAppearance!="Auto"&&IconAppearance!="Light"&&IconAppearance!="Dark"&&IconAppearance!="Original")IconAppearance="Auto";
             GlassOpacity = Double.IsNaN(GlassOpacity)||Double.IsInfinity(GlassOpacity)?.09:Math.Max(.06, Math.Min(.65, GlassOpacity));

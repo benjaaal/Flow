@@ -57,6 +57,7 @@ namespace MacFlow
                 string data;
                 switch(kind)
                 {
+                    case "keyboard":data="M4,5 L20,5 Q22,5 22,7 L22,17 Q22,19 20,19 L4,19 Q2,19 2,17 L2,7 Q2,5 4,5 Z M6,9 L6.1,9 M10,9 L10.1,9 M14,9 L14.1,9 M18,9 L18.1,9 M6,12 L6.1,12 M10,12 L10.1,12 M14,12 L14.1,12 M18,12 L18.1,12 M7,16 L17,16";break;
                     case "bluetooth":data="M11.5,3 L17,7.5 7,16.5 M11.5,21 L17,16.5 7,7.5 M11.5,3 L11.5,21";break;
                     case "appearance":data="M12,3 A9,9 0 1 1 11.99,3 M12,3 L12,21 M12,3 A9,9 0 0 1 12,21 Z";break;
                     case "wallpaper":data="M5,4 L19,4 Q21,4 21,6 L21,18 Q21,20 19,20 L5,20 Q3,20 3,18 L3,6 Q3,4 5,4 Z M3,17 L9,10 14,15 17,12 21,17 M16.5,7 L16.5,7.1";break;
@@ -74,6 +75,15 @@ namespace MacFlow
                     case "settings":data="M12,3 L14,3 14.6,5.2 16.1,6.1 18.2,5.5 20.2,8.8 18.6,10.3 18.6,12.4 20.2,13.9 18.2,17.2 16.1,16.6 14.6,17.5 14,19.7 10,19.7 9.4,17.5 7.9,16.6 5.8,17.2 3.8,13.9 5.4,12.4 5.4,10.3 3.8,8.8 5.8,5.5 7.9,6.1 9.4,5.2 10,3 Z M12,8 A3.4,3.4 0 1 1 11.99,8";break;
                     case "windows":data="M4,4 L17,4 17,15 4,15 Z M8,19 L21,19 21,8";break;
                     case "power":data="M12,2 L12,11 M6,5.5 A8.5,8.5 0 1 0 18,5.5";break;
+                    case "timer":data="M12,6 A8,8 0 1 1 11.99,6 M9,2 L15,2 M12,2 L12,6 M18,5 L20,3 M12,10 L12,15 15,15";break;
+                    case "music":data="M9,17 L9,5 20,3 20,15 M9,8 L20,6 M9,17 A3,2 0 1 1 8.99,17 M20,15 A3,2 0 1 1 19.99,15";break;
+                    case "pause":data="M8,5 L8,19 M16,5 L16,19";break;
+                    case "previous":data="M5,5 L5,19 M18,5 L8,12 18,19 Z";break;
+                    case "next":data="M19,5 L19,19 M6,5 L16,12 6,19 Z";break;
+                    case "up":data="M5,15 L12,8 19,15";break;
+                    case "assistant":data="M12,3 C12,9 9,12 3,12 C9,12 12,15 12,21 C12,15 15,12 21,12 C15,12 12,9 12,3 Z";break;
+                    case "mic":data="M9,5 A3,3 0 0 1 15,5 L15,12 A3,3 0 0 1 9,12 Z M6,11 L6,12 A6,6 0 0 0 18,12 L18,11 M12,18 L12,22 M8,22 L16,22";break;
+                    case "calendar":data="M5,5 L19,5 Q21,5 21,7 L21,20 Q21,22 19,22 L5,22 Q3,22 3,20 L3,7 Q3,5 5,5 Z M3,10 L21,10 M8,2 L8,7 M16,2 L16,7 M8,14 L9,14 M15,14 L16,14 M8,18 L9,18 M15,18 L16,18";break;
                     case "restart":data="M19.5,8 A8,8 0 1 0 20,15 M20,3 L20,9 14,9";break;
                     case "lock":data="M7,10 L7,7 A5,5 0 0 1 17,7 L17,10 M6,10 L18,10 Q20,10 20,12 L20,20 Q20,22 18,22 L6,22 Q4,22 4,20 L4,12 Q4,10 6,10 Z M12,15 L12,18";break;
                     case "signout":data="M10,3 L4,3 Q3,3 3,4 L3,20 Q3,21 4,21 L10,21 M9,12 L22,12 M18,8 L22,12 18,16";break;

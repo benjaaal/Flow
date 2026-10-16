@@ -68,6 +68,7 @@ namespace MacFlow
         private float cachedWidth=-1,cachedHeight=-1,cachedRemaining=-1,cachedRadius=-1,cachedOpacity=-1;
         private bool cachedVisible,cachedBackdrop,positionKnown;
         private Native.RECT cachedBounds;
+        private int cachedGap=-1;
         private CompositorGlass(Window window)
         {
             this.window=window;
@@ -119,6 +120,7 @@ namespace MacFlow
             if(width!=cachedWidth||height!=cachedHeight||remaining!=cachedRemaining)
             {visual.Size=new Vector2(width,height);geometry.Offset=new Vector2(width*(1-remaining)/2,height*(1-remaining)/2);geometry.Size=new Vector2(width*remaining,height*remaining);cachedWidth=width;cachedHeight=height;cachedRemaining=remaining;}
             if(radius!=cachedRadius){geometry.CornerRadius=new Vector2(radius,radius);cachedRadius=radius;}
+            int gap=(int)Math.Round((double)window.GetValue(Native.BarGap)*scale);if(gap!=cachedGap||!positionKnown||cachedBounds.Right-cachedBounds.Left!=(int)width||cachedBounds.Bottom-cachedBounds.Top!=(int)height){Native.ApplyGlassRegion(backgroundWindow,(int)Math.Ceiling(width),(int)Math.Ceiling(height),(int)Math.Round(radius*2),gap);cachedGap=gap;}
             bool clear=window.Title.Contains("Dock")||window.Title.Contains("barra superior")||window.Title.Contains("Centro de control")||window.Title.Contains("Conexiones")||window.Title.Contains("Widget ·");float opacity=(float)(window.Opacity*BackdropCoverage(Design.GlassOpacity,clear));
             if(cachedOpacity!=opacity){cachedOpacity=opacity;visual.Opacity=cachedOpacity;}
             if(cachedBackdrop!=LiquidMaterial.LiveBackdrop||!positionKnown){cachedBackdrop=LiquidMaterial.LiveBackdrop;visual.IsVisible=cachedBackdrop;}

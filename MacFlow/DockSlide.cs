@@ -19,7 +19,7 @@ namespace MacFlow
         {window=value;fallback=new DispatcherTimer{Interval=TimeSpan.FromMilliseconds(390)};fallback.Tick+=delegate{FinishHide(generation);};window.Closed+=delegate{fallback.Stop();};}
         private DependencyProperty Axis {get{return moving?axis:window.Width>window.Height?Window.TopProperty:Window.LeftProperty;}}
         private double Current {get{return (double)window.GetValue(Axis);}}
-        private double Travel {get{if(Axis==Window.TopProperty)return window.Height+20;return window.Left<SystemParameters.PrimaryScreenWidth/2?-(window.Width+20):window.Width+20;}}
+        private double Travel {get{if(Axis==Window.TopProperty)return window.Height+20;var area=DisplaySpace.For(window).Dips;return window.Left<area.Left+area.Width/2?-(window.Width+20):window.Width+20;}}
         private void Prepare(){if(!moving){axis=Axis;resting=Current;}moving=true;}
         private void Reset(){window.BeginAnimation(Axis,null);window.SetValue(Axis,resting);moving=false;}
         internal void PositionChanging(){if(!moving)return;generation++;fallback.Stop();Reset();}

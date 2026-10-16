@@ -38,7 +38,7 @@ namespace MacFlow
                 if(!Native.Matches(entry))return;
                 if(image!=null)
                 {
-                    var source=PresentationSource.FromVisual(Application.Current.MainWindow);double scale=source==null?1:source.CompositionTarget.TransformToDevice.M11;
+                    double scale=DisplaySpace.ForHandle(entry.Handle).Scale;
                     preview=new Window{Title=minimize?"MacFlow · Minimizar ventana":"MacFlow · Cerrar ventana",WindowStyle=WindowStyle.None,ResizeMode=ResizeMode.NoResize,AllowsTransparency=true,Background=Brushes.Transparent,ShowInTaskbar=false,ShowActivated=false,Topmost=true,IsHitTestVisible=false,Width=(bounds.Right-bounds.Left)/scale,Height=(bounds.Bottom-bounds.Top)/scale,Left=bounds.Left/scale,Top=bounds.Top/scale,Content=new Image{Source=image,Stretch=Stretch.Fill}};
                     preview.SourceInitialized+=delegate{Native.NoActivate(preview);var h=new WindowInteropHelper(preview).Handle;Native.SetWindowLong(h,-20,Native.GetWindowLong(h,-20)|0x20);};preview.Show();
                     Native.SetWindowPos(new WindowInteropHelper(preview).Handle,new IntPtr(-1),bounds.Left,bounds.Top,bounds.Right-bounds.Left,bounds.Bottom-bounds.Top,0x50);

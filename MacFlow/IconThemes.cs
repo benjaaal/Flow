@@ -24,7 +24,10 @@ namespace MacFlow
         }
         internal static UIElement Frame(UIElement original,int size)
         {
-            if(Design.IconAppearance=="Original")return original;
+            // Original icons can report 256/1024px natural sizes. They still
+            // need the same explicit layout contract as themed icons.
+            var element=original as FrameworkElement;if(element!=null){element.Width=element.Height=size;element.MaxWidth=element.MaxHeight=size;}
+            if(Design.IconAppearance=="Original")return new Border{Width=size,Height=size,ClipToBounds=true,Child=original};
             return new Border{Width=size,Height=size,CornerRadius=new CornerRadius(size*.23),Background=Design.Brush(Dark?"#ED18212E":"#EAF2F6FC"),Padding=new Thickness(size*.13),Child=new Viewbox{Stretch=Stretch.Uniform,Child=original}};
         }
         // Simple Icons paths, CC0. Pinned source and notices accompany the app.

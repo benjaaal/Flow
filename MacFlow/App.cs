@@ -42,6 +42,7 @@ namespace MacFlow
             if (args.Length == 2 && args[0] == "--features-smoke") return NewFeaturesVisual.Run(args[1]);
             if (args.Length == 2 && args[0] == "--modules-smoke") return ModulesVisual.Run(args[1]);
             if (args.Length == 2 && args[0] == "--renewal-smoke") return RenewalVisual.Run(args[1]);
+            if (args.Length == 2 && args[0] == "--revision-smoke") return RevisionVisual.Run(args[1]);
             if (args.Length == 2 && args[0] == "--session-smoke") return SessionGreetingVisual.Run(args[1]);
             if (args.Length == 2 && args[0] == "--edges-smoke") return GlassEdgesVisual.Run(args[1]);
             if (args.Length == 2 && args[0] == "--close-transition-smoke") return CloseTransitionVisual.Run(args[1]);
@@ -228,6 +229,9 @@ namespace MacFlow
                 bool savedAnimations=Design.Animations;Design.Animations=false;var reducedPage=new System.Windows.Controls.StackPanel();ContentTransition.Show(transitionHost,newPage,reducedPage,-1);Assert(transitionHost.Children.Count==1&&transitionHost.Children[0]==reducedPage&&!newPage.IsHitTestVisible&&!reducedPage.HasAnimatedProperties,"Configuración: cambiar de página con movimiento reducido conserva aislamiento y no crea relojes",results);Design.Animations=savedAnimations;
                 string settingsSignal="Local\\MacFlow.Settings.Test."+Guid.NewGuid();using(var signal=new EventWaitHandle(false,EventResetMode.AutoReset,settingsSignal)){Assert(Program.SignalSettings(settingsSignal)&&signal.WaitOne(50)&&!signal.WaitOne(0),"Configuración: segundo inicio envía una única solicitud a la sesión",results);}Assert(!Program.SignalSettings(settingsSignal),"Configuración: solicitud sin sesión no crea un evento huérfano",results);
                 var tap=new WindowsTapState();Assert(!tap.Process(0x5B,true,false)&&tap.Process(0x5B,false,false),"Menú Windows: pulsación izquierda completa",results);
+                var keyboardMigration=new Preferences{WindowsKeyAction="Disabled"};Assert(keyboardMigration.UpgradeKeyboardSearch()&&keyboardMigration.WindowsKeyAction=="Search","26.3: migración única a búsqueda escrita con Windows",results);keyboardMigration.WindowsKeyAction="Windows";Assert(!keyboardMigration.UpgradeKeyboardSearch()&&keyboardMigration.WindowsKeyAction=="Windows","26.3: se conserva la selección posterior del usuario",results);
+                Assert(WakePhrase.Accept("Hey Siri",.9f)&&WakePhrase.Accept("Oye Siri",.9f)&&!WakePhrase.Accept("Hey Siri",.3f)&&!WakePhrase.Accept("hey siri abre todo",1),"26.3: activación local exige frase completa y confianza",results);
+                Assert(LocalCommands.Parse("Abrí Chrome").Intent==LocalIntent.Open&&LocalCommands.Parse("Buscá café").Intent==LocalIntent.Search&&LocalCommands.Parse("format c:").Intent==LocalIntent.Unknown,"26.3: acciones locales acotadas sin terminal",results);
                 Assert(!tap.Process(0x5C,true,false)&&!tap.Process(0x5C,true,false)&&tap.Process(0x5C,false,false),"Menú Windows: derecha y repetición sin abrir antes de soltar",results);
                 tap.Process(0x5B,true,false);tap.Process(0x45,true,false);tap.Process(0x45,false,false);Assert(!tap.Process(0x5B,false,false),"Menú Windows: conserva Win+E",results);
                 tap.Process(0x5B,true,true);Assert(!tap.Process(0x5B,false,true),"Menú Windows: conserva combinaciones con modificadores",results);

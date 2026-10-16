@@ -118,7 +118,7 @@ namespace MacFlow
             int duration=Motion.WindowClose+10;bool finished=false;var fallback=new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Background){Interval=TimeSpan.FromMilliseconds(duration+80)};
             Action finish=delegate{if(finished)return;finished=true;fallback.Stop();PanelMotion.CompleteClose(window);window.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle,new Action(delegate{window.Close();if(after!=null)after();}));};
             fallback.Tick+=delegate{finish();};window.Closed+=delegate{finished=true;fallback.Stop();};fallback.Start();
-            bool genie=GenieTransition.TryStart(window,Motion.WindowClose);
+            bool genie=!PanelMotion.FromTop(window)&&GenieTransition.TryStart(window,Motion.WindowClose);
             if(genie){window.BeginAnimation(UIElement.OpacityProperty,null);window.Opacity=0;CompositorGlass.Resize(window,1);}
             PanelMotion.Close(window);
             var animation=new DoubleAnimation(0,TimeSpan.FromMilliseconds(duration)){EasingFunction=Motion.Ease(true)};Timeline.SetDesiredFrameRate(animation,60);animation.Completed+=delegate{finish();};window.BeginAnimation(UIElement.OpacityProperty,animation);
@@ -128,7 +128,7 @@ namespace MacFlow
             if(window.WindowState==WindowState.Minimized||(bool)window.GetValue(MinimizingProperty)||(bool)window.GetValue(DismissingProperty))return;
             if(!(bool)window.GetValue(RestoreHookProperty)){window.SetValue(RestoreHookProperty,true);bool minimized=false;window.StateChanged+=delegate{if(window.WindowState==WindowState.Minimized)minimized=true;else if(minimized){minimized=false;Reveal(window);}};}
             if(!Motion.Enabled){window.WindowState=WindowState.Minimized;return;}window.SetValue(MinimizingProperty,true);window.IsHitTestVisible=false;
-            bool genie=GenieTransition.TryStart(window,Motion.WindowClose);if(genie){window.BeginAnimation(UIElement.OpacityProperty,null);window.Opacity=0;CompositorGlass.Resize(window,1);}
+            bool genie=!PanelMotion.FromTop(window)&&GenieTransition.TryStart(window,Motion.WindowClose);if(genie){window.BeginAnimation(UIElement.OpacityProperty,null);window.Opacity=0;CompositorGlass.Resize(window,1);}
             PanelMotion.Close(window);
             bool finished=false;var fallback=new System.Windows.Threading.DispatcherTimer{Interval=TimeSpan.FromMilliseconds(Motion.WindowClose+90)};EventHandler closed=null;DependencyPropertyChangedEventHandler hidden=null;
             Action cleanup=delegate{fallback.Stop();window.Closed-=closed;window.IsVisibleChanged-=hidden;};

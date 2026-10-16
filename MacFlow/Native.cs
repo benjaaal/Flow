@@ -58,6 +58,15 @@ namespace MacFlow
         [DllImport("dwmapi.dll")] public static extern int DwmIsCompositionEnabled([MarshalAs(UnmanagedType.Bool)]out bool enabled);
         [DllImport("gdi32.dll")] private static extern IntPtr CreateRoundRectRgn(int left,int top,int right,int bottom,int width,int height);
         [DllImport("gdi32.dll")] private static extern bool DeleteObject(IntPtr value);
+        [DllImport("gdi32.dll")]private static extern int CombineRgn(IntPtr result,IntPtr first,IntPtr second,int mode);
+        internal static readonly DependencyProperty BarGap=DependencyProperty.RegisterAttached("BarGap",typeof(double),typeof(Native),new PropertyMetadata(0.0));
+        internal static void ApplyGlassRegion(IntPtr handle,int width,int height,int radius,int gap)
+        {
+            IntPtr region=IntPtr.Zero;
+            if(gap>0&&width>gap+100){int half=(width-gap)/2;region=CreateRoundRectRgn(0,0,half,height,radius,radius);var right=CreateRoundRectRgn(half+gap,0,width,height,radius,radius);try{if(region!=IntPtr.Zero&&right!=IntPtr.Zero)CombineRgn(region,region,right,2);}finally{if(right!=IntPtr.Zero)DeleteObject(right);}}
+            else region=CreateRoundRectRgn(0,0,width,height,radius,radius);
+            if(region!=IntPtr.Zero&&SetWindowRgn(handle,region,true)==0)DeleteObject(region);
+        }
         [DllImport("user32.dll")] private static extern int SetWindowRgn(IntPtr window,IntPtr region,bool redraw);
         [StructLayout(LayoutKind.Sequential)]private struct ACCENT {public int State,Flags;public uint Color;public int Animation;}
         [StructLayout(LayoutKind.Sequential)]private struct COMPOSITION {public int Attribute;public IntPtr Data;public int Size;}
@@ -111,6 +120,7 @@ namespace MacFlow
             double scale=source.CompositionTarget.TransformToDevice.M11,remaining=Math.Max(0,Math.Min(1,fraction));
             double width=window.ActualWidth*scale,height=window.ActualHeight*scale,left=width*(1-remaining)/2,top=height*(1-remaining)/2;
             double radius=Math.Min(GlassRadius(window)*scale,Math.Min(width,height)*remaining/2);
+            double gap=(double)window.GetValue(BarGap);if(gap>0&&remaining>.999){ApplyGlassRegion(new WindowInteropHelper(window).Handle,(int)Math.Ceiling(width),(int)Math.Ceiling(height),(int)Math.Round(radius*2),(int)Math.Round(gap*scale));return;}
             
             var region=CreateRoundRectRgn((int)left,(int)top,(int)Math.Ceiling(width-left),(int)Math.Ceiling(height-top),Math.Max(1,(int)(radius*2)),Math.Max(1,(int)(radius*2)));
             if(region!=IntPtr.Zero&&SetWindowRgn(new WindowInteropHelper(window).Handle,region,true)==0)DeleteObject(region);

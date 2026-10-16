@@ -28,6 +28,7 @@ namespace MacFlow
         [DataMember]public bool HasLocation;
         [DataMember]public string AppExecutable="",AppIconPath="";
         [DataMember]public string Surface="Clear";
+        [DataMember]public string Monitor="";
         public override string ToString(){return WidgetCatalog.Name(Kind);}
         internal double Elapsed(DateTime now){return Math.Max(0,Seconds+(Running?Math.Max(0,(now-StartedUtc).TotalSeconds):0));}
         internal double Remaining(DateTime now){return Math.Max(0,TimerMinutes*60-Elapsed(now));}
@@ -37,6 +38,7 @@ namespace MacFlow
     [DataContract] internal sealed class WidgetState
     {
         [DataMember]public List<WidgetSpec> Items=new List<WidgetSpec>();
+        [DataMember]public int LayoutRevision;
         internal void Validate()
         {
             if(Items==null)Items=new List<WidgetSpec>();Items=Items.Where(x=>x!=null&&WidgetCatalog.Kinds.Contains(x.Kind)).Take(16).ToList();var ids=new HashSet<string>();
@@ -53,7 +55,7 @@ namespace MacFlow
         internal static bool Place(WidgetSpec item,IEnumerable<WidgetSpec> all,Size available,int requestedColumn,int requestedRow)
         {
             var d=Dimensions(item.Size);if(d.Width>available.Width-32||d.Height>available.Height-150)return false;int columns=Math.Max(1,(int)((available.Width-32-d.Width)/88)+1),rows=Math.Max(1,(int)((available.Height-150-d.Height)/88)+1);
-            Func<int,int,bool> free=(c,r)=>!all.Where(x=>x.Id!=item.Id).Any(x=>Bounds(x).IntersectsWith(new Rect(16+c*88,58+r*88,d.Width,d.Height)));
+            Func<int,int,bool> free=(c,r)=>!all.Where(x=>x.Id!=item.Id&&String.Equals(x.Monitor??"",item.Monitor??"",StringComparison.OrdinalIgnoreCase)).Any(x=>Bounds(x).IntersectsWith(new Rect(16+c*88,58+r*88,d.Width,d.Height)));
             int desiredC=Math.Max(0,Math.Min(columns-1,requestedColumn)),desiredR=Math.Max(0,Math.Min(rows-1,requestedRow));if(free(desiredC,desiredR)){item.Column=desiredC;item.Row=desiredR;return true;}
             for(int r=0;r<rows;r++)for(int c=0;c<columns;c++)if(free(c,r)){item.Column=c;item.Row=r;return true;}return false;
         }

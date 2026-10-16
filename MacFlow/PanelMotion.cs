@@ -70,6 +70,7 @@ namespace MacFlow
         internal static void CompleteClose(Window window)
         {
             if(!IsClosing(window)||!window.IsVisible)return;
+            if(FromTop(window))return;
             // A late frame must not let the opacity clock close the HWND while
             // the coalesced native geometry is still far from the destination.
             window.BeginAnimation(ExitProgress,null);window.SetValue(ExitProgress,.999);
@@ -96,6 +97,7 @@ namespace MacFlow
         internal static void Close(Window window)
         {
             if(window.WindowState==WindowState.Minimized)return;
+            if(FromTop(window)){CloseUp(window);return;}
             if((bool)window.GetValue(Opening))
             {
                 double progress=(double)window.GetValue(ExitProgress);window.SetValue(Opening,false);window.SetValue(Closing,true);window.BeginAnimation(ExitProgress,null);window.SetValue(ExitProgress,progress);
@@ -112,6 +114,17 @@ namespace MacFlow
             Native.RECT bounds;Native.GetWindowRect(new System.Windows.Interop.WindowInteropHelper(window).Handle,out bounds);window.SetValue(ExitStart,bounds);
             bool menu=false;var destination=menu?(Point?)new Point((bounds.Left+bounds.Right)/2.0,(bounds.Top+bounds.Bottom)/2.0-4):DockDestination==null?null:DockDestination(window);window.SetValue(HasTarget,destination.HasValue);if(destination.HasValue)window.SetValue(ExitTarget,destination.Value);
             var collapse=new DoubleAnimation((double)window.GetValue(ExitProgress),.999,TimeSpan.FromMilliseconds(menu?Motion.Menu:Motion.WindowClose)){EasingFunction=new CubicEase{EasingMode=EasingMode.EaseInOut}};Timeline.SetDesiredFrameRate(collapse,60);window.BeginAnimation(ExitProgress,collapse);
+        }
+        private static void CloseUp(Window window)
+        {
+            double start=window.Top;window.BeginAnimation(Window.TopProperty,null);window.Top=start;window.SetValue(Closing,true);
+            double end=DisplaySpace.UpperEdge(window)-window.Height-12;
+            var slide=new DoubleAnimationUsingKeyFrames{FillBehavior=FillBehavior.HoldEnd};
+            slide.KeyFrames.Add(new EasingDoubleKeyFrame(start,KeyTime.FromTimeSpan(TimeSpan.Zero)));
+            slide.KeyFrames.Add(new EasingDoubleKeyFrame(start+7,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(75)),Motion.Ease()));
+            slide.KeyFrames.Add(new EasingDoubleKeyFrame(end-5,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(325)),new CubicEase{EasingMode=EasingMode.EaseInOut}));
+            slide.KeyFrames.Add(new EasingDoubleKeyFrame(end,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(Motion.WindowClose)),Motion.Ease()));
+            Timeline.SetDesiredFrameRate(slide,60);window.BeginAnimation(Window.TopProperty,slide);
         }
         internal static void Reset(Window window)
         {

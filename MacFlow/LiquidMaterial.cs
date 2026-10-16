@@ -174,7 +174,7 @@ namespace MacFlow
         {
             string widgetMode=window.TryFindResource("GlassWidgetSurface") as string;if(widgetMode=="Dark")whiteText=true;else if(widgetMode=="Light")whiteText=false;
             lightText=whiteText;nativeReadability=window.Title.Contains("Conexiones")?(whiteText?-.24:.56):(whiteText?-.32:.66);if(lens!=null)lens.Readability=nativeReadability;
-            if(materialFace!=null&&!SystemParameters.HighContrast)materialFace.Background=widgetMode=="Dark"?(Brush)Design.Brush("#CE15161A"):widgetMode=="Light"?(Brush)Design.Brush("#CFFFFFFF"):Design.MaterialTint(widgetMode=="Clear"||window.Title.Contains("Dock")||window.Title.Contains("barra superior"),whiteText);
+            if(materialFace!=null&&!SystemParameters.HighContrast)materialFace.Background=widgetMode=="Dark"?(Brush)Design.Brush("#CE15161A"):widgetMode=="Light"?(Brush)Design.Brush("#CFFFFFFF"):Design.MaterialTint(widgetMode=="Clear"||window.Title.Contains("Dock")||window.Title.Contains("barra superior")||window.Title.Contains("Centro de control")||window.Title.Contains("Conexiones"),whiteText);
             window.Resources["GlassInk"]=SystemParameters.HighContrast?SystemColors.WindowTextBrush:Design.Brush(whiteText?"#F8FAFF":"#19212D");
             window.Resources["GlassMuted"]=SystemParameters.HighContrast?SystemColors.WindowTextBrush:Design.Brush(whiteText?"#DCE4EF":"#303B4B");
             window.Resources["GlassCardSurface"]=Design.Brush(whiteText?"#161C222B":"#22FFFFFF");window.Resources["GlassTileSurface"]=Design.Brush(whiteText?"#16141A23":"#22FFFFFF");

@@ -20,29 +20,30 @@ namespace MacFlow
         private readonly string file;
         private readonly Dictionary<string,DesktopWidget> windows=new Dictionary<string,DesktopWidget>();
         private readonly DispatcherTimer timer=new DispatcherTimer(DispatcherPriority.Background){Interval=TimeSpan.FromSeconds(1)};
-        private bool disposed,sampling,visible;private int ticks;
+        private bool disposed,sampling,visible,desktopRequested;private int ticks;
         internal DeviceSnapshot Metrics=new DeviceSnapshot();
         internal WidgetManager(Desktop desktop)
-        {Desktop=desktop;file=System.IO.Path.Combine(desktop.Store.DirectoryPath,"widgets.json");bool legacy=!File.Exists(file);State=ModuleStore.Read<WidgetState>(file);State.Validate();if(legacy&&desktop.Preferences.ShowWidget){State.Items.Add(new WidgetSpec{Kind="Digital"});Save();}timer.Tick+=Tick;timer.Start();}
+        {Desktop=desktop;file=System.IO.Path.Combine(desktop.Store.DirectoryPath,"widgets.json");bool legacy=!File.Exists(file);State=ModuleStore.Read<WidgetState>(file);State.Validate();if(legacy&&desktop.Preferences.ShowWidget){State.Items.Add(new WidgetSpec{Kind="Digital"});Save();}if(State.LayoutRevision<1){foreach(var item in State.Items.Where(w=>w.Size=="M"&&(w.Kind=="Digital"||w.Kind=="Battery"||w.Kind=="Calendar")))item.Size="S";State.LayoutRevision=1;Save();}timer.Tick+=Tick;timer.Start();}
         internal IEnumerable<DesktopWidget> Windows{get{return windows.Values;}}
         internal void Save(){if(disposed)return;try{ModuleStore.Write(file,State);}catch(Exception ex){Log.Write("Widgets: "+ex.Message);}}
         internal bool Add(string kind)
-        {if(State.Items.Count>=16)return false;var x=new WidgetSpec{Kind=kind};if(!WidgetCatalog.Place(x,State.Items,Available(),0,0))return false;State.Items.Add(x);Desktop.Preferences.ShowWidget=true;Desktop.Save();Save();Sync();return true;}
-        internal Size Available(){return new Size(SystemParameters.PrimaryScreenWidth,SystemParameters.PrimaryScreenHeight);}
+        {if(State.Items.Count>=16)return false;var current=DisplaySpace.Current;var x=new WidgetSpec{Kind=kind,Monitor=current.Device==System.Windows.Forms.Screen.PrimaryScreen.DeviceName?"":current.Device};if(!WidgetCatalog.Place(x,State.Items,Available(x),0,0))return false;State.Items.Add(x);Desktop.Preferences.ShowWidget=true;Desktop.Save();Save();Sync();return true;}
+        internal DisplayArea Area(WidgetSpec spec){return DisplaySpace.Of(System.Windows.Forms.Screen.AllScreens.FirstOrDefault(s=>s.DeviceName==spec.Monitor)??System.Windows.Forms.Screen.PrimaryScreen);}
+        internal Size Available(WidgetSpec spec=null){var area=spec==null?DisplaySpace.Of(System.Windows.Forms.Screen.PrimaryScreen):Area(spec);return new Size(area.Width,area.Height);}
         internal bool Resize(WidgetSpec x,string size)
-        {string old=x.Size;int c=x.Column,r=x.Row;x.Size=size;if(!WidgetCatalog.Place(x,State.Items,Available(),c,r)){x.Size=old;return false;}Save();Sync();foreach(var w in windows.Values.Where(w=>w.Spec.Id==x.Id))w.RefreshLayout();return true;}
+        {string old=x.Size;int c=x.Column,r=x.Row;x.Size=size;if(!WidgetCatalog.Place(x,State.Items,Available(x),c,r)){x.Size=old;return false;}Save();Sync();foreach(var w in windows.Values.Where(w=>w.Spec.Id==x.Id))w.RefreshLayout();return true;}
         internal void Remove(WidgetSpec x){State.Items.Remove(x);Save();Sync();}
         internal void Sync()
         {
             if(disposed)return;
             foreach(var id in windows.Keys.Where(id=>!State.Items.Any(x=>x.Id==id)).ToList()){Design.Dismiss(windows[id]);windows.Remove(id);}
-            foreach(var x in State.Items){DesktopWidget window;if(!windows.TryGetValue(x.Id,out window)){window=new DesktopWidget(this,x);windows.Add(x.Id,window);}window.Place();window.RefreshAppearance();}
-            SetVisible(visible);
+            foreach(var x in State.Items){if(!String.IsNullOrEmpty(x.Monitor)&&!System.Windows.Forms.Screen.AllScreens.Any(s=>s.DeviceName==x.Monitor)){x.Monitor="";Save();}WidgetCatalog.Place(x,State.Items,Available(x),x.Column,x.Row);DesktopWidget window;if(!windows.TryGetValue(x.Id,out window)){window=new DesktopWidget(this,x);windows.Add(x.Id,window);}window.Place();window.RefreshAppearance();}
+            SetVisible(desktopRequested);
         }
         internal void SetVisible(bool value)
         {
-            visible=value&&Desktop.Preferences.ShowWidget;
-            foreach(var w in windows.Values){if(visible){if(!w.IsVisible){w.Show();w.SetActive(true);}}else if(w.IsVisible&&!w.IsKeyboardFocusWithin){w.SetActive(false);w.Hide();}}
+            desktopRequested=value;visible=false;var free=new Dictionary<string,bool>();
+            foreach(var w in windows.Values){bool show=value;if(!show&&!Desktop.IsTesting&&Desktop.ShellVisible){string key=w.Spec.Monitor??"";if(!free.TryGetValue(key,out show)){var area=Area(w.Spec).Pixels;show=!Desktop.Windows.Any(app=>{Native.RECT r;return !Native.IsIconic(app.Handle)&&Native.GetWindowRect(app.Handle,out r)&&area.IntersectsWith(new Rect(r.Left,r.Top,Math.Max(0,r.Right-r.Left),Math.Max(0,r.Bottom-r.Top)));});free[key]=show;}}show=show&&Desktop.Preferences.ShowWidget&&Desktop.ShellVisible;if(show){visible=true;if(!w.IsVisible){w.Show();w.SetActive(true);}}else if(w.IsVisible&&!w.IsKeyboardFocusWithin){w.SetActive(false);w.Hide();}}
         }
         private async void Tick(object sender,EventArgs e)
         {
@@ -67,6 +68,7 @@ namespace MacFlow
         private readonly CancellationTokenSource stop=new CancellationTokenSource();
         private readonly DispatcherTimer saveDelay=new DispatcherTimer{Interval=TimeSpan.FromMilliseconds(450)};
         private bool dark=Design.Dark;
+        private string placedMonitor;
         internal DesktopWidget(WidgetManager owner,WidgetSpec spec)
         {
             this.owner=owner;Spec=spec;Title="MacFlow · Widget · "+WidgetCatalog.Name(spec.Kind);WindowStyle=WindowStyle.None;ResizeMode=ResizeMode.NoResize;ShowInTaskbar=false;ShowActivated=false;Background=Brushes.Transparent;
@@ -74,7 +76,7 @@ namespace MacFlow
             var root=new Grid();root.Children.Add(new ScrollViewer{Content=body,VerticalScrollBarVisibility=ScrollBarVisibility.Hidden,HorizontalScrollBarVisibility=ScrollBarVisibility.Disabled});
             var options=Design.Button("⋯",Menu,false);options.Width=24;options.Height=20;options.Padding=new Thickness(0);options.Margin=new Thickness(0,-5,-6,0);options.Background=Brushes.Transparent;options.HorizontalAlignment=HorizontalAlignment.Right;options.VerticalAlignment=VerticalAlignment.Top;options.ToolTip="Tamaño, material y configuración";System.Windows.Automation.AutomationProperties.SetName(options,"Opciones del widget");options.Opacity=0;root.Children.Add(options);
             MouseEnter+=delegate{Motion.Fade(options,options.Opacity,1,Motion.Hover);};MouseLeave+=delegate{Motion.Fade(options,options.Opacity,0,Motion.Hover);};GotKeyboardFocus+=delegate{options.Opacity=1;};
-            MouseLeftButtonDown+=delegate(object s,MouseButtonEventArgs e){if(e.ClickCount!=1)return;var node=e.OriginalSource as DependencyObject;while(node!=null&&node!=root){if(node is System.Windows.Controls.Primitives.ButtonBase||node is TextBox||node is Slider)return;node=node is Visual?VisualTreeHelper.GetParent(node):LogicalTreeHelper.GetParent(node);}try{DragMove();int c=(int)Math.Round((Left-16)/88),r=(int)Math.Round((Top-58)/88);WidgetCatalog.Place(Spec,owner.State.Items,owner.Available(),c,r);Place();owner.Save();e.Handled=true;}catch(InvalidOperationException){}};
+            MouseLeftButtonDown+=delegate(object s,MouseButtonEventArgs e){if(e.ClickCount!=1)return;var node=e.OriginalSource as DependencyObject;while(node!=null&&node!=root){if(node is System.Windows.Controls.Primitives.ButtonBase||node is TextBox||node is Slider)return;node=node is Visual?VisualTreeHelper.GetParent(node):LogicalTreeHelper.GetParent(node);}try{DragMove();var area=DisplaySpace.For(this);Spec.Monitor=area.Device==System.Windows.Forms.Screen.PrimaryScreen.DeviceName?"":area.Device;int c=(int)Math.Round((Left-area.Dips.Left-16)/88),r=(int)Math.Round((Top-area.Dips.Top-58)/88);WidgetCatalog.Place(Spec,owner.State.Items,owner.Available(Spec),c,r);Place();owner.Save();e.Handled=true;}catch(InvalidOperationException){}};
             glassPlate=Design.Glass(root,26,true);glassPlate.Padding=new Thickness(16);Content=glassPlate;
             SourceInitialized+=delegate{Native.Glass(this,Design.Dark);var h=new System.Windows.Interop.WindowInteropHelper(this).Handle;Native.SetWindowLong(h,-20,Native.GetWindowLong(h,-20)|0x80);};
             Closed+=delegate{closed=true;stop.Cancel();saveDelay.Stop();if(media!=null)media.Dispose();stop.Dispose();};saveDelay.Tick+=delegate{saveDelay.Stop();owner.Save();};Build();
@@ -82,7 +84,7 @@ namespace MacFlow
         }
         internal void Place()
         {
-            var r=WidgetCatalog.Bounds(Spec);AnimatePlacement(WidthProperty,r.Width);AnimatePlacement(HeightProperty,r.Height);AnimatePlacement(LeftProperty,r.Left);AnimatePlacement(TopProperty,r.Top);
+            var r=WidgetCatalog.Bounds(Spec);var area=owner.Area(Spec);AnimatePlacement(WidthProperty,r.Width);AnimatePlacement(HeightProperty,r.Height);if(!IsLoaded||placedMonitor!=area.Device){DisplaySpace.Place(this,area,r.Left,r.Top);placedMonitor=area.Device;}else{AnimatePlacement(LeftProperty,area.Dips.Left+r.Left);AnimatePlacement(TopProperty,area.Dips.Top+r.Top);}
         }
         private void AnimatePlacement(DependencyProperty property,double value)
         {
@@ -145,7 +147,7 @@ namespace MacFlow
             switch(Spec.Kind)
             {
                 case "Calendar":if(calendarDay!=DateTime.Today)Build();break;
-                case "Digital":value.FontSize=Spec.Size=="L"?68:Spec.Size=="M"?52:40;value.Text=local.ToString("HH:mm");detail.Text=local.ToString("dddd d MMMM",CultureInfo.GetCultureInfo("es-AR"));break;
+                case "Digital":value.FontSize=Spec.Size=="L"?68:Spec.Size=="M"?52:40;value.FontWeight=FontWeights.Normal;value.Text=local.ToString("HH:mm");detail.Text=local.ToString("dddd d MMMM",CultureInfo.GetCultureInfo("es-AR"));break;
                 case "Analog":Position(hour,(local.Hour%12+local.Minute/60.0)*Math.PI/6,26);Position(minute,(local.Minute+local.Second/60.0)*Math.PI/30,39);Position(second,local.Second*Math.PI/30,43);break;
                 case "Battery":value.FontSize=Spec.Size=="S"?(m.PowerKnown&&(m.Power.BatteryFlag==128||m.Power.BatteryLifePercent==255)?14:24):36;value.Text=!m.PowerKnown?"—":m.Power.BatteryFlag==128||m.Power.BatteryLifePercent==255?"Corriente":m.Power.BatteryLifePercent+"%";detail.Text=!m.PowerKnown?"No disponible":m.Power.ACLineStatus==1?"Con corriente":"Usando batería";if(batteryArt!=null)batteryArt.Update(m);break;
                 case "Performance":value.Text=m.Cpu.HasValue?m.Cpu.Value.ToString("0")+"% CPU":"CPU · —";detail.Text=m.Ready?"RAM "+(m.TotalRam>0?Gb(m.UsedRam)+" / "+Gb(m.TotalRam)+" GB":"—")+"\nDisco libre "+(m.DiskTotal>0?Gb(m.DiskFree)+" GB":"—"):"Consultando RAM y almacenamiento…";if(activityArt!=null)activityArt.Update(m);break;

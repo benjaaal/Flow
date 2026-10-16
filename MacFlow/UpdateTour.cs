@@ -87,7 +87,7 @@ namespace MacFlow
                 case 0:
                     title.Text="Todo empieza en el Dock.";description.Text="Acercá el cursor y los iconos crecen dentro del cristal. Tus aplicaciones, siempre a mano.";CreateDockPreview();break;
                 case 1:
-                    title.Text="Deslizá. Y tomá el control.";description.Text="Mantené el clic derecho en el extremo derecho de la barra superior y arrastrá hacia abajo. Soltá para abrir el Centro de control.";
+                    title.Text="Deslizá. Y tomá el control.";description.Text="Arrastrá hacia abajo desde la batería o los indicadores con clic izquierdo o derecho. El Centro de control se abre y se retira hacia arriba con un rebote suave.";
                     example=new ControlCenter(desktop){Height=360};ShowExample();SlidePreview(125);CreatePointer(example.Width-34,28,205);break;
                 case 2:
                     title.Text="Encontrá tu forma de usar MacFlow.";description.Text="Configuración se renovó: buscá un ajuste, elegí tu tema y personalizá el inicio, el Dock y los gestos. Todo en un solo lugar.";
@@ -97,10 +97,10 @@ namespace MacFlow
                     title.Text="Pequeños espacios, más tuyos.";description.Text="Widgets más limpios, datos grandes y tres materiales: transparente, oscuro o claro. Usá su menú para elegir tamaño y acomodalos arrastrando el fondo.";
                     example=new DesktopWidget(desktop.Widgets,new WidgetSpec{Kind="Calendar",Size="S",Surface="Dark"}){Width=164,Height=164};ShowExample();SlidePreview(18);break;
                 case 4:
-                    title.Text="Lo que pasa, siempre a la vista.";description.Text="La cápsula negra reúne música, temporizadores y acciones recientes. Tocala para expandir sus controles. Los avisos de MacFlow entran desde el borde con un rebote suave.";
+                    title.Text="Lo que pasa, siempre a la vista.";description.Text="La cápsula negra reúne música, temporizadores y acciones recientes. Tocala para expandir sus controles. Los avisos de MacFlow bajan desde la manzana con un rebote suave.";
                     var provider=new MediaFixture();provider.State.Playing=true;provider.State.Title="Música · Demostración";provider.State.Artist="Controles conectados al reproductor de Windows";islandPreview=new ActivityIsland(desktop,provider,true);example=islandPreview.View;ShowExample();SlidePreview(18);break;
                 case 5:
-                    title.Text="Todo empieza en la manzana.";description.Text="Un clic abre el menú. Dos clics abren Configuración. IOS es una etiqueta; la tecla Windows sola queda desactivada por defecto. Podés cambiarlo en Sistema.";
+                    title.Text="Todo empieza en la manzana.";description.Text="Un clic abre el menú y dos abren Configuración. Windows abre la búsqueda escrita con un contorno de luz. Hey Siri activa la voz cuando Windows tiene reconocimiento español disponible.";
                     // Read-only instance of the actual menu: a tour must never
                     // execute a power action or change the user's preferences.
                     example=new GlassMenu("MacFlow",new[]{new GlassCommand("Aplicaciones",null,"grid"),new GlassCommand("Buscar",null,"search"),new GlassCommand("Tus ventanas",null,"windows"),new GlassCommand("Configuración",null,"settings"),new GlassCommand("Suspender…",null,"moon"),new GlassCommand("Reiniciar…",null,"power"),new GlassCommand("Apagar…",null,"power")},false);ShowExample();SlidePreview(24);break;
