@@ -27,14 +27,19 @@ namespace MacFlow
         private int wallpaperRequest;
         private int pageGeneration;
         private bool windowClosed;
+        private readonly TextBox settingsQuery;
+        private bool changingQuery;
+        private static readonly string[] PageNames={"Apariencia","Fondos","Dock","Barra superior","Rendimiento","Sistema"};
+        private static readonly string[] PageKeywords={"tema claro oscuro automatico color acento widgets stage manager","fondo imagen wallpaper galeria fotografia escritorio","dock iconos favoritos tamaño tamaño ampliacion animacion aplicaciones posicion ocultar","barra superior wifi bateria volumen reloj windows tarea isla capsula notificaciones musica actividad","rendimiento ahorro memoria cristal transparencia animaciones movimiento recursos","inicio windows arranque teclado tecla saludo bienvenida hola actualizacion energia tapa atajos desinstalar restaurar gestos"};
         public SettingsWindow(Desktop controller, bool testing)
         {
             desktop=controller; var p=desktop.Preferences;
             draft=new Preferences { Theme=p.Theme, Accent=p.Accent, IconSize=p.IconSize,IconAppearance=p.IconAppearance, ContainedDockApplied=p.ContainedDockApplied, Animations=p.Animations, AutoHideTaskbar=p.AutoHideTaskbar, ShowTopBar=p.ShowTopBar, HideInFullscreen=p.HideInFullscreen, GlassOpacity=p.GlassOpacity, LiveGlass=p.LiveGlass, DockAutoHide=p.DockAutoHide, HideDockInApps=p.HideDockInApps, DockPosition=p.DockPosition, ShowNetwork=p.ShowNetwork, ShowBattery=p.ShowBattery, ShowVolume=p.ShowVolume, LowPower=p.LowPower,WindowsMenu=p.WindowsMenu,ProtectDockEdge=p.ProtectDockEdge,HideDockInCodex=p.HideDockInCodex,AppleWindowControls=p.AppleWindowControls, Hotkey=p.Hotkey, ShowWidget=p.ShowWidget, UpdateRepository=p.UpdateRepository };
             startupAvailable=!testing && Startup.TryRead(out startupValue);
-            draft.LocalUpdateFolder=p.LocalUpdateFolder;draft.UpdateFeedUrl=p.UpdateFeedUrl;draft.LidAnimation=p.LidAnimation;draft.WelcomeAfterUpdate=p.WelcomeAfterUpdate;draft.LastWelcomedVersion=p.LastWelcomedVersion;draft.CheckUpdatesAutomatically=p.CheckUpdatesAutomatically;draft.WallpaperPath=p.WallpaperPath;wallpaperSelection=p.WallpaperPath;
-            Title="MacFlow · Configuración";Width=800;Height=610;MinWidth=750;MinHeight=520;WindowStyle=WindowStyle.None;AllowsTransparency=false;ResizeMode=ResizeMode.CanResizeWithGrip;ShowInTaskbar=true;Background=Brushes.Transparent;FontFamily=new FontFamily("Segoe UI Variable Text, Segoe UI");
-            var layout=new Grid();layout.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(184)});layout.ColumnDefinitions.Add(new ColumnDefinition());
+            draft.LocalUpdateFolder=p.LocalUpdateFolder;draft.UpdateFeedUrl=p.UpdateFeedUrl;draft.LidAnimation=p.LidAnimation;draft.WelcomeAfterUpdate=p.WelcomeAfterUpdate;draft.ShowSessionGreeting=p.ShowSessionGreeting;draft.LastWelcomedVersion=p.LastWelcomedVersion;draft.CheckUpdatesAutomatically=p.CheckUpdatesAutomatically;draft.WallpaperPath=p.WallpaperPath;wallpaperSelection=p.WallpaperPath;
+            draft.ShowActivityIsland=p.ShowActivityIsland;draft.WindowsKeyAction=p.WindowsKeyAction;draft.ControlCenterGesture=p.ControlCenterGesture;
+            Title="MacFlow · Configuración";Width=900;Height=650;MinWidth=750;MinHeight=520;WindowStyle=WindowStyle.None;AllowsTransparency=false;ResizeMode=ResizeMode.CanResizeWithGrip;ShowInTaskbar=true;Background=Brushes.Transparent;FontFamily=new FontFamily("Segoe UI Variable Text, Segoe UI");
+            var layout=new Grid();layout.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(204)});layout.ColumnDefinitions.Add(new ColumnDefinition());
             var side=new DockPanel{Margin=new Thickness(12,12,12,15)};
             var top=new StackPanel();
             var lights=new WindowControls(this,delegate{Design.Dismiss(this);}){Margin=new Thickness(0,0,0,22)};top.Children.Add(lights);
@@ -43,24 +48,26 @@ namespace MacFlow
             identity.Children.Add(new Image{Source=Icon,Width=36,Height=36,Margin=new Thickness(0,0,9,0),VerticalAlignment=VerticalAlignment.Center});
             var labels=new StackPanel{VerticalAlignment=VerticalAlignment.Center};var brand=Design.Text("MacFlow",18,true);labels.Children.Add(brand);
             var caption=Design.Text("Configuración",11,false);caption.SetResourceReference(TextBlock.ForegroundProperty,"GlassMuted");caption.Margin=new Thickness(0,3,0,0);labels.Children.Add(caption);identity.Children.Add(labels);top.Children.Add(identity);
-            string[] names={"Apariencia","Fondos","Dock","Barra superior","Rendimiento","Sistema"}; string[] symbols={"appearance","wallpaper","dock","topbar","performance","settings"};
+            var searchLabel=Design.Text("Buscar ajustes",11,false);searchLabel.Margin=new Thickness(7,0,0,7);searchLabel.SetResourceReference(TextBlock.ForegroundProperty,"GlassMuted");top.Children.Add(searchLabel);
+            settingsQuery=new TextBox{Padding=new Thickness(10,7,10,7),FontSize=13,BorderThickness=new Thickness(0),Background=Brushes.Transparent,Margin=new Thickness(0)};settingsQuery.SetResourceReference(Control.ForegroundProperty,"GlassInk");settingsQuery.SetResourceReference(TextBox.CaretBrushProperty,"GlassInk");System.Windows.Automation.AutomationProperties.SetName(settingsQuery,"Buscar ajustes");top.Children.Add(new Border{CornerRadius=new CornerRadius(10),Background=Design.Brush("#18FFFFFF"),Margin=new Thickness(4,0,4,14),Child=settingsQuery});
+            string[] names=PageNames; string[] symbols={"appearance","wallpaper","dock","topbar","performance","settings"};
             for(int i=0;i<names.Length;i++)
             {
                 int index=i;var b=Design.Button("",delegate{ShowPage(index);},false);b.HorizontalContentAlignment=HorizontalAlignment.Left;b.Padding=new Thickness(7,6,7,6);b.Margin=new Thickness(0,2,0,2);b.BorderThickness=new Thickness(0);
                 System.Windows.Automation.AutomationProperties.SetName(b,names[i]);
-                string[] colors={"#9277D7","#29A0D7","#007AFF","#6373CF","#35B58A","#85858E"};
-                var row=new StackPanel{Orientation=Orientation.Horizontal};row.Children.Add(new Border{Child=Design.Symbol(symbols[i],15,Brushes.White),Width=23,Height=23,CornerRadius=new CornerRadius(6),Background=Design.Brush(colors[i]),Margin=new Thickness(0,0,8,0)});row.Children.Add(Design.Text(names[i],12,false));b.Content=row;navigation.Add(b);top.Children.Add(b);
+                var row=new StackPanel{Orientation=Orientation.Horizontal};row.Children.Add(new Border{Child=Design.Symbol(symbols[i],17,Design.Ink),Width=25,Height=25,CornerRadius=new CornerRadius(7),Background=Design.Brush("#0AFFFFFF"),Margin=new Thickness(0,0,8,0)});row.Children.Add(Design.Text(names[i],12,false));b.Content=row;b.ToolTip=names[i];navigation.Add(b);top.Children.Add(b);
             }
             DockPanel.SetDock(top,System.Windows.Controls.Dock.Top); side.Children.Add(top);
             var version=Design.Text("MacFlow "+Product.VersionText,10,false);version.SetResourceReference(TextBlock.ForegroundProperty,"GlassMuted");version.VerticalAlignment=VerticalAlignment.Bottom;version.Margin=new Thickness(7,0,0,2);side.Children.Add(version);
             layout.Children.Add(new Border{Background=Design.SidebarSurface,Child=side});
             var main=new DockPanel{Margin=new Thickness(25,22,25,18)};var contentSurface=new Border{Background=Design.ContentSurface,Child=main};Grid.SetColumn(contentSurface,1);layout.Children.Add(contentSurface);
             main.Resources["GlassCardSurface"]=Design.CardSurface;
-            var header=new StackPanel{Margin=new Thickness(0,0,0,20)};title=Design.Text("",21,true);subtitle=Design.Text("",12,false);subtitle.SetResourceReference(TextBlock.ForegroundProperty,"GlassMuted");subtitle.Margin=new Thickness(0,6,0,0);header.Children.Add(title);header.Children.Add(subtitle);DockPanel.SetDock(header,System.Windows.Controls.Dock.Top);main.Children.Add(header);
+            var header=new StackPanel{Margin=new Thickness(0,0,0,23)};title=Design.Text("",25,true);subtitle=Design.Text("",13,false);subtitle.SetResourceReference(TextBlock.ForegroundProperty,"GlassMuted");subtitle.TextWrapping=TextWrapping.Wrap;subtitle.Margin=new Thickness(0,7,0,0);header.Children.Add(title);header.Children.Add(subtitle);DockPanel.SetDock(header,System.Windows.Controls.Dock.Top);main.Children.Add(header);
             var foot=new DockPanel{Margin=new Thickness(0,12,0,0)};status=Design.Text("",10,false);status.SetResourceReference(TextBlock.ForegroundProperty,"GlassMuted");status.TextWrapping=TextWrapping.Wrap;var apply=Design.Button("Aplicar",Apply,true);System.Windows.Automation.AutomationProperties.SetName(apply,"Aplicar cambios");apply.MinWidth=85;apply.Margin=new Thickness(8,0,0,0);DockPanel.SetDock(apply,System.Windows.Controls.Dock.Right);foot.Children.Add(apply);foot.Children.Add(status);DockPanel.SetDock(foot,System.Windows.Controls.Dock.Bottom);main.Children.Add(foot);
             page=new StackPanel();pagesHost=new Grid();pagesHost.Children.Add(page);pageScroll=new ScrollViewer {Content=pagesHost,VerticalScrollBarVisibility=ScrollBarVisibility.Auto,HorizontalScrollBarVisibility=ScrollBarVisibility.Disabled};main.Children.Add(pageScroll);
             var shell=Design.Glass(layout,16,false);shell.Padding=new Thickness(0);Content=shell;SourceInitialized+=delegate{Native.Glass(this,Design.Dark);};header.MouseLeftButtonDown+=delegate{DragMove();};top.MouseLeftButtonDown+=delegate(object sender,MouseButtonEventArgs e){if(e.OriginalSource is TextBlock&&!e.Handled){var node=(DependencyObject)e.OriginalSource;while(node!=null){if(node is System.Windows.Controls.Primitives.ButtonBase)return;node=VisualTreeHelper.GetParent(node);}DragMove();}};
-            KeyDown+=delegate(object sender,KeyEventArgs e) { if(e.Key==Key.Escape) {e.Handled=true;Design.Dismiss(this);} };Closed+=delegate {windowClosed=true;wallpaperRequest++;};ShowPage(0);
+            settingsQuery.TextChanged+=delegate{if(!changingQuery)SearchSettings();};
+            KeyDown+=delegate(object sender,KeyEventArgs e) { if(e.Key==Key.Escape) {e.Handled=true;if(settingsQuery.Text.Length>0)settingsQuery.Clear();else Design.Dismiss(this);} };Closed+=delegate {windowClosed=true;wallpaperRequest++;};ShowPage(0);
         }
         private static Button Light(string color,Action action,string tooltip)
         {
@@ -68,15 +75,36 @@ namespace MacFlow
         }
         private void ShowPage(int index)
         {
-            int direction=index.CompareTo(selected);selected=index;var previous=page;page=new StackPanel();for(int i=0;i<navigation.Count;i++){navigation[i].Background=i==index?Design.Brush(draft.Accent):Brushes.Transparent;navigation[i].Resources["GlassInk"]=i==index?Brushes.White:Design.Ink;}
+            if(settingsQuery.Text.Length>0){changingQuery=true;settingsQuery.Clear();changingQuery=false;}
+            int direction=index.CompareTo(selected);selected=index;var previous=page;page=new StackPanel();for(int i=0;i<navigation.Count;i++){navigation[i].Background=i==index?Design.Brush(Design.Dark?"#26FFFFFF":"#35000000"):Brushes.Transparent;navigation[i].Resources["GlassInk"]=Design.Ink;}
             wallpaperRequest++;pageGeneration++;
             if(index==0) Appearance();else if(index==1) WallpaperPage();else if(index==2) Dock();else if(index==3) Bar();else if(index==4) Performance();else SystemPage();
             pageScroll.ScrollToVerticalOffset(0);ContentTransition.Show(pagesHost,previous.Children.Count==0?null:previous,page,direction);
         }
+        internal void SetSearch(string query){settingsQuery.Text=query;}
+        internal FrameworkElement TourPreview()
+        {
+            // Reuse the actual search controls at readable size, rather than
+            // shrinking the entire settings window into the presentation.
+            SetSearch("inicio");var root=new StackPanel();var header=title.Parent as Panel;if(header!=null){header.Children.Remove(title);header.Children.Remove(subtitle);}root.Children.Add(title);subtitle.Margin=new Thickness(0,6,0,12);root.Children.Add(subtitle);
+            var holder=settingsQuery.Parent as Border;if(holder!=null)holder.Child=null;settingsQuery.Margin=new Thickness(0,0,0,13);settingsQuery.Background=Design.Brush("#16FFFFFF");root.Children.Add(settingsQuery);pageScroll.Content=null;root.Children.Add(pagesHost);var glass=Design.Glass(root,22,false);glass.Padding=new Thickness(22);return glass;
+        }
+        private void SearchSettings()
+        {
+            string query=settingsQuery.Text.Trim();if(query.Length==0){ShowPage(selected);return;}
+            wallpaperRequest++;pageGeneration++;var previous=page;page=new StackPanel();Heading("Buscar ajustes","Encontrá una opción y abrí su sección.");int count=0;
+            for(int i=0;i<PageNames.Length;i++)
+            {
+                if(!SearchMatches(PageNames[i]+" "+PageKeywords[i],query))continue;int target=i;var content=new DockPanel();var arrow=Design.Symbol("chevron",16,Design.Muted);DockPanel.SetDock(arrow,System.Windows.Controls.Dock.Right);content.Children.Add(arrow);var label=Design.Text(PageNames[i],14,true);content.Children.Add(label);var button=Design.Button("",delegate{ShowPage(target);},false);button.Content=content;button.Padding=new Thickness(15);button.HorizontalContentAlignment=HorizontalAlignment.Stretch;button.Margin=new Thickness(0,0,0,8);System.Windows.Automation.AutomationProperties.SetName(button,"Abrir "+PageNames[i]);page.Children.Add(button);count++;
+            }
+            if(count==0){var message=Design.Text("No encontramos ese ajuste",17,true);message.Margin=new Thickness(0,20,0,8);page.Children.Add(message);var hint=Design.Text("Probá con fondo, iconos, inicio o animaciones.",13,false);hint.TextWrapping=TextWrapping.Wrap;page.Children.Add(hint);}pageScroll.ScrollToVerticalOffset(0);ContentTransition.Show(pagesHost,previous,page,0);
+        }
+        internal static bool SearchMatches(string text,string query)
+        {return query.Split(new[]{' '},StringSplitOptions.RemoveEmptyEntries).All(word=>System.Globalization.CultureInfo.CurrentCulture.CompareInfo.IndexOf(text,word,System.Globalization.CompareOptions.IgnoreCase|System.Globalization.CompareOptions.IgnoreNonSpace)>=0);}
         private void Heading(string text,string description) { title.Text=text;subtitle.Text=description; }
         private StackPanel Section(string label)
         {
-            var labelText=Design.Text(label,12,true);labelText.Margin=new Thickness(2,0,0,9);page.Children.Add(labelText);var contents=new StackPanel();page.Children.Add(Design.Card(contents));return contents;
+            var labelText=Design.Text(label,13,true);labelText.Margin=new Thickness(2,0,0,10);page.Children.Add(labelText);var contents=new StackPanel();var card=Design.Card(contents);card.Padding=new Thickness(17,12,17,12);card.CornerRadius=new CornerRadius(17);page.Children.Add(card);return contents;
         }
         private static Grid Row(string name,string detail,UIElement control)
         {
@@ -91,7 +119,7 @@ namespace MacFlow
             Heading("Apariencia","Elegí cómo se ve tu escritorio.");
             var themes=new StackPanel {Orientation=Orientation.Horizontal,Margin=new Thickness(0,0,0,18)};
             themes.Children.Add(Design.Button("Claro",delegate {draft.Theme="Light";ShowPage(0);},draft.Theme=="Light"));
-            themes.Children.Add(Design.Button("Oscuro",delegate {draft.Theme="Dark";ShowPage(0);},draft.Theme=="Dark"));page.Children.Add(themes);
+            themes.Children.Add(Design.Button("Oscuro",delegate {draft.Theme="Dark";ShowPage(0);},draft.Theme=="Dark"));themes.Children.Add(Design.Button("Automático",delegate {draft.Theme="Auto";ShowPage(0);},draft.Theme=="Auto"));page.Children.Add(themes);
             var material=Section("Cristal");material.Children.Add(Row("Intensidad del cristal","Transparencia del Dock y los menús.",Design.Symbol("sun",20,Design.Muted)));
             var transparency=new Slider {Minimum=.06,Maximum=.65,Value=draft.GlassOpacity,Margin=new Thickness(0,12,0,3)};transparency.ValueChanged+=delegate {draft.GlassOpacity=transparency.Value;};material.Children.Add(transparency);material.Children.Add(Row("Más transparente","",Design.Text("Más contraste",10,false)));
             var colors=Section("Color del acento");var swatches=new StackPanel {Orientation=Orientation.Horizontal};string[] palette={"#8DAEFF","#B8A1FF","#7CDEC1","#FF9BC2","#F5CC85","#FF9F0A"};string[] labels={"Azul","Lavanda","Menta","Rosa","Ámbar","Mandarina"};
@@ -156,7 +184,7 @@ namespace MacFlow
         private void Bar()
         {
             Heading("Barra superior","Una barra de cristal con reloj y controles del sistema.");var section=Section("Elementos visibles");Toggle(section,"Barra superior","Sin contorno exterior, esquinas suaves y altura de 40 puntos.",draft.ShowTopBar,delegate(bool v){draft.ShowTopBar=v;});Toggle(section,"Wi-Fi y red","Estado de tu conexión",draft.ShowNetwork,delegate(bool v){draft.ShowNetwork=v;});Toggle(section,"Batería","Porcentaje o alimentación por corriente",draft.ShowBattery,delegate(bool v){draft.ShowBattery=v;});Toggle(section,"Volumen","Nivel del dispositivo de salida",draft.ShowVolume,delegate(bool v){draft.ShowVolume=v;});
-            var integration=Section("Integración con Windows");Toggle(integration,"Ocultar la barra de tareas original","Se oculta mientras MacFlow está activo; vuelve al salir.",draft.AutoHideTaskbar,delegate(bool v){draft.AutoHideTaskbar=v;});Toggle(integration,"Borde del Dock protegido","Acercá el cursor al borde para recuperar el Dock.",draft.ProtectDockEdge,delegate(bool v){draft.ProtectDockEdge=v;});var note=Design.Text("La barra superior incluye controles rojo, amarillo y verde para la ventana activa. Los botones originales de cada programa se conservan.",12,false);note.SetResourceReference(TextBlock.ForegroundProperty,"GlassMuted");note.TextWrapping=TextWrapping.Wrap;integration.Children.Add(note);
+            Toggle(section,"Actividad en vivo","Cápsula negra para música, temporizadores y acciones de MacFlow.",draft.ShowActivityIsland!=false,delegate(bool v){draft.ShowActivityIsland=v;});var integration=Section("Integración con Windows");Toggle(integration,"Ocultar la barra de tareas original","Se oculta mientras MacFlow está activo; vuelve al salir.",draft.AutoHideTaskbar,delegate(bool v){draft.AutoHideTaskbar=v;});Toggle(integration,"Borde del Dock protegido","Acercá el cursor al borde para recuperar el Dock.",draft.ProtectDockEdge,delegate(bool v){draft.ProtectDockEdge=v;});var note=Design.Text("La barra superior incluye controles rojo, amarillo y verde para la ventana activa. Los botones originales de cada programa se conservan.",12,false);note.SetResourceReference(TextBlock.ForegroundProperty,"GlassMuted");note.TextWrapping=TextWrapping.Wrap;integration.Children.Add(note);
         }
         private void Performance()
         {
@@ -167,8 +195,12 @@ namespace MacFlow
             Heading("Sistema","MacFlow se adapta a tu Windows.");var section=Section("Inicio y accesos");var start=Design.Check("",startupValue,delegate(bool v){startupValue=v;});start.Width=45;start.IsEnabled=startupAvailable;var startupInfo=desktop.IsTesting?null:Startup.Inspect();section.Children.Add(Row("Iniciar con Windows",startupInfo==null?"No disponible en este modo de prueba":startupInfo.Description,start));
             var repair=Design.Button("Reparar inicio automático",delegate{try{Startup.Enabled=true;startupValue=true;ShowPage(5);status.Text="Acceso de inicio reparado. Windows puede deshabilitarlo desde Aplicaciones de inicio.";}catch(Exception ex){status.Text=ex.Message;}},false);repair.IsEnabled=startupAvailable;section.Children.Add(repair);
             section.Children.Add(Design.Button("Revisar aplicaciones de inicio en Windows",delegate{Process.Start(new ProcessStartInfo("ms-settings:startupapps"){UseShellExecute=true});},false));
+            section.Children.Add(Design.Button("Abrir Administrador de tareas",desktop.OpenTaskManager,false));
+            var launch=desktop.IsTesting?null:LaunchDiagnostics.Read(desktop.Store.DirectoryPath);var launchText=Design.Text(launch==null?"La próxima apertura registrará el tiempo hasta mostrar el Dock.":"Último inicio: "+launch.Mode+" · "+launch.Phase+(launch.FirstFrameMs>0?" · Dock en "+(launch.FirstFrameMs/1000).ToString("F2")+" s":""),12,false);launchText.TextWrapping=TextWrapping.Wrap;section.Children.Add(launchText);
+            Toggle(section,"Bienvenida al iniciar sesión","Entrada breve sobre tu fondo, después de acceder a Windows. No reemplaza la contraseña ni la pantalla de bloqueo.",draft.ShowSessionGreeting!=false,delegate(bool v){draft.ShowSessionGreeting=v;});
             Toggle(section,"Saludo después de actualizar","Hola aparece una vez por versión nueva.",draft.WelcomeAfterUpdate,delegate(bool v){draft.WelcomeAfterUpdate=v;});section.Children.Add(Design.Button("Repetir Hola y demostración",desktop.ReplayWelcome,false));
-            Toggle(section,"Menú con la tecla Windows","Una pulsación abre MacFlow. Win+E y otros atajos siguen en Windows.",draft.WindowsMenu,delegate(bool v){draft.WindowsMenu=v;});section.Children.Add(Design.Button("Tus ventanas · minimizar, ampliar y cerrar",desktop.OpenOverview,false));section.Children.Add(Design.Button("Abrir menú de energía",desktop.OpenPowerMenu,false));
+            var winAction=new ComboBox{ItemsSource=new[]{"Sin acción","Menú de MacFlow","Menú de Windows"},SelectedIndex=draft.WindowsKeyAction=="MacFlow"?1:draft.WindowsKeyAction=="Windows"?2:0,Width=165};winAction.SelectionChanged+=delegate{draft.WindowsKeyAction=winAction.SelectedIndex==1?"MacFlow":winAction.SelectedIndex==2?"Windows":"Disabled";draft.WindowsMenu=winAction.SelectedIndex!=2;};section.Children.Add(Row("Tecla Windows sola","Win+E y las demás combinaciones se conservan.",winAction));
+            Toggle(section,"Deslizar el centro de control","Arrastrá hacia abajo con el botón derecho desde la parte derecha de la barra superior.",draft.ControlCenterGesture!=false,delegate(bool v){draft.ControlCenterGesture=v;});section.Children.Add(Design.Button("Tus ventanas · minimizar, ampliar y cerrar",desktop.OpenOverview,false));section.Children.Add(Design.Button("Abrir menú de energía",desktop.OpenPowerMenu,false));
             var lid=Section("Tapa de la notebook");Toggle(lid,"Transición al abrir y cerrar la tapa","Pliegue con desenfoque y movimiento suave.",draft.LidAnimation,delegate(bool v){draft.LidAnimation=v;});lid.Children.Add(Design.Button("Probar pliegue del escritorio",desktop.PreviewLidAnimation,false));var lidNote=Design.Text(desktop.LidStatus+"\nSin sensor, el efecto responde al aviso de apertura/cierre. La suspensión puede interrumpirlo.",11,false);lidNote.TextWrapping=TextWrapping.Wrap;lidNote.Margin=new Thickness(0,8,0,0);lid.Children.Add(lidNote);
             var hotkey=new ComboBox {ItemsSource=new[]{"Alt + Espacio","Ctrl + Alt + Espacio","Ctrl + Espacio"},SelectedIndex=draft.Hotkey=="CtrlAltSpace"?1:draft.Hotkey=="CtrlSpace"?2:0,Width=185};hotkey.SelectionChanged+=delegate {draft.Hotkey=hotkey.SelectedIndex==1?"CtrlAltSpace":hotkey.SelectedIndex==2?"CtrlSpace":"AltSpace";};section.Children.Add(Row("Atajo del buscador","Si está ocupado, podés usar el Dock.",hotkey));
             var update=Section("Actualizaciones");Toggle(update,"Buscar automáticamente","Consulta el canal al iniciar y cada 12 horas, sin instalar por tu cuenta.",draft.CheckUpdatesAutomatically,delegate(bool v){draft.CheckUpdatesAutomatically=v;});update.Children.Add(Design.Button("Abrir actualizaciones",delegate{desktop.OpenUpdates(draft.UpdateRepository,draft.UpdateFeedUrl);},false));var repo=new TextBox{Text=draft.UpdateRepository??"",Padding=new Thickness(10),Background=Design.Brush("#12FFFFFF"),BorderThickness=new Thickness(0),ToolTip="Canal opcional de GitHub: propietario/repositorio"};repo.SetResourceReference(Control.ForegroundProperty,"GlassInk");repo.SetResourceReference(TextBox.CaretBrushProperty,"GlassInk");repo.TextChanged+=delegate{draft.UpdateRepository=repo.Text.Trim();};update.Children.Add(Design.Text("Canal de GitHub (opcional)",11,false));repo.Margin=new Thickness(0,8,0,8);update.Children.Add(repo);

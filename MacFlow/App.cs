@@ -41,6 +41,8 @@ namespace MacFlow
             if (args.Length == 2 && args[0] == "--public-update-test") return PublicUpdateProbe.Run(args[1]);
             if (args.Length == 2 && args[0] == "--features-smoke") return NewFeaturesVisual.Run(args[1]);
             if (args.Length == 2 && args[0] == "--modules-smoke") return ModulesVisual.Run(args[1]);
+            if (args.Length == 2 && args[0] == "--renewal-smoke") return RenewalVisual.Run(args[1]);
+            if (args.Length == 2 && args[0] == "--session-smoke") return SessionGreetingVisual.Run(args[1]);
             if (args.Length == 2 && args[0] == "--edges-smoke") return GlassEdgesVisual.Run(args[1]);
             if (args.Length == 2 && args[0] == "--close-transition-smoke") return CloseTransitionVisual.Run(args[1]);
             if (args.Length == 2 && args[0] == "--weather-test") return WeatherProbe.Run(args[1]);
@@ -60,6 +62,7 @@ namespace MacFlow
             using (var mutex = new Mutex(true, smoke ? MutexName + ".Smoke" : MutexName, out created))
             {
                 if (!created) { if(!smoke&&!(args.Length>0&&args[0]=="--background")){for(int attempt=0;attempt<20;attempt++){if(SignalSettings(args.Length>0&&args[0]=="--welcome"?WelcomeEvent:SettingsEvent))return 0;Thread.Sleep(50);}}return 0; }
+                if(!smoke)LaunchDiagnostics.Begin(data,args.Length>0&&args[0]=="--background");
                 var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown }; Desktop desktop = null;
                 app.DispatcherUnhandledException += delegate(object sender, DispatcherUnhandledExceptionEventArgs e)
                 {
@@ -80,12 +83,12 @@ namespace MacFlow
                         {
                             Log.Write("Inicio automático recibido: "+Product.VersionText);
                             await Startup.WaitForDesktop(delegate{return Native.GetShellWindow()!=IntPtr.Zero&&Native.FindWindow("Shell_TrayWnd",null)!=IntPtr.Zero;},delegate(int delay){return Task.Delay(delay);});
-                            if(app.Dispatcher.HasShutdownStarted)return;
+                            if(app.Dispatcher.HasShutdownStarted)return;LaunchDiagnostics.Mark("Explorer comprobado");
                         }
                         if(smoke&&!preview){var fixture=new VisualTestBackground {WindowState=WindowState.Normal,Width=SystemParameters.PrimaryScreenWidth,Height=SystemParameters.PrimaryScreenHeight,Left=0,Top=0,ShowActivated=false,IsHitTestVisible=false};fixture.SourceInitialized+=delegate {Native.NoActivate(fixture);};fixture.Show();}
                         if(!smoke)Log.Write((args.Length>0&&args[0]=="--background"?"Inicio automático solicitado: ":"Inicio manual solicitado: ")+Product.VersionText);
                         desktop = new Desktop(smoke ? Path.Combine(Path.GetFullPath(args[1]), "profile") : data, smoke,smoke&&!preview,args.Length>0&&args[0]=="--background");
-                        if(!smoke)Log.Write("MacFlow listo: "+Product.VersionText);
+                        if(!smoke){Log.Write("MacFlow listo: "+Product.VersionText);LaunchDiagnostics.Mark("Interfaz creada");}
                         if (preview) desktop.OpenSettings();
                         else if (smoke)
                         {
@@ -103,7 +106,7 @@ namespace MacFlow
                                     if (stage == 3) {
                                         var applications=(Launchpad)desktop.Launcher;applications.ZoomButton.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Button.ClickEvent));await Task.Delay(280);
                                         if(applications.WindowState!=WindowState.Maximized)throw new Exception("Applications zoom button failed");applications.ZoomButton.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Button.ClickEvent));await Task.Delay(280);
-                                        if(applications.WindowState!=WindowState.Normal)throw new Exception("Applications zoom restore failed");applications.MinimizeButton.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Button.ClickEvent));await Task.Delay(350);
+                                        if(applications.WindowState!=WindowState.Normal)throw new Exception("Applications zoom restore failed");applications.MinimizeButton.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Button.ClickEvent));await Task.Delay(Motion.WindowClose+150);
                                         if(desktop.Launcher!=applications||applications.WindowState!=WindowState.Minimized)throw new Exception("Applications minimize closed the window");desktop.OpenLaunchpad();await Task.Delay(350);
                                         if(desktop.Launcher!=applications||applications.WindowState!=WindowState.Normal)throw new Exception("Dock did not restore minimized Applications");
                                         Render(desktop.Launcher,Path.Combine(args[1],"applications.png")); await CaptureOwnWindow(desktop.Launcher,Path.Combine(args[1],"applications-desktop.png"));
@@ -134,6 +137,7 @@ namespace MacFlow
                         }
                         else if (args.Length>0&&args[0]=="--welcome") desktop.OpenWelcome();
                         else if(desktop.WelcomeForNewVersion()) { }
+                        else if(args.Length>0&&args[0]=="--background")desktop.OpenSessionGreeting();
                         else if (args.Length == 0 || !File.Exists(desktop.Store.PathName)) desktop.OpenSettings();
                     };
                     app.Exit += delegate { wait.Unregister(null);settingsWait.Unregister(null);greetingWait.Unregister(null); if (desktop != null) desktop.Dispose(); };
@@ -173,12 +177,13 @@ namespace MacFlow
                 var store = new SettingsStore(Path.Combine(directory, "settings-tests")); var p = new Preferences { IconSize = 999, Theme = "bad", Accent = "invalid" }; p.Pins.Add(new AppEntry { Name = "Test", Target = "explorer.exe" }); store.Save(p); var restored = store.Load();
                 Assert(restored.IconSize == 72 && restored.Theme == "Dark" && restored.Accent == "#8DAEFF" && restored.Pins.Count == 1, "Preferencias: persistencia y validación", results);
                 restored.IconSize = 32; store.Save(restored); Assert(store.Load().IconSize == 32, "Reemplazo atómico de preferencias existentes", results);
-                File.WriteAllText(store.PathName, "{invalid json"); Assert(store.Load().IconSize == 32, "Recuperación de JSON corrupto", results);
+                File.WriteAllText(store.PathName, "{invalid json"); Assert(store.Load().IconSize == 72 && store.Load().Pins.Count==1, "Recuperación de JSON corrupto desde la copia anterior", results);
                 File.WriteAllText(store.PathName,"{\"IconSize\":36,\"Animations\":true}");Assert(store.Load().NeedsUpdateWelcome(Product.Version),"Bienvenida: perfiles anteriores detectan el cambio de versión",results);restored.WelcomeAfterUpdate=false;store.Save(restored);Assert(!store.Load().NeedsUpdateWelcome(Product.Version),"Bienvenida: se conserva la elección de desactivarla",results);restored.WelcomeAfterUpdate=true;restored.LastWelcomedVersion=Product.VersionText;store.Save(restored);Assert(!store.Load().NeedsUpdateWelcome(Product.Version),"Bienvenida: reiniciar la misma versión no repite Hola",results);Assert(restored.NeedsUpdateWelcome(new Version(Product.Version.Major,Product.Version.Minor,Product.Version.Build+1)),"Bienvenida: una nueva versión vuelve a mostrar Hola",results);
                 UpdateRegression.Run(Path.Combine(directory,"updates"),results);
                 NewFeaturesRegression.Run(Path.Combine(directory,"features"),results);
                 ModuleRegression.Run(Path.Combine(directory,"modules"),results);
                 StartupRegression.Run(Path.Combine(directory,"startup"),results);
+                ModernizationRegression.Run(Path.Combine(directory,"modernization"),results);
                 Assert(LiquidMaterial.LightInkForLuminance(.2,false,false)&&!LiquidMaterial.LightInkForLuminance(.8,false,true),"Cristal: tinta legible sobre material oscuro y claro",results);
                 Assert(LiquidMaterial.LightInkForLuminance(.55,true,true)&&!LiquidMaterial.LightInkForLuminance(.48,true,false),"Cristal: histéresis evita parpadeos de texto cerca del umbral",results);
                 double maxSpring=0;bool finiteSpring=true;for(int sample=0;sample<=200;sample++){double position=SpringEase.Progress(sample/200.0);finiteSpring&=!Double.IsNaN(position)&&!Double.IsInfinity(position);maxSpring=Math.Max(maxSpring,position);}
@@ -262,15 +267,15 @@ namespace MacFlow
                     Assert(TaskbarSurfaces.TaskbarClass("Shell_TrayWnd")&&TaskbarSurfaces.TaskbarClass("Shell_SecondaryTrayWnd")&&!TaskbarSurfaces.TaskbarClass("Notepad"),"Barra: filtro restringido a las superficies de Explorer",results);
                 }
                 Motion.TestClientAreaAnimations=false;var reducedPanel=TestWindow();int reducedCalls=0;reducedPanel.Show();Design.Dismiss(reducedPanel,delegate{reducedCalls++;});Assert(!reducedPanel.IsVisible&&reducedCalls==1,"Panel: política de movimiento reducido cierra inmediatamente y ejecuta su acción una vez",results);Motion.TestClientAreaAnimations=true;
-                var panel=TestWindow();int calls=0;panel.Show();Design.Dismiss(panel,delegate{calls++;});panel.BeginAnimation(UIElement.OpacityProperty,null);Pump(500);
+                var panel=TestWindow();int calls=0;panel.Show();Design.Dismiss(panel,delegate{calls++;});panel.BeginAnimation(UIElement.OpacityProperty,null);Pump(Motion.WindowClose+240);
                 Assert(!panel.IsVisible&&calls==1,"Panel: cierre garantizado si se interrumpe la animación; callback una vez",results);
                 panel=TestWindow();calls=0;panel.Show();Design.Dismiss(panel,delegate{calls++;});panel.Close();Pump(400);
                 Assert(calls==0,"Panel: cierre externo cancela la acción pendiente",results);
                 var shell=Native.GetShellWindow();Assert(shell==IntPtr.Zero||Native.IsDesktopWindow(shell),"Dock: reconoce el escritorio real de Windows",results);
                 var namedDesktop=TestWindow();namedDesktop.Title="Escritorio";namedDesktop.Show();Assert(!Native.IsDesktopWindow(new System.Windows.Interop.WindowInteropHelper(namedDesktop).Handle)&&!Native.IsDesktopWindow(IntPtr.Zero),"Dock: una app llamada Escritorio no evita el ocultamiento",results);namedDesktop.Close();
-                panel=TestWindow();panel.Content=new System.Windows.Controls.Border();panel.Show();Design.Minimize(panel);Design.Minimize(panel);Pump(400);Assert(panel.WindowState==WindowState.Minimized&&panel.IsHitTestVisible,"Paneles: minimizar termina realmente y recupera controles",results);
+                panel=TestWindow();panel.Content=new System.Windows.Controls.Border();panel.Show();Design.Minimize(panel);Design.Minimize(panel);Pump(Motion.WindowClose+240);Assert(panel.WindowState==WindowState.Minimized&&panel.IsHitTestVisible,"Paneles: minimizar termina realmente y recupera controles",results);
                 bool liveBackdrop=LiquidMaterial.LiveBackdrop;LiquidMaterial.LiveBackdrop=false;panel.WindowState=WindowState.Normal;Pump(400);Assert(panel.WindowState==WindowState.Normal&&panel.Opacity==1&&panel.IsHitTestVisible,"Paneles: restaurar vuelve a mostrar el contenido",results);panel.Close();LiquidMaterial.LiveBackdrop=liveBackdrop;
-                panel=TestWindow();panel.Content=new System.Windows.Controls.Border();panel.Show();Design.Minimize(panel);panel.Hide();Pump(400);panel.Show();Assert(panel.IsHitTestVisible&&((FrameworkElement)panel.Content).Opacity==1,"Paneles: ocultar durante animación no deja controles bloqueados",results);panel.Close();
+                panel=TestWindow();panel.Content=new System.Windows.Controls.Border();panel.Show();Design.Minimize(panel);panel.Hide();Pump(Motion.WindowClose+240);panel.Show();Assert(panel.IsHitTestVisible&&((FrameworkElement)panel.Content).Opacity==1,"Paneles: ocultar durante animación no deja controles bloqueados",results);panel.Close();
                 var dock=TestWindow();dock.Content=new System.Windows.Controls.Border();dock.Show();var visibility=new DockVisibility(dock);visibility.Hide();Pump(70);visibility.Show();Pump(400);
                 Assert(dock.IsVisible&&dock.IsHitTestVisible&&((FrameworkElement)dock.Content).Opacity>.99,"Dock: invertir la animación no oculta el Dock al reaparecer",results);
                 visibility.Hide();Pump(70);visibility.ShowImmediately();Pump(400);Assert(dock.IsVisible&&dock.IsHitTestVisible&&((FrameworkElement)dock.Content).Opacity==1,"Dock: escritorio interrumpe ocultación y lo muestra sin espera ni rebote",results);visibility.Hide();Pump(400);Assert(!dock.IsVisible,"Dock: finaliza el descenso y libera la zona de clics",results);dock.Close();
@@ -285,7 +290,7 @@ namespace MacFlow
                 var closePanel=Design.Panel("MacFlow · Prueba de cierre",100,80);closePanel.Left=closePanel.Top=-2000;closePanel.ShowActivated=false;closePanel.Content=Design.Glass(new System.Windows.Controls.Border(),22,false);closePanel.Show();int nativeClosed=0;closePanel.Closed+=delegate{nativeClosed++;};Design.Reveal(closePanel);Pump(60);Design.Dismiss(closePanel);
                 // Assert at the action boundary. A background timer can run
                 // late on offscreen windows, past the entire close duration.
-                Assert(closePanel.IsVisible&&!closePanel.IsHitTestVisible&&PanelMotion.IsClosing(closePanel),"Paneles: cerrar durante apertura conserva la transición y bloquea acciones duplicadas [visible="+closePanel.IsVisible+", entrada="+closePanel.IsHitTestVisible+", animado="+DependencyPropertyHelper.GetValueSource(closePanel,UIElement.OpacityProperty).IsAnimated+"]",results);Pump(430);Assert(!closePanel.IsVisible&&nativeClosed==1,"Paneles: cierre de cristal nativo finaliza una vez",results);
+                Assert(closePanel.IsVisible&&!closePanel.IsHitTestVisible&&PanelMotion.IsClosing(closePanel),"Paneles: cerrar durante apertura conserva la transición y bloquea acciones duplicadas [visible="+closePanel.IsVisible+", entrada="+closePanel.IsHitTestVisible+", animado="+DependencyPropertyHelper.GetValueSource(closePanel,UIElement.OpacityProperty).IsAnimated+"]",results);Pump(Motion.WindowClose+240);Assert(!closePanel.IsVisible&&nativeClosed==1,"Paneles: cierre de cristal nativo finaliza una vez",results);
                 var actionHost=DockAppMotion.Host(new System.Windows.Controls.Border());var hoverScale=new ScaleTransform(1.27,1.27);
                 var appIcon=new System.Windows.Controls.Border{Child=actionHost,RenderTransform=hoverScale};var appFixture=TestWindow();appFixture.Content=appIcon;appFixture.Show();
                 var actionTransforms=(TransformGroup)actionHost.RenderTransform;var actionScale=(ScaleTransform)actionTransforms.Children[0];var actionShift=(TranslateTransform)actionTransforms.Children[1];

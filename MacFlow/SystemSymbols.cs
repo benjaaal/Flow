@@ -36,6 +36,11 @@ namespace MacFlow
                 if(kind=="volume-off")dc.DrawGeometry(null,pen,Shape("M17,9 L22,15 M22,9 L17,15"));
                 else{dc.DrawGeometry(null,pen,Shape("M16.5,8.6 C19,10.2 19,13.8 16.5,15.4"));if(kind!="volume-low")dc.DrawGeometry(null,pen,Shape("M19.5,5.7 C24,8.6 24,15.4 19.5,18.3"));}
             }
+            else if(kind=="chevron")dc.DrawGeometry(null,pen,Shape("M9,5 L16,12 9,19"));
+            else if(kind=="bell")
+            {
+                dc.DrawGeometry(null,pen,Shape("M5,16 C7,14 6.3,12 7,8.6 C7.5,5.5 9.3,4 12,4 C14.7,4 16.5,5.5 17,8.6 C17.7,12 17,14 19,16 Z M10,20 C11,21 13,21 14,20 M12,2.4 L12,4"));
+            }
             else if(kind=="control")
             {
                 dc.DrawRoundedRectangle(null,pen,new Rect(3,4,18,6),3,3);dc.DrawRoundedRectangle(null,pen,new Rect(3,14,18,6),3,3);dc.DrawEllipse(ink,null,new Point(8,7),2,2);dc.DrawEllipse(ink,null,new Point(16,17),2,2);
@@ -69,6 +74,9 @@ namespace MacFlow
                     case "settings":data="M12,3 L14,3 14.6,5.2 16.1,6.1 18.2,5.5 20.2,8.8 18.6,10.3 18.6,12.4 20.2,13.9 18.2,17.2 16.1,16.6 14.6,17.5 14,19.7 10,19.7 9.4,17.5 7.9,16.6 5.8,17.2 3.8,13.9 5.4,12.4 5.4,10.3 3.8,8.8 5.8,5.5 7.9,6.1 9.4,5.2 10,3 Z M12,8 A3.4,3.4 0 1 1 11.99,8";break;
                     case "windows":data="M4,4 L17,4 17,15 4,15 Z M8,19 L21,19 21,8";break;
                     case "power":data="M12,2 L12,11 M6,5.5 A8.5,8.5 0 1 0 18,5.5";break;
+                    case "restart":data="M19.5,8 A8,8 0 1 0 20,15 M20,3 L20,9 14,9";break;
+                    case "lock":data="M7,10 L7,7 A5,5 0 0 1 17,7 L17,10 M6,10 L18,10 Q20,10 20,12 L20,20 Q20,22 18,22 L6,22 Q4,22 4,20 L4,12 Q4,10 6,10 Z M12,15 L12,18";break;
+                    case "signout":data="M10,3 L4,3 Q3,3 3,4 L3,20 Q3,21 4,21 L10,21 M9,12 L22,12 M18,8 L22,12 18,16";break;
                     case "play":data="M8,5.5 L18.5,12 8,18.5 Z";break;
                     case "folder":data="M3,6 Q3,4.5 4.5,4.5 L9,4.5 11,7 19.5,7 Q21,7 21,8.5 L21,18.5 Q21,20 19.5,20 L4.5,20 Q3,20 3,18.5 Z";break;
                     case "check":data="M5,12 L9.5,16.5 19.5,6.5";break;

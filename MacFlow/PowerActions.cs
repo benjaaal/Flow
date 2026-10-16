@@ -24,6 +24,8 @@ namespace MacFlow
         {
             switch(action){case PowerAction.Shutdown:return "Apagar";case PowerAction.Restart:return "Reiniciar";case PowerAction.Sleep:return "Suspender";case PowerAction.SignOut:return "Cerrar sesión";case PowerAction.Lock:return "Bloquear";default:throw new ArgumentOutOfRangeException("action");}
         }
+        public static string Symbol(PowerAction action)
+        {switch(action){case PowerAction.Restart:return "restart";case PowerAction.Sleep:return "moon";case PowerAction.SignOut:return "signout";case PowerAction.Lock:return "lock";default:return "power";}}
         public static uint ExitFlags(PowerAction action)
         {
             switch(action){case PowerAction.Shutdown:return 8;case PowerAction.Restart:return 2;case PowerAction.SignOut:return 0;default:throw new ArgumentOutOfRangeException("action");}
@@ -51,11 +53,12 @@ namespace MacFlow
         public bool Confirmed {get;private set;}
         public PowerPrompt(PowerAction action,bool testing,Action confirmed)
         {
-            string label=PowerActions.Label(action);Title="MacFlow · "+label;Width=460;Height=250;WindowStyle=WindowStyle.None;AllowsTransparency=false;ResizeMode=ResizeMode.NoResize;ShowInTaskbar=false;Topmost=true;Background=Brushes.Transparent;
-            var content=new StackPanel();var heading=Design.Text(label+" la computadora?",24,true);if(action==PowerAction.SignOut)heading.Text="Cerrar tu sesión?";if(action==PowerAction.Lock)heading.Text="Bloquear la computadora?";heading.Margin=new Thickness(0,0,0,14);content.Children.Add(heading);
-            var description=Design.Text(action==PowerAction.Sleep?"La sesión queda abierta y podés continuar al despertar.":action==PowerAction.Lock?"Tus aplicaciones siguen abiertas. Windows mostrará su pantalla de bloqueo.":"Guardá tu trabajo antes de continuar. Las aplicaciones pueden pedirte guardar cambios.",13,false);description.TextWrapping=TextWrapping.Wrap;description.Margin=new Thickness(0,0,0,22);content.Children.Add(description);
-            var buttons=new StackPanel{Orientation=Orientation.Horizontal,HorizontalAlignment=HorizontalAlignment.Right};var cancel=Design.Button("Cancelar",delegate{Design.Dismiss(this);},false);cancel.IsCancel=true;buttons.Children.Add(cancel);var accept=Design.Button(label,delegate{Confirmed=true;Design.Dismiss(this,confirmed);},true);buttons.Children.Add(accept);content.Children.Add(buttons);
-            var glass=Design.Glass(content,24,false);glass.Padding=new Thickness(24);Content=glass;SourceInitialized+=delegate{Native.Glass(this,Design.Dark);};KeyDown+=delegate(object sender,System.Windows.Input.KeyEventArgs e){if(e.Key==System.Windows.Input.Key.Escape)Close();};
+            string label=PowerActions.Label(action);Title="MacFlow · "+label;Width=388;Height=304;WindowStyle=WindowStyle.None;AllowsTransparency=false;ResizeMode=ResizeMode.NoResize;ShowInTaskbar=false;Topmost=true;Background=Brushes.Transparent;
+            var content=new DockPanel();var buttons=new Grid{Margin=new Thickness(0,20,0,0)};buttons.ColumnDefinitions.Add(new ColumnDefinition());buttons.ColumnDefinitions.Add(new ColumnDefinition());var cancel=Design.Button("Cancelar",delegate{Design.Dismiss(this);},false);cancel.IsCancel=true;cancel.Margin=new Thickness(0,0,5,0);cancel.Height=36;buttons.Children.Add(cancel);var accept=Design.Button(label,delegate{Confirmed=true;Design.Dismiss(this,confirmed);},true);accept.Margin=new Thickness(5,0,0,0);accept.Height=36;Grid.SetColumn(accept,1);buttons.Children.Add(accept);DockPanel.SetDock(buttons,Dock.Bottom);content.Children.Add(buttons);
+            var body=new StackPanel();body.Children.Add(new Border{Width=58,Height=58,CornerRadius=new CornerRadius(19),Background=Design.Brush("#18FFFFFF"),Child=Design.Symbol(PowerActions.Symbol(action),28,Design.Ink),HorizontalAlignment=HorizontalAlignment.Center,Margin=new Thickness(0,0,0,16)});
+            var heading=Design.Text(label+" la computadora?",22,true);if(action==PowerAction.SignOut)heading.Text="Cerrar tu sesión?";if(action==PowerAction.Lock)heading.Text="Bloquear la computadora?";heading.HorizontalAlignment=HorizontalAlignment.Center;heading.Margin=new Thickness(0,0,0,10);body.Children.Add(heading);
+            var description=Design.Text(action==PowerAction.Sleep?"Tu trabajo queda abierto para cuando vuelvas.":action==PowerAction.Lock?"Windows protege tu sesión. Tus apps siguen abiertas.":"Guardá tu trabajo. Las aplicaciones pueden pedirte guardar cambios antes de continuar.",12,false);description.TextWrapping=TextWrapping.Wrap;description.TextAlignment=TextAlignment.Center;description.SetResourceReference(TextBlock.ForegroundProperty,"GlassMuted");body.Children.Add(description);content.Children.Add(body);
+            var glass=Design.Glass(content,28,false);glass.Padding=new Thickness(28,24,28,24);Content=glass;SourceInitialized+=delegate{Native.Glass(this,Design.Dark);};KeyDown+=delegate(object sender,System.Windows.Input.KeyEventArgs e){if(e.Key==System.Windows.Input.Key.Escape){e.Handled=true;Design.Dismiss(this);}};
             if(!testing)Loaded+=delegate{cancel.Focus();};
         }
     }

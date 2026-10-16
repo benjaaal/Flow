@@ -9,7 +9,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 namespace MacFlow
 {
-    // Animate our short-lived representation after a normal close succeeds.
+    // Animate our short-lived representation after a normal close/minimize succeeds.
     // Never hide, resize, cloak, restyle or inject into the source application.
     internal static class WindowCloseTransition
     {
@@ -19,43 +19,44 @@ namespace MacFlow
         private static readonly object captureGate=new object();
         private static bool capturing;
         internal static event Action<Window> PreviewStarted;
-        internal static bool Request(WindowEntry window,Action failure)
+        internal static bool Request(WindowEntry window,Action failure,bool minimize=false)
         {
             if(!Native.Matches(window))return false;
-            if(!Motion.Enabled||Native.IsIconic(window.Handle))return Native.RequestClose(window);
+            if(!Motion.Enabled||Native.IsIconic(window.Handle))return Send(window,minimize);
             if(!pending.Add(window.Handle))return true;
-            Run(window,failure);return true;
+            Run(window,failure,minimize);return true;
         }
-        private static async void Run(WindowEntry entry,Action failure)
+        private static bool Send(WindowEntry entry,bool minimize){return minimize?Native.RequestMinimize(entry):Native.RequestClose(entry);}
+        private static async void Run(WindowEntry entry,Action failure,bool minimize)
         {
             Window preview=null;
             try
             {
-                Native.RECT bounds;if(!Native.GetWindowRect(entry.Handle,out bounds)){if(!Native.RequestClose(entry)&&failure!=null)failure();return;}
+                Native.RECT bounds;if(!Native.GetWindowRect(entry.Handle,out bounds)){if(!Send(entry,minimize)&&failure!=null)failure();return;}
                 var capture=Task.Run(()=>Capture(entry,bounds));var finished=await Task.WhenAny(capture,Task.Delay(240));
                 BitmapSource image=finished==capture?await capture:null;
                 if(!Native.Matches(entry))return;
                 if(image!=null)
                 {
                     var source=PresentationSource.FromVisual(Application.Current.MainWindow);double scale=source==null?1:source.CompositionTarget.TransformToDevice.M11;
-                    preview=new Window{Title="MacFlow · Cerrar ventana",WindowStyle=WindowStyle.None,ResizeMode=ResizeMode.NoResize,AllowsTransparency=true,Background=Brushes.Transparent,ShowInTaskbar=false,ShowActivated=false,Topmost=true,IsHitTestVisible=false,Width=(bounds.Right-bounds.Left)/scale,Height=(bounds.Bottom-bounds.Top)/scale,Left=bounds.Left/scale,Top=bounds.Top/scale,Content=new Image{Source=image,Stretch=Stretch.Fill}};
+                    preview=new Window{Title=minimize?"MacFlow · Minimizar ventana":"MacFlow · Cerrar ventana",WindowStyle=WindowStyle.None,ResizeMode=ResizeMode.NoResize,AllowsTransparency=true,Background=Brushes.Transparent,ShowInTaskbar=false,ShowActivated=false,Topmost=true,IsHitTestVisible=false,Width=(bounds.Right-bounds.Left)/scale,Height=(bounds.Bottom-bounds.Top)/scale,Left=bounds.Left/scale,Top=bounds.Top/scale,Content=new Image{Source=image,Stretch=Stretch.Fill}};
                     preview.SourceInitialized+=delegate{Native.NoActivate(preview);var h=new WindowInteropHelper(preview).Handle;Native.SetWindowLong(h,-20,Native.GetWindowLong(h,-20)|0x20);};preview.Show();
                     Native.SetWindowPos(new WindowInteropHelper(preview).Handle,new IntPtr(-1),bounds.Left,bounds.Top,bounds.Right-bounds.Left,bounds.Bottom-bounds.Top,0x50);
                 }
-                if(!Native.RequestClose(entry)){if(failure!=null)failure();return;}
-                for(int i=0;i<12&&Native.Matches(entry);i++)
+                if(!Send(entry,minimize)){if(failure!=null)failure();return;}
+                for(int i=0;i<12&&Native.Matches(entry)&&(!minimize||!Native.IsIconic(entry.Handle));i++)
                 {
                     await Task.Delay(25);var foreground=Native.GetForegroundWindow();uint pid;Native.GetWindowThreadProcessId(foreground,out pid);
                     // A save/confirmation dialog must remain fully visible.
-                    if(foreground!=entry.Handle&&pid==entry.ProcessId&&Native.GetWindow(foreground,4)!=IntPtr.Zero)break;
+                    if(!minimize&&foreground!=entry.Handle&&pid==entry.ProcessId&&Native.GetWindow(foreground,4)!=IntPtr.Zero)break;
                 }
-                if(preview!=null&&!Native.Matches(entry))
+                if(preview!=null&&(minimize?Native.Matches(entry)&&Native.IsIconic(entry.Handle):!Native.Matches(entry)))
                 {
                     var started=PreviewStarted;if(started!=null)started(preview);
                     Design.Dismiss(preview);await Task.Delay(450);
                 }
             }
-            catch(Exception ex){Log.Write("Cerrar hacia el Dock: "+ex.Message);if(Native.Matches(entry)&&!Native.RequestClose(entry)&&failure!=null)failure();}
+            catch(Exception ex){Log.Write("Transición hacia el Dock: "+ex.Message);if(Native.Matches(entry)&&!Send(entry,minimize)&&failure!=null)failure();}
             finally{if(preview!=null&&preview.IsVisible)preview.Close();pending.Remove(entry.Handle);}
         }
         private static BitmapSource Capture(WindowEntry entry,Native.RECT bounds)

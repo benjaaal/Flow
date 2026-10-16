@@ -56,7 +56,9 @@ namespace MacFlow
         internal double LeftInset {get{return Inset;}}
         internal double UpperInset {get{return TopInset;}}
         internal double TextureScale {get{return .5;}}
-        internal double Readability {get{return lens.Readability;}}
+        private double nativeReadability;
+        private int stableTone;
+        internal double Readability {get{return lens==null?nativeReadability:lens.Readability;}}
         internal static LiquidMaterial ForWindow(Window target){LiquidMaterial result;return target!=null&&instances.TryGetValue(target,out result)?result:null;}
         internal static void DesktopChanged(){foreach(var material in instances.Values){if(material.disposed||!material.window.IsVisible)continue;if(!material.window.AllowsTransparency){material.RefreshContrast();continue;}if(!material.enabled)continue;material.quietFrames=0;material.timer.Interval=TimeSpan.FromMilliseconds(166);material.Refresh();}}
         public static void Apply(Window window,bool dark)
@@ -64,13 +66,15 @@ namespace MacFlow
             LiquidMaterial material;if(!instances.TryGetValue(window,out material)){material=new LiquidMaterial(window);instances.Add(window,material);}material.Update(dark);
         }
         public static void SetLensForTest(Window window,double strength)
-        {LiquidMaterial material;if(instances.TryGetValue(window,out material))material.lens.Strength=strength;}
+        {LiquidMaterial material;if(instances.TryGetValue(window,out material)&&material.lens!=null)material.lens.Strength=strength;}
         private LiquidMaterial(Window target)
         {
-            window=target;image=new Image {Stretch=Stretch.Fill,IsHitTestVisible=false,Effect=new BlurEffect {Radius=window.Title.Contains("Dock")||window.Title.Contains("barra superior")?7:18,KernelType=KernelType.Gaussian,RenderingBias=RenderingBias.Performance}};
-            lens=new LiquidLens();lensLayer=new Border {Child=image,IsHitTestVisible=false,CacheMode=new BitmapCache(.75)};if(RenderCapability.IsPixelShaderVersionSupported(3,0))lensLayer.Effect=lens;
+            window=target;image=new Image {Stretch=Stretch.Fill,IsHitTestVisible=false};
+            lensLayer=new Border {Child=image,IsHitTestVisible=false};
+            if(window.AllowsTransparency)
+            {image.Effect=new BlurEffect{Radius=18,RenderingBias=RenderingBias.Performance};lens=new LiquidLens();lensLayer.CacheMode=new BitmapCache(.75);if(RenderCapability.IsPixelShaderVersionSupported(3,0))lensLayer.Effect=lens;}
             timer=new DispatcherTimer(DispatcherPriority.Background){Interval=TimeSpan.FromMilliseconds(166)};timer.Tick+=delegate{Refresh();};
-            toneTimer=new DispatcherTimer(DispatcherPriority.Background){Interval=TimeSpan.FromMilliseconds(400)};toneTimer.Tick+=delegate{toneTimer.Interval=TimeSpan.FromMilliseconds(window.IsMouseOver?300:LowPower?900:600);RefreshContrast();};window.MouseEnter+=delegate{RefreshContrast();};
+            toneTimer=new DispatcherTimer(DispatcherPriority.Background){Interval=TimeSpan.FromMilliseconds(400)};toneTimer.Tick+=delegate{toneTimer.Interval=TimeSpan.FromMilliseconds(window.IsMouseOver?350:stableTone>=3?LowPower?2500:1400:600);RefreshContrast();};window.MouseEnter+=delegate{stableTone=0;RefreshContrast();};
             var descriptor=System.ComponentModel.DependencyPropertyDescriptor.FromProperty(ContentControl.ContentProperty,typeof(Window));descriptor.AddValueChanged(window,ContentChanged);
             window.SizeChanged+=delegate{Resize();};window.LocationChanged+=delegate{quietFrames=0;timer.Interval=TimeSpan.FromMilliseconds(LowPower?333:166);};window.IsVisibleChanged+=delegate{if(window.IsVisible&&enabled){Refresh();timer.Start();}else timer.Stop();if(window.IsVisible&&!SystemParameters.HighContrast)toneTimer.Start();else toneTimer.Stop();};
             window.Closed+=delegate{descriptor.RemoveValueChanged(window,ContentChanged);Dispose();instances.Remove(window);};Wrap();
@@ -87,7 +91,7 @@ namespace MacFlow
                 var glass=content as Border;materialFace=glass;
                 if(glass!=null&&!(bool)glass.GetValue(PaddingMerged))
                 {double gap=window.Title.Contains("barra superior")||window.Title.Contains("Dock")?0:2;var p=glass.Padding;glass.Padding=new Thickness(p.Left+gap,p.Top+gap,p.Right+gap,p.Bottom+gap);glass.SetValue(PaddingMerged,true);}
-                surface=new Grid {Background=Brushes.Transparent};var shadow=new Border {Margin=new Thickness(Inset,TopInset,Inset,Inset),Child=lensLayer,CacheMode=new BitmapCache(.75)};
+                surface=new Grid {Background=Brushes.Transparent};var shadow=new Border {Margin=new Thickness(Inset,TopInset,Inset,Inset),Child=lensLayer};
                 if(Inset>0)shadow.Effect=new DropShadowEffect {BlurRadius=10,ShadowDepth=2,Opacity=.10,Color=Color.FromRgb(19,35,56),RenderingBias=RenderingBias.Performance};
                 surface.Children.Add(shadow);readabilityLayer=new Border{Margin=new Thickness(Inset,TopInset,Inset,Inset),CornerRadius=new CornerRadius(Radius),IsHitTestVisible=false};surface.Children.Add(readabilityLayer);if(content!=null)surface.Children.Add(new Border {Margin=new Thickness(Inset,TopInset,Inset,Inset),Child=content});
                 light=new CrystalLight(Radius,window.Title.Contains("barra superior")?.4:window.Title.Contains("Dock")?.95:1){Margin=new Thickness(Inset,TopInset,Inset,Inset)};surface.Children.Add(light);window.Content=surface;Resize();
@@ -100,7 +104,7 @@ namespace MacFlow
         private double Radius{get{return Native.GlassRadius(window);}}
         private void Resize()
         {
-            if(surface==null)return;double width=Math.Max(1,window.ActualWidth-Inset*2),height=Math.Max(1,window.ActualHeight-TopInset-Inset);lensLayer.Clip=new RectangleGeometry(new Rect(0,0,width,height),Radius,Radius);lens.Size=new Point(width,height);lens.Radius=Radius;
+            if(surface==null)return;double width=Math.Max(1,window.ActualWidth-Inset*2),height=Math.Max(1,window.ActualHeight-TopInset-Inset);lensLayer.Clip=new RectangleGeometry(new Rect(0,0,width,height),Radius,Radius);if(lens!=null){lens.Size=new Point(width,height);lens.Radius=Radius;}
             if(light!=null)light.SetCorner(Radius);
         }
         private void Update(bool dark)
@@ -168,8 +172,9 @@ namespace MacFlow
         }
         private void SetReadability(bool whiteText)
         {
-            lightText=whiteText;lens.Readability=window.Title.Contains("Conexiones")?(whiteText?-.24:.56):(whiteText?-.32:.66);
-            if(materialFace!=null&&!SystemParameters.HighContrast)materialFace.Background=Design.MaterialTint(window.Title.Contains("Dock")||window.Title.Contains("barra superior"),whiteText);
+            string widgetMode=window.TryFindResource("GlassWidgetSurface") as string;if(widgetMode=="Dark")whiteText=true;else if(widgetMode=="Light")whiteText=false;
+            lightText=whiteText;nativeReadability=window.Title.Contains("Conexiones")?(whiteText?-.24:.56):(whiteText?-.32:.66);if(lens!=null)lens.Readability=nativeReadability;
+            if(materialFace!=null&&!SystemParameters.HighContrast)materialFace.Background=widgetMode=="Dark"?(Brush)Design.Brush("#CE15161A"):widgetMode=="Light"?(Brush)Design.Brush("#CFFFFFFF"):Design.MaterialTint(widgetMode=="Clear"||window.Title.Contains("Dock")||window.Title.Contains("barra superior"),whiteText);
             window.Resources["GlassInk"]=SystemParameters.HighContrast?SystemColors.WindowTextBrush:Design.Brush(whiteText?"#F8FAFF":"#19212D");
             window.Resources["GlassMuted"]=SystemParameters.HighContrast?SystemColors.WindowTextBrush:Design.Brush(whiteText?"#DCE4EF":"#303B4B");
             window.Resources["GlassCardSurface"]=Design.Brush(whiteText?"#161C222B":"#22FFFFFF");window.Resources["GlassTileSurface"]=Design.Brush(whiteText?"#16141A23":"#22FFFFFF");
@@ -193,6 +198,7 @@ namespace MacFlow
         private async void RefreshContrast()
         {
             if(disposed||toneBusy||!window.IsVisible||window.WindowState==WindowState.Minimized||SystemParameters.HighContrast)return;
+            string fixedMode=window.TryFindResource("GlassWidgetSurface") as string;if(fixedMode=="Dark"||fixedMode=="Light"){if(!toneKnown||lightText!=(fixedMode=="Dark")){toneKnown=true;SetReadability(fixedMode=="Dark");}stableTone=4;return;}
             var handle=new WindowInteropHelper(window).Handle;Native.RECT rect;if(!Native.GetWindowRect(handle,out rect)||rect.Right-rect.Left<40||rect.Bottom-rect.Top<25)return;
             var source=PresentationSource.FromVisual(window);double dpi=source==null?1:source.CompositionTarget.TransformToDevice.M11;int padding=(int)Math.Round((Inset+10)*dpi);
             // Read five pixels in our own unused glass margin, without saving a
@@ -213,7 +219,7 @@ namespace MacFlow
                     }}finally{ReleaseDC(IntPtr.Zero,dc);}return new double[]{total,count};
                 });
                 Native.RECT current;if(disposed||sample[1]<3||!window.IsVisible||window.WindowState==WindowState.Minimized||!Native.GetWindowRect(handle,out current)||current.Left!=rect.Left||current.Top!=rect.Top||current.Right!=rect.Right||current.Bottom!=rect.Bottom)return;
-                bool next=LightInkForLuminance(sample[0]/sample[1],toneKnown,lightText);toneKnown=true;if(next!=lightText)SetReadability(next);
+                bool next=LightInkForLuminance(sample[0]/sample[1],toneKnown,lightText);toneKnown=true;if(next!=lightText){stableTone=0;SetReadability(next);}else stableTone=Math.Min(4,stableTone+1);
             }
             catch(Exception ex){if(!disposed)Log.Write("Contraste del cristal: "+ex.Message);}
             finally{toneBusy=false;}

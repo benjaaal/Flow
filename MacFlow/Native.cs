@@ -157,6 +157,7 @@ namespace MacFlow
         public static List<WindowEntry> Windows()
         {
             var result = new List<WindowEntry>(); uint self = (uint)Process.GetCurrentProcess().Id;
+            var paths=new Dictionary<uint,string>();
             EnumWindows(delegate(IntPtr h, IntPtr arg)
             {
                 if (!IsWindowVisible(h) || GetWindowTextLength(h) == 0) return true;
@@ -165,7 +166,8 @@ namespace MacFlow
                 if ((style & 0x80) != 0 || (GetWindow(h, 4) != IntPtr.Zero && (style & 0x40000) == 0)) return true;
                 if (DwmGetWindowAttribute(h, 14, out cloaked, 4) == 0 && cloaked != 0) return true;
                 string title = Title(h); if (title == "Program Manager") return true;
-                result.Add(new WindowEntry { Handle = h,ProcessId=pid,Title = title, Executable = ProcessPath(pid) }); return true;
+                string executable;if(!paths.TryGetValue(pid,out executable)){executable=ProcessPath(pid);paths[pid]=executable;}
+                result.Add(new WindowEntry { Handle = h,ProcessId=pid,Title = title, Executable = executable }); return true;
             }, IntPtr.Zero);
             return result;
         }

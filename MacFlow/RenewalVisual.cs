@@ -1,0 +1,45 @@
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Interop;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+namespace MacFlow
+{
+    internal static class RenewalVisual
+    {
+        internal static int Run(string folder)
+        {
+            folder=Path.GetFullPath(folder);Directory.CreateDirectory(folder);Log.DirectoryPath=folder;var report=new List<string>();var app=new Application{ShutdownMode=ShutdownMode.OnExplicitShutdown};Desktop desktop=null;Window background=null,panel=null;ActivityIsland island=null;GlassNotifications notices=null;Action<Window,GenieSurface> begun=null;
+            app.Startup+=async delegate
+            {
+                try
+                {
+                    Motion.TestClientAreaAnimations=true;new SettingsStore(Path.Combine(folder,"profile")).Save(new Preferences{ContainedDockApplied=true,Theme="Dark",DockAutoHide=false,HideDockInApps=false,HideDockInCodex=false,HideInFullscreen=false});desktop=new Desktop(Path.Combine(folder,"profile"),true,true);
+                    background=new VisualTestBackground{Width=SystemParameters.PrimaryScreenWidth,Height=SystemParameters.PrimaryScreenHeight,WindowState=WindowState.Normal,Left=0,Top=0,ShowActivated=false,Topmost=true,IsHitTestVisible=false};background.SourceInitialized+=delegate{Native.NoActivate(background);};background.Show();
+                    var media=new MediaFixture();media.State.Playing=true;island=new ActivityIsland(desktop,media);await Task.Delay(600);Check(island.View.IsVisible&&Math.Abs(island.View.Height-34)<1,"cápsula aparece por reproducción real del proveedor y conserva el formato compacto",report);await Program.CaptureOwnWindow(island.View,Path.Combine(folder,"island-compact.png"));
+                    island.Toggle();await Task.Delay(500);Check(island.Expanded&&Math.Abs(island.View.Height-145)<1,"cápsula expande sus controles con tamaño final exacto",report);await Program.CaptureOwnWindow(island.View,Path.Combine(folder,"island-expanded.png"));
+                    var pause=ModulesVisual.DescendantsForTest(island.View).OfType<Button>().First(b=>(b.Content as string)=="Pausar");pause.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));await Task.Delay(150);Check(media.Calls==1&&!media.State.Playing,"Pausar invoca el proveedor multimedia, sin simular teclado",report);
+                    island.Toggle();await Task.Delay(480);Check(!island.View.IsVisible,"sin reproducción ni actividad la cápsula se retira",report);
+                    var timer=new WidgetSpec{Kind="Timer",TimerMinutes=5,Running=true,StartedUtc=DateTime.UtcNow};desktop.Widgets.State.Items.Add(timer);island.Refresh();await Task.Delay(400);island.Toggle();await Task.Delay(450);await Program.CaptureOwnWindow(island.View,Path.Combine(folder,"island-timer.png"));pause=ModulesVisual.DescendantsForTest(island.View).OfType<Button>().First(b=>(b.Content as string)=="Pausar");pause.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));await Task.Delay(480);Check(!timer.Running&&timer.Seconds>0,"el control del temporizador pausa y guarda el tiempo real",report);
+                    desktop.Preferences.ShowActivityIsland=false;island.Flash("Volumen · 50%","volume");await Task.Delay(480);Check(!island.View.IsVisible,"la preferencia desactivada impide mostrar actividad",report);desktop.Preferences.ShowActivityIsland=true;media.State.Playing=true;island.Flash("Volumen · 50%","volume");await Task.Delay(400);island.Toggle();await Task.Delay(400);var removeIsland=ModulesVisual.DescendantsForTest(island.View).OfType<Button>().First(b=>System.Windows.Automation.AutomationProperties.GetName(b)=="Quitar isla dinámica");removeIsland.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));await Task.Delay(500);Check(!island.View.IsVisible&&!island.Expanded&&desktop.Preferences.ShowActivityIsland==false,"quitar desde la cápsula guarda la elección y termina el rebote fuera de pantalla",report);island.Dispose();island=null;
+                    int opened=0;notices=new GlassNotifications(delegate{opened++;});var toast=notices.Show("MacFlow","Una notificación real de prueba",true);await Task.Delay(550);Check(toast.IsVisible&&Math.Abs(toast.Left-(SystemParameters.WorkArea.Right-toast.Width-16))<1,"aviso entra desde el borde y termina dentro del área de trabajo",report);await Program.CaptureOwnWindow(toast,Path.Combine(folder,"notification.png"));var dismiss=ModulesVisual.DescendantsForTest(toast).OfType<Button>().First(b=>System.Windows.Automation.AutomationProperties.GetName(b)=="Descartar notificación");dismiss.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));await Task.Delay(380);Check(!toast.IsVisible&&notices.Count==0&&opened==0,"descartar sale al costado y libera su ventana y temporizador",report);for(int n=0;n<4;n++)notices.Show("Aviso "+n,"Prueba de límite",true);Check(notices.Count==3,"no se acumulan más de tres avisos",report);notices.Clear();Check(notices.Count==0,"ocultar presentación o salir libera todos los avisos",report);notices.Dispose();notices=null;
+                    var visual=new DrawingVisual();using(var dc=visual.RenderOpen()){dc.DrawRectangle(new LinearGradientBrush(Color.FromRgb(95,146,224),Color.FromRgb(37,54,96),90),null,new Rect(0,0,360,220));dc.DrawText(new FormattedText("MacFlow",CultureInfo.InvariantCulture,FlowDirection.LeftToRight,new Typeface("Segoe UI"),32,Brushes.White),new Point(24,30));dc.DrawRoundedRectangle(Design.Brush("#47FFFFFF"),null,new Rect(24,95,312,80),16,16);}var texture=new RenderTargetBitmap(360,220,96,96,PixelFormats.Pbgra32);texture.Render(visual);texture.Freeze();
+                    var surface=new GenieSurface(texture,new Rect(70,50,360,220),new Point(390,610),22,600,640);surface.SetValue(GenieSurface.ProgressProperty,.4);Check(surface.TopWidth>surface.TailWidth*3&&surface.Tail.Y>500,"la malla forma un embudo curvo con la cola adelantada hacia el Dock",report);
+                    panel=new Window{Title="MacFlow · Prueba de deformación",Width=600,Height=640,Left=100,Top=40,WindowStyle=WindowStyle.None,AllowsTransparency=true,Background=Brushes.Transparent,Content=surface,ShowActivated=false,ShowInTaskbar=false,Topmost=true,IsHitTestVisible=false};panel.SourceInitialized+=delegate{Native.NoActivate(panel);};panel.Show();await Task.Delay(250);await Program.CaptureOwnWindow(panel,Path.Combine(folder,"genie-curve.png"));surface.SetValue(GenieSurface.ProgressProperty,1.0);Check((surface.Tail-new Point(390,610)).Length<.001&&surface.TopWidth==0&&surface.TailWidth==0,"la deformación acaba exactamente en el destino",report);panel.Close();panel=null;
+                    int transitions=0;GenieSurface active=null;begun=delegate(Window source,GenieSurface value){transitions++;active=value;};GenieTransition.Started+=begun;
+                    panel=Design.Panel("MacFlow · Panel de prueba",360,220);panel.Left=320;panel.Top=160;panel.ShowActivated=false;panel.IsHitTestVisible=false;panel.Content=Design.Glass(new StackPanel{Margin=new Thickness(20),Children={Design.Text("Cerrar hacia el Dock",23,true),Design.Text("Controles y cristal reales",13,false)}},22,false);panel.SourceInitialized+=delegate{Native.NoActivate(panel);};panel.Show();await Task.Delay(350);Design.Dismiss(panel);await Task.Delay(180);Check(transitions==1&&GenieTransition.ActiveCount==1&&active.TopWidth>active.TailWidth,"cerrar un panel propio activa la malla visible, no sólo una escala uniforme",report);await Task.Delay(450);Check(!panel.IsVisible&&GenieTransition.ActiveCount==0,"el cierre libera la textura y la representación temporal",report);panel=null;GenieTransition.Started-=begun;begun=null;
+                    Motion.TestClientAreaAnimations=false;panel=Design.Panel("MacFlow · Movimiento reducido",220,120);panel.ShowActivated=false;panel.Show();Design.Dismiss(panel);Check(!panel.IsVisible&&GenieTransition.ActiveCount==0,"movimiento reducido cierra sin textura ni reloj de deformación",report);panel=null;File.WriteAllLines(Path.Combine(folder,"renewal-tests.txt"),report);app.Shutdown();
+                }
+                catch(Exception ex){report.Add("FAIL "+ex);File.WriteAllLines(Path.Combine(folder,"renewal-tests.txt"),report);app.Shutdown(1);}
+            };
+            app.Exit+=delegate{if(begun!=null)GenieTransition.Started-=begun;if(island!=null)island.Dispose();if(notices!=null)notices.Dispose();if(panel!=null&&panel.IsVisible)panel.Close();if(desktop!=null)desktop.Dispose();if(background!=null)background.Close();Motion.TestClientAreaAnimations=null;};return app.Run();
+        }
+        private static void Check(bool value,string text,List<string> report){if(!value)throw new Exception(text);report.Add("PASS "+text);}
+    }
+}

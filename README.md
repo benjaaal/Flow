@@ -1,10 +1,42 @@
-# MacFlow 26.1.4
+# MacFlow 26.2.0
 
 Aplicación nativa para Windows 11 x64, con C# y WPF sobre .NET Framework 4.8.
 
-[Descargar instalador](https://github.com/benjaaal/Flow/releases/tag/v26.1.4).
+[Descargar instalador](https://github.com/benjaaal/Flow/releases/tag/v26.2.0).
 Actualizar conserva las preferencias y vuelve a abrir MacFlow. La instalación
 es por usuario y el inicio con Windows es opcional.
+
+## Renovación 26.2.0
+
+Materiales de cristal diferenciados para Dock y paneles, centro de control más
+compacto, tema automático, centro de actividad local y bienvenida opcional después
+del inicio de sesión. Menos superficies gráficas y sondeo en reposo; catálogo e
+iconos desacoplados. Cierre y minimización finalizan su recorrido hacia el Dock.
+Preferencias con copia de recuperación y diagnóstico del tiempo hasta el primer cuadro.
+
+Configuración tiene búsqueda y una nueva jerarquía visual. Un clic en la manzana
+abre el menú y dos abren Configuración. IOS es una etiqueta. La tecla Windows sola
+queda sin acción por defecto; sus combinaciones se conservan y el modo es configurable.
+Mantené clic derecho en los últimos 300 puntos de la barra superior y arrastrá hacia
+abajo para desplegar el Centro de control; un gesto corto lo cancela.
+
+Después de Hola, la demostración manual muestra el Dock, el gesto, Configuración,
+los widgets renovados, la actividad en vivo y el menú actual. Conserva Atrás, Siguiente y Ver de nuevo; no ejecuta acciones de
+energía ni cambia preferencias. Bienvenido espera Iniciar para revelar el escritorio.
+
+La cápsula negra muestra música, temporizadores y acciones recientes. Se expande
+con un clic y se puede quitar desde su ×, con salida suave hacia arriba; se reactiva
+en Barra superior. Los avisos propios entran desde el borde derecho.
+El menú de la manzana y Sistema permiten abrir el Administrador de tareas de Windows.
+El panel de energía tiene símbolos propios y confirmación explícita; Configuración
+conserva su barra lateral abierta, con selección suave e iconos uniformes.
+Los widgets tienen materiales transparente, oscuro y claro por separado.
+El cierre curvo usa una malla y una textura transitoria de una ventana propia,
+liberada al terminar. La X de otros programas conserva la animación de Windows.
+
+[Decisiones, referencias, pruebas y límites](docs/RENOVACION-26.2.0.md).
+El acceso remoto quedó fuera de esta versión por elección del usuario.
+La bienvenida de MacFlow no reemplaza el inicio de sesión protegido de Windows.
 
 ## Revisión visual y de interacción 26.1.4
 

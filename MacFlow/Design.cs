@@ -17,6 +17,8 @@ namespace MacFlow
         public static string Accent = "#8DAEFF";
         internal static string IconAppearance="Auto";
         private static bool loaded;
+        private static readonly object BrushGate=new object();
+        private static readonly System.Collections.Generic.Dictionary<string,SolidColorBrush> BrushCache=new System.Collections.Generic.Dictionary<string,SolidColorBrush>(StringComparer.OrdinalIgnoreCase);
         private static readonly DependencyProperty ScaleTargetProperty=DependencyProperty.RegisterAttached("ScaleTarget",typeof(double),typeof(Design),new PropertyMetadata(1.0));
         private static readonly DependencyProperty DismissingProperty=DependencyProperty.RegisterAttached("Dismissing",typeof(bool),typeof(Design),new PropertyMetadata(false));
         private static readonly DependencyProperty MinimizingProperty=DependencyProperty.RegisterAttached("Minimizing",typeof(bool),typeof(Design),new PropertyMetadata(false));
@@ -38,7 +40,10 @@ namespace MacFlow
                 loaded = true;
             }
         }
-        public static SolidColorBrush Brush(string hex) { var b = (SolidColorBrush)new BrushConverter().ConvertFromString(hex); b.Freeze(); return b; }
+        public static SolidColorBrush Brush(string hex)
+        {
+            lock(BrushGate){SolidColorBrush cached;if(BrushCache.TryGetValue(hex,out cached))return cached;var brush=(SolidColorBrush)new BrushConverter().ConvertFromString(hex);brush.Freeze();if(BrushCache.Count>=256)BrushCache.Clear();BrushCache[hex]=brush;return brush;}
+        }
         public static Brush Ink { get { return Brush(Dark ? "#F5F5F7" : "#202023"); } }
         public static Brush Muted { get { return Brush(Dark ? "#C5C5CC" : "#5D5D64"); } }
         public static Brush ContentSurface {get{return Brush(Dark?"#1812151B":"#18FFFFFF");}}
@@ -57,8 +62,10 @@ namespace MacFlow
         }
         internal static LinearGradientBrush MaterialTint(bool dock,bool dark)
         {
-            var colors=dock?dark?new[]{"#1E151A22","#0C151A22","#24121720"}:new[]{"#24FFFFFF","#12FFFFFF","#20F4F7FC"}
-                :dark?new[]{"#40131921","#30131921","#38131921"}:new[]{"#40FFFFFF","#30FFFFFF","#38F4F7FC"};
+            // Clear material for navigation; a regular material behind text.
+            // This is a tint above the real clipped compositor backdrop.
+            var colors=dock?dark?new[]{"#18171C24","#08171C24","#1C171C24"}:new[]{"#28FFFFFF","#10FFFFFF","#20F8FBFF"}
+                :dark?new[]{"#501A202A","#3D1A202A","#481A202A"}:new[]{"#58FFFFFF","#44FFFFFF","#50FAFCFF"};
             var brush=new LinearGradientBrush{StartPoint=new Point(0,0),EndPoint=new Point(.8,1)};
             for(int i=0;i<3;i++){var color=(Color)ColorConverter.ConvertFromString(colors[i]);color.A=(byte)Math.Min(220,color.A*Math.Max(.5,GlassOpacity/.18));brush.GradientStops.Add(new GradientStop(color,i==0?0:i==1?.48:1));}brush.Freeze();return brush;
         }
@@ -92,7 +99,7 @@ namespace MacFlow
             if(element.RenderTransform!=null&&element.RenderTransform.IsFrozen)element.RenderTransform=element.RenderTransform.CloneCurrentValue();
             var transform = element.RenderTransform as ScaleTransform;var group=element.RenderTransform as TransformGroup;if(transform==null&&group!=null)transform=group.Children.OfType<ScaleTransform>().FirstOrDefault();if(transform==null)return;
             double previous=(double)element.GetValue(ScaleTargetProperty);if(Math.Abs(previous-value)<.0005)return;element.SetValue(ScaleTargetProperty,value);
-            if (!Animations) { transform.BeginAnimation(ScaleTransform.ScaleXProperty, null); transform.BeginAnimation(ScaleTransform.ScaleYProperty, null); transform.ScaleX = transform.ScaleY = value; return; }
+            if (!Motion.Enabled) { transform.BeginAnimation(ScaleTransform.ScaleXProperty, null); transform.BeginAnimation(ScaleTransform.ScaleYProperty, null); transform.ScaleX = transform.ScaleY = value; return; }
             Motion.To(transform,ScaleTransform.ScaleXProperty,value,value<1?Motion.Press:Motion.Hover);Motion.To(transform,ScaleTransform.ScaleYProperty,value,value<1?Motion.Press:Motion.Hover);
         }
         public static void Reveal(Window window)
@@ -100,7 +107,7 @@ namespace MacFlow
             if((bool)window.GetValue(DismissingProperty))return;
             if (!Motion.Enabled) return;
             var entrance = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(window.Title=="MacFlow · Menú"?Motion.Menu:Motion.Content)) { EasingFunction = Motion.Ease() };
-            entrance.Completed += delegate { if(window.IsVisible&&!(bool)window.GetValue(DismissingProperty)&&!(bool)window.GetValue(MinimizingProperty)){window.BeginAnimation(UIElement.OpacityProperty,null); Native.Glass(window,Dark);} };
+            entrance.Completed += delegate { if(window.IsVisible&&!(bool)window.GetValue(DismissingProperty)&&!(bool)window.GetValue(MinimizingProperty))window.BeginAnimation(UIElement.OpacityProperty,null); };
             window.BeginAnimation(UIElement.OpacityProperty, entrance);
             PanelMotion.Open(window);
         }
@@ -109,8 +116,10 @@ namespace MacFlow
             if((bool)window.GetValue(DismissingProperty))return;window.SetValue(DismissingProperty,true);window.IsHitTestVisible=false;
             if(!Motion.Enabled){window.Close();if(after!=null)after();return;}
             int duration=Motion.WindowClose+10;bool finished=false;var fallback=new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Background){Interval=TimeSpan.FromMilliseconds(duration+80)};
-            Action finish=delegate{if(finished)return;finished=true;fallback.Stop();window.Close();if(after!=null)after();};
+            Action finish=delegate{if(finished)return;finished=true;fallback.Stop();PanelMotion.CompleteClose(window);window.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle,new Action(delegate{window.Close();if(after!=null)after();}));};
             fallback.Tick+=delegate{finish();};window.Closed+=delegate{finished=true;fallback.Stop();};fallback.Start();
+            bool genie=GenieTransition.TryStart(window,Motion.WindowClose);
+            if(genie){window.BeginAnimation(UIElement.OpacityProperty,null);window.Opacity=0;CompositorGlass.Resize(window,1);}
             PanelMotion.Close(window);
             var animation=new DoubleAnimation(0,TimeSpan.FromMilliseconds(duration)){EasingFunction=Motion.Ease(true)};Timeline.SetDesiredFrameRate(animation,60);animation.Completed+=delegate{finish();};window.BeginAnimation(UIElement.OpacityProperty,animation);
         }
@@ -118,10 +127,14 @@ namespace MacFlow
         {
             if(window.WindowState==WindowState.Minimized||(bool)window.GetValue(MinimizingProperty)||(bool)window.GetValue(DismissingProperty))return;
             if(!(bool)window.GetValue(RestoreHookProperty)){window.SetValue(RestoreHookProperty,true);bool minimized=false;window.StateChanged+=delegate{if(window.WindowState==WindowState.Minimized)minimized=true;else if(minimized){minimized=false;Reveal(window);}};}
-            if(!Animations){window.WindowState=WindowState.Minimized;return;}window.SetValue(MinimizingProperty,true);window.IsHitTestVisible=false;
+            if(!Motion.Enabled){window.WindowState=WindowState.Minimized;return;}window.SetValue(MinimizingProperty,true);window.IsHitTestVisible=false;
+            bool genie=GenieTransition.TryStart(window,Motion.WindowClose);if(genie){window.BeginAnimation(UIElement.OpacityProperty,null);window.Opacity=0;CompositorGlass.Resize(window,1);}
             PanelMotion.Close(window);
-            bool finished=false;var fallback=new System.Windows.Threading.DispatcherTimer{Interval=TimeSpan.FromMilliseconds(390)};EventHandler closed=null;closed=delegate{finished=true;fallback.Stop();window.Closed-=closed;};Action finish=delegate{if(finished)return;finished=true;fallback.Stop();window.Closed-=closed;PanelMotion.Reset(window);window.BeginAnimation(UIElement.OpacityProperty,null);window.Opacity=1;window.IsHitTestVisible=true;window.SetValue(MinimizingProperty,false);if(window.IsVisible)window.WindowState=WindowState.Minimized;};fallback.Tick+=delegate{finish();};window.Closed+=closed;fallback.Start();
-            var fade=new DoubleAnimation(0,TimeSpan.FromMilliseconds(310)){EasingFunction=new CubicEase{EasingMode=EasingMode.EaseIn}};fade.Completed+=delegate{finish();};window.BeginAnimation(UIElement.OpacityProperty,fade);
+            bool finished=false;var fallback=new System.Windows.Threading.DispatcherTimer{Interval=TimeSpan.FromMilliseconds(Motion.WindowClose+90)};EventHandler closed=null;DependencyPropertyChangedEventHandler hidden=null;
+            Action cleanup=delegate{fallback.Stop();window.Closed-=closed;window.IsVisibleChanged-=hidden;};
+            Action finish=delegate{if(finished)return;finished=true;cleanup();PanelMotion.CompleteClose(window);window.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle,new Action(delegate{PanelMotion.Reset(window);window.BeginAnimation(UIElement.OpacityProperty,null);window.Opacity=1;window.IsHitTestVisible=true;window.SetValue(MinimizingProperty,false);if(window.IsVisible)window.WindowState=WindowState.Minimized;}));};
+            closed=delegate{finished=true;cleanup();};hidden=delegate{if(!window.IsVisible)finish();};fallback.Tick+=delegate{finish();};window.Closed+=closed;window.IsVisibleChanged+=hidden;fallback.Start();
+            var fade=new DoubleAnimation(0,TimeSpan.FromMilliseconds(Motion.WindowClose+10)){EasingFunction=new CubicEase{EasingMode=EasingMode.EaseIn}};fade.Completed+=delegate{finish();};window.BeginAnimation(UIElement.OpacityProperty,fade);
         }
         public static Window Panel(string title, double width, double height)
         {

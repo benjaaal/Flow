@@ -10,7 +10,7 @@ namespace MacFlow
 {
     public sealed class ControlCenter : Window
     {
-        private readonly IControlBackend backend;private readonly CancellationTokenSource stop=new CancellationTokenSource();
+        private readonly IControlBackend backend;private readonly Desktop desktop;private readonly CancellationTokenSource stop=new CancellationTokenSource();
         private readonly DispatcherTimer poll=new DispatcherTimer(DispatcherPriority.Background){Interval=TimeSpan.FromSeconds(2)};
         private readonly DispatcherTimer brightnessDelay=new DispatcherTimer{Interval=TimeSpan.FromMilliseconds(140)};
         private readonly DispatcherTimer volumeDelay=new DispatcherTimer(DispatcherPriority.Input){Interval=TimeSpan.FromMilliseconds(40)};
@@ -22,11 +22,11 @@ namespace MacFlow
         public ControlCenter(Desktop desktop):this(desktop,desktop.IsTesting?(IControlBackend)new ControlFixture():new ControlBackend()){}
         internal ControlCenter(Desktop desktop,IControlBackend provider)
         {
-            backend=provider;Title="MacFlow · Centro de control";Width=430;Height=Math.Min(700,SystemParameters.WorkArea.Height-65);WindowStyle=WindowStyle.None;AllowsTransparency=false;ResizeMode=ResizeMode.NoResize;Topmost=true;ShowInTaskbar=false;Background=Brushes.Transparent;
+            this.desktop=desktop;backend=provider;Title="MacFlow · Centro de control";Width=430;Height=Math.Min(700,SystemParameters.WorkArea.Height-65);WindowStyle=WindowStyle.None;AllowsTransparency=false;ResizeMode=ResizeMode.NoResize;Topmost=true;ShowInTaskbar=false;Background=Brushes.Transparent;
             var root=new StackPanel();var header=new DockPanel{Margin=new Thickness(0,0,0,16)};var lights=new WindowControls(this,delegate{Design.Dismiss(this);});DockPanel.SetDock(lights,Dock.Left);header.Children.Add(lights);var title=Design.Text("Centro de control",16,true);title.Margin=new Thickness(14,0,0,0);header.Children.Add(title);root.Children.Add(header);
             var top=new Grid{Margin=new Thickness(-4,0,-4,0)};top.ColumnDefinitions.Add(new ColumnDefinition());top.ColumnDefinitions.Add(new ColumnDefinition());
-            var radios=new StackPanel();var wifiCard=new StackPanel();wifi=Design.Check("Wi-Fi",false,delegate(bool on){if(!updating)ChangeRadio(true,on);});wifiText=Note("Consultando…");wifiCard.Children.Add(wifi);wifiCard.Children.Add(wifiText);wifiCard.Children.Add(Link("Redes disponibles",desktop.OpenWifi));radios.Children.Add(Piece(wifiCard));
-            var btCard=new StackPanel();bluetooth=Design.Check("Bluetooth",false,delegate(bool on){if(!updating)ChangeRadio(false,on);});bluetoothText=Note("Consultando…");btCard.Children.Add(bluetooth);btCard.Children.Add(bluetoothText);btCard.Children.Add(Link("Dispositivos",desktop.OpenBluetooth));radios.Children.Add(Piece(btCard));top.Children.Add(radios);
+            var radios=new StackPanel();wifi=Design.Check("Wi-Fi",false,delegate(bool on){if(!updating)ChangeRadio(true,on);});wifi.FontSize=13;wifi.Margin=new Thickness(0,3,0,5);wifiText=Note("Consultando…");radios.Children.Add(wifi);radios.Children.Add(wifiText);radios.Children.Add(Link("Redes disponibles ›",desktop.OpenWifi));
+            radios.Children.Add(new Border{Height=1,Background=Design.Brush("#10FFFFFF"),Margin=new Thickness(0,9,0,9)});bluetooth=Design.Check("Bluetooth",false,delegate(bool on){if(!updating)ChangeRadio(false,on);});bluetooth.FontSize=13;bluetooth.Margin=new Thickness(0,3,0,5);bluetoothText=Note("Consultando…");radios.Children.Add(bluetooth);radios.Children.Add(bluetoothText);radios.Children.Add(Link("Dispositivos ›",desktop.OpenBluetooth));top.Children.Add(Piece(radios));
             media=new MediaCard(desktop.IsTesting?(IMediaSource)new MediaFixture():new WindowsMediaSource());var music=Piece(media);Grid.SetColumn(music,1);top.Children.Add(music);root.Children.Add(top);
             var sound=new StackPanel();sound.Children.Add(Heading("volume","Sonido"));VolumeSlider=new Slider{Minimum=0,Maximum=100,Margin=new Thickness(0,7,0,4),IsEnabled=false};soundText=Note("Salida predeterminada");sound.Children.Add(VolumeSlider);sound.Children.Add(soundText);mute=Design.Check("Silenciar",false,delegate(bool on){if(!updating)try{backend.Mute(on);}catch(Exception ex){status.Text=ex.Message;}});var soundActions=new DockPanel();DockPanel.SetDock(mute,Dock.Left);mute.Margin=new Thickness(0,0,10,0);soundActions.Children.Add(mute);soundActions.Children.Add(Link("Salida de audio ↗",delegate{Settings("ms-settings:sound");}));sound.Children.Add(soundActions);root.Children.Add(Piece(sound));
             var light=new StackPanel();light.Children.Add(Heading("sun","Pantalla"));BrightnessSlider=new Slider{Minimum=0,Maximum=100,Margin=new Thickness(0,7,0,4),IsEnabled=false};brightnessText=Note("Consultando brillo…");light.Children.Add(BrightnessSlider);light.Children.Add(brightnessText);light.Children.Add(Link("Luz nocturna · Configurar",delegate{Settings("ms-settings:nightlight");}));root.Children.Add(Piece(light));
@@ -59,14 +59,14 @@ namespace MacFlow
         private async void ChangeRadio(bool mode,bool on)
         {
             if(radioBusy||closed)return;radioBusy=true;radioGeneration++;wifi.IsEnabled=bluetooth.IsEnabled=false;
-            try{var result=await backend.SwitchRadio(mode,on,stop.Token);if(!closed)status.Text=result.Success?"":result.Message;}catch(Exception ex){if(!closed)status.Text="El cambio no se completó.";Log.Write(ex.Message);}finally{radioBusy=false;if(!closed)RefreshState();}
+            try{var result=await backend.SwitchRadio(mode,on,stop.Token);if(!closed){status.Text=result.Success?"":result.Message;if(result.Success)desktop.ReportAction((mode?"Wi-Fi":"Bluetooth")+(on?" activado":" desactivado"),mode?"network":"bluetooth");}}catch(Exception ex){if(!closed)status.Text="El cambio no se completó.";Log.Write(ex.Message);}finally{radioBusy=false;if(!closed)RefreshState();}
         }
         private async void WriteBrightness()
         {
             if(brightnessBusy||closed)return;brightnessBusy=true;
-            try{while(pendingBrightness.HasValue&&!closed){int value=pendingBrightness.Value;pendingBrightness=null;await backend.SetBrightness(value);}}catch(Exception ex){pendingBrightness=null;if(!closed)status.Text="Windows no permitió cambiar el brillo.";Log.Write(ex.Message);}finally{brightnessBusy=false;}
+            try{while(pendingBrightness.HasValue&&!closed){int value=pendingBrightness.Value;pendingBrightness=null;await backend.SetBrightness(value);if(!closed)desktop.ReportAction("Brillo · "+value+"%","sun");}}catch(Exception ex){pendingBrightness=null;if(!closed)status.Text="Windows no permitió cambiar el brillo.";Log.Write(ex.Message);}finally{brightnessBusy=false;}
         }
         private void WriteVolume()
-        {volumeDelay.Stop();if(closed||!pendingVolume.HasValue)return;double value=pendingVolume.Value;pendingVolume=null;try{backend.Volume(value);}catch(Exception ex){status.Text=ex.Message;}}
+        {volumeDelay.Stop();if(closed||!pendingVolume.HasValue)return;double value=pendingVolume.Value;pendingVolume=null;try{backend.Volume(value);desktop.ReportAction("Volumen · "+(int)value+"%","volume");}catch(Exception ex){status.Text=ex.Message;}}
     }
 }

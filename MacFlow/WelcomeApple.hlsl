@@ -32,6 +32,8 @@ float4 main(float2 uv : TEXCOORD) : COLOR
     // lettering. The actual wallpaper remains visible through the alpha.
     float light=dot(photo,float3(.2126,.7152,.0722));
     float3 imageGlass=saturate(color*lerp(.86,1.05,light));
-    float clearAlpha=saturate(.22+frost*.30+reflection+edge*(.30*crown+.12*foot)+fine*(.48*crown+.20*foot))*a;
+    float clearAlpha=saturate(.14+frost*.24+reflection+edge*(.30*crown+.12*foot)+fine*(.48*crown+.20*foot))*a;
+    // An opposing neutral reflection gives the transparent body a curved lip.
+    imageGlass=lerp(imageGlass,float3(.18,.18,.18),fine*foot*.36);
     return lerp(float4(color*alpha,alpha),float4(imageGlass*clearAlpha,clearAlpha),hasWallpaper);
 }

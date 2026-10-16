@@ -45,11 +45,14 @@ namespace MacFlow
         [DataMember] public bool ShowVolume = true;
         [DataMember] public bool LowPower = true;
         [DataMember] public bool WindowsMenu = true;
+        [DataMember] public string WindowsKeyAction="Disabled";
+        [DataMember] public bool? ControlCenterGesture=true;[DataMember]public bool? ShowActivityIsland=true;
         [DataMember] public bool ProtectDockEdge = true;
         [DataMember] public bool HideDockInCodex = true;
         [DataMember] public bool AppleWindowControls = false;
         [DataMember] public bool LidAnimation = true;
         [DataMember] public bool WelcomeAfterUpdate = true;
+        [DataMember] public bool? ShowSessionGreeting = true;
         [DataMember] public string LastWelcomedVersion = "1.0.0";
         [DataMember] public bool CheckUpdatesAutomatically = true;
         internal bool NeedsUpdateWelcome(Version current){Version previous;return WelcomeAfterUpdate&&(!Version.TryParse(LastWelcomedVersion,out previous)||current>previous);}
@@ -68,10 +71,11 @@ namespace MacFlow
         }
         public void Validate()
         {
-            if (Theme != "Dark" && Theme != "Light") Theme = "Dark";
+            if (Theme != "Dark" && Theme != "Light" && Theme != "Auto") Theme = "Dark";
+            if(WindowsKeyAction!="Disabled"&&WindowsKeyAction!="MacFlow"&&WindowsKeyAction!="Windows")WindowsKeyAction="Disabled";
             IconSize = Math.Max(32, Math.Min(72, IconSize));
             if(IconAppearance!="Auto"&&IconAppearance!="Light"&&IconAppearance!="Dark"&&IconAppearance!="Original")IconAppearance="Auto";
-            GlassOpacity = Math.Max(.06, Math.Min(.65, GlassOpacity));
+            GlassOpacity = Double.IsNaN(GlassOpacity)||Double.IsInfinity(GlassOpacity)?.09:Math.Max(.06, Math.Min(.65, GlassOpacity));
             if (DockPosition != "Bottom" && DockPosition != "Left" && DockPosition != "Right") DockPosition = "Bottom";
             if (Hotkey != "AltSpace" && Hotkey != "CtrlAltSpace" && Hotkey != "CtrlSpace") Hotkey = "AltSpace";
             if (Accent == null || !System.Text.RegularExpressions.Regex.IsMatch(Accent, "^#[0-9A-Fa-f]{6}$")) Accent = "#8DAEFF";
@@ -122,7 +126,11 @@ namespace MacFlow
                     if(String.IsNullOrWhiteSpace(result.UpdateFeedUrl)&&String.IsNullOrWhiteSpace(result.UpdateRepository))result.UpdateFeedUrl=Product.DefaultFeedUrl;return result;
                 }
             }
-            catch (Exception ex) { Log.Write("Lectura de preferencias: " + ex.Message); return new Preferences(); }
+            catch (Exception ex)
+            {
+                if(!(ex is FileNotFoundException)&&!(ex is DirectoryNotFoundException))Log.Write("Lectura de preferencias: " + ex.Message);
+                try{using(var backup=File.OpenRead(PathName+".bak")){var restored=(Preferences)new DataContractJsonSerializer(typeof(Preferences)).ReadObject(backup);restored.Validate();if(String.IsNullOrWhiteSpace(restored.UpdateFeedUrl)&&String.IsNullOrWhiteSpace(restored.UpdateRepository))restored.UpdateFeedUrl=Product.DefaultFeedUrl;Log.Write("Preferencias recuperadas desde la copia anterior.");return restored;}}catch(FileNotFoundException){}catch(DirectoryNotFoundException){}catch(Exception backupError){Log.Write("Copia de preferencias no disponible: "+backupError.Message);}return new Preferences();
+            }
         }
         public void Save(Preferences value)
         {
@@ -132,7 +140,13 @@ namespace MacFlow
             {
                 new DataContractJsonSerializer(typeof(Preferences)).WriteObject(stream, value); stream.Flush(true);
             }
-            if (File.Exists(PathName)) File.Replace(temp, PathName, null); else File.Move(temp, PathName);
+            if (File.Exists(PathName))
+            {
+                bool previousValid=false;try{using(var old=File.OpenRead(PathName)){previousValid=new DataContractJsonSerializer(typeof(Preferences)).ReadObject(old) is Preferences;}}catch{}
+                // A damaged primary must not replace the last valid backup.
+                File.Replace(temp, PathName, previousValid?PathName+".bak":null);
+            }
+            else File.Move(temp, PathName);
         }
     }
 

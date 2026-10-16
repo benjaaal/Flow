@@ -27,6 +27,7 @@ namespace MacFlow
         [DataMember]public double Latitude,Longitude;
         [DataMember]public bool HasLocation;
         [DataMember]public string AppExecutable="",AppIconPath="";
+        [DataMember]public string Surface="Clear";
         public override string ToString(){return WidgetCatalog.Name(Kind);}
         internal double Elapsed(DateTime now){return Math.Max(0,Seconds+(Running?Math.Max(0,(now-StartedUtc).TotalSeconds):0));}
         internal double Remaining(DateTime now){return Math.Max(0,TimerMinutes*60-Elapsed(now));}
@@ -39,7 +40,7 @@ namespace MacFlow
         internal void Validate()
         {
             if(Items==null)Items=new List<WidgetSpec>();Items=Items.Where(x=>x!=null&&WidgetCatalog.Kinds.Contains(x.Kind)).Take(16).ToList();var ids=new HashSet<string>();
-            foreach(var x in Items){if(String.IsNullOrEmpty(x.Id)||!ids.Add(x.Id)){x.Id=Guid.NewGuid().ToString("N");ids.Add(x.Id);}if(x.Size!="S"&&x.Size!="M"&&x.Size!="L")x.Size="S";x.Column=Math.Max(0,Math.Min(64,x.Column));x.Row=Math.Max(0,Math.Min(64,x.Row));x.MonthOffset=Math.Max(-120,Math.Min(120,x.MonthOffset));x.TimerMinutes=Math.Max(1,Math.Min(1440,x.TimerMinutes));x.Text=(x.Text??"").Substring(0,Math.Min(4000,(x.Text??"").Length));if(x.Tasks==null)x.Tasks=new List<WidgetTask>();x.Tasks=x.Tasks.Where(t=>t!=null&&!String.IsNullOrWhiteSpace(t.Text)).Take(32).ToList();foreach(var t in x.Tasks)t.Text=t.Text.Substring(0,Math.Min(160,t.Text.Length));if(Double.IsNaN(x.Seconds)||Double.IsInfinity(x.Seconds)||x.Seconds<0)x.Reset();if(x.StartedUtc.Kind!=DateTimeKind.Utc)x.StartedUtc=DateTime.SpecifyKind(x.StartedUtc,DateTimeKind.Utc);if(x.Running&&x.StartedUtc==DateTime.MinValue)x.Reset();if(Double.IsNaN(x.Latitude)||Double.IsNaN(x.Longitude)||Math.Abs(x.Latitude)>90||Math.Abs(x.Longitude)>180){x.HasLocation=false;x.Latitude=x.Longitude=0;}}
+            foreach(var x in Items){if(x.Surface!="Dark"&&x.Surface!="Light")x.Surface="Clear";if(String.IsNullOrEmpty(x.Id)||!ids.Add(x.Id)){x.Id=Guid.NewGuid().ToString("N");ids.Add(x.Id);}if(x.Size!="S"&&x.Size!="M"&&x.Size!="L")x.Size="S";x.Column=Math.Max(0,Math.Min(64,x.Column));x.Row=Math.Max(0,Math.Min(64,x.Row));x.MonthOffset=Math.Max(-120,Math.Min(120,x.MonthOffset));x.TimerMinutes=Math.Max(1,Math.Min(1440,x.TimerMinutes));x.Text=(x.Text??"").Substring(0,Math.Min(4000,(x.Text??"").Length));if(x.Tasks==null)x.Tasks=new List<WidgetTask>();x.Tasks=x.Tasks.Where(t=>t!=null&&!String.IsNullOrWhiteSpace(t.Text)).Take(32).ToList();foreach(var t in x.Tasks)t.Text=t.Text.Substring(0,Math.Min(160,t.Text.Length));if(Double.IsNaN(x.Seconds)||Double.IsInfinity(x.Seconds)||x.Seconds<0)x.Reset();if(x.StartedUtc.Kind!=DateTimeKind.Utc)x.StartedUtc=DateTime.SpecifyKind(x.StartedUtc,DateTimeKind.Utc);if(x.Running&&x.StartedUtc==DateTime.MinValue)x.Reset();if(Double.IsNaN(x.Latitude)||Double.IsNaN(x.Longitude)||Math.Abs(x.Latitude)>90||Math.Abs(x.Longitude)>180){x.HasLocation=false;x.Latitude=x.Longitude=0;}}
         }
     }
     internal static class WidgetCatalog

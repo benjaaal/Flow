@@ -109,7 +109,7 @@ namespace MacFlow
             System.Windows.Automation.AutomationProperties.SetName(grid,"Manzanita de cristal");return grid;
         }
     }
-    internal sealed class WelcomeWindow : Window
+    internal class WelcomeWindow : Window
     {
         internal readonly HelloLettering Lettering=new HelloLettering();
         internal readonly Button StartButton;
@@ -147,7 +147,7 @@ namespace MacFlow
         {
             this.showNews=showNews;this.finalGreeting=finalGreeting;this.afterHello=afterHello;
             bounds=testBounds??System.Windows.Forms.Screen.PrimaryScreen.Bounds;
-            animated=Design.Animations&&SystemParameters.ClientAreaAnimation&&!SystemParameters.HighContrast;
+            animated=Motion.Enabled;
             Title="MacFlow · Hola";Width=bounds.Width;Height=bounds.Height;Left=bounds.Left;Top=bounds.Top;WindowStyle=WindowStyle.None;ResizeMode=ResizeMode.NoResize;
             AllowsTransparency=false;Background=Brushes.Black;ShowInTaskbar=false;Topmost=true;
             surface=new Grid{Opacity=animated?0:1};surface.Children.Add(wallpaperImage);surface.Children.Add(new Border{Background=SceneBackdrop(),IsHitTestVisible=false});
@@ -238,14 +238,14 @@ namespace MacFlow
         private void Play()
         {
             if(!animated){appleScale.ScaleX=appleScale.ScaleY=.42;applePosition.Y=-150;Lettering.Progress=1;actionsPosition.Y=0;StartButton.IsEnabled=true;return;}
-            Animate(surface,OpacityProperty,0,1,650,0);
-            Animate(apple,OpacityProperty,0,1,900,100);
+            Animate(surface,OpacityProperty,0,1,450,0);
+            Animate(apple,OpacityProperty,0,1,700,0);
             // A finite timeline, with no perpetual render handler or polling timer.
             ScaleSequence(ScaleTransform.ScaleXProperty);ScaleSequence(ScaleTransform.ScaleYProperty);
             Animate(applePosition,TranslateTransform.YProperty,0,-150,850,950);
-            Animate(Lettering,OpacityProperty,0,1,600,1250);Lettering.Play(1350);
-            Animate(actions,OpacityProperty,0,1,650,2700,delegate{StartButton.IsEnabled=true;});
-            Animate(actionsPosition,TranslateTransform.YProperty,14,0,750,2600);
+            Animate(Lettering,OpacityProperty,0,1,500,950);Lettering.Play(1050);
+            Animate(actions,OpacityProperty,0,1,600,2400,delegate{StartButton.IsEnabled=true;});
+            Animate(actionsPosition,TranslateTransform.YProperty,14,0,650,2350);
             languageTimer.Start();
         }
         internal int GreetingIndex{get{return greetingIndex;}}

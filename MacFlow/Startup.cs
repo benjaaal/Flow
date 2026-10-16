@@ -16,9 +16,9 @@ namespace MacFlow
     {
         internal static async System.Threading.Tasks.Task WaitForDesktop(Func<bool> ready,Func<int,System.Threading.Tasks.Task> delay)
         {
-            int checks=0;while(!ready()&&checks++<60)await delay(250);
-            // Explorer's HWND can precede its first composed frame at logon.
-            await delay(750);
+            int checks=0;while(!ready()&&checks++<32)await delay(250);
+            // The Dock paints before acquiring the taskbar lease. ShellRecovery
+            // handles a late Explorer without delaying every normal logon.
         }
         private const string RunKey="Software\\Microsoft\\Windows\\CurrentVersion\\Run";
         private static string LinkPath {get{return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Startup),"MacFlow.lnk");}}
