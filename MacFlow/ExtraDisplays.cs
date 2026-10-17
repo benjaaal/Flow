@@ -19,7 +19,7 @@ namespace MacFlow
         internal ExtraDisplays(Desktop desktop,IEnumerable<DisplayArea> areas){this.desktop=desktop;fixture=areas!=null;if(areas!=null)foreach(var area in areas)surfaces.Add(area.Device,new Surface(desktop,area));Refresh();}
         internal Window[] Bars{get{return surfaces.Values.Select(s=>s.Bar).ToArray();}}internal Window[] Docks{get{return surfaces.Values.Select(s=>s.Dock).ToArray();}}
         internal Window BarAtCursor(){Surface item;return surfaces.TryGetValue(DisplaySpace.Current.Device,out item)?item.Bar:null;}
-        internal Point? DockDestination(Window source){var device=DisplaySpace.For(source).Device;Surface item;if(!surfaces.TryGetValue(device,out item))return null;var rect=item.Visibility.RestingBounds();return new Point((rect.Left+rect.Right)/2.0,(rect.Top+rect.Bottom)/2.0);}
+        internal Point? DockDestination(Window source){var device=DisplaySpace.For(source).Device;Surface item;if(!surfaces.TryGetValue(device,out item))return null;var rect=item.Visibility.RestingBounds();return PanelMotion.IconDestination(source,item.Dock,rect)??new Point((rect.Left+rect.Right)/2.0,(rect.Top+rect.Bottom)/2.0);}
         internal void Rebuild(){foreach(var surface in surfaces.Values){surface.Signature=null;surface.DrawBar();surface.Layout();}Refresh();}
         internal void Refresh()
         {

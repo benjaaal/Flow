@@ -137,6 +137,7 @@ namespace MacFlow
         public bool IsTesting {get{return nonInteractiveTest;}}
         private readonly Func<Window,Point?> panelDestination;
         private ExtraDisplays extraDisplays;
+        private NativeDockObserver nativeDockObserver;
         internal Window ActivityBar{get{return extraDisplays==null?TopBar:extraDisplays.BarAtCursor()??TopBar;}}
         internal bool ShellVisible{get{return !disposed&&!suspended&&!PresentationActive;}}
         internal bool DesktopVisible{get{return desktopForeground;}}
@@ -144,9 +145,11 @@ namespace MacFlow
         internal void SetIslandEnabled(bool enabled){Preferences.ShowActivityIsland=enabled;Save();DrawTopBar();Native.SetGlassClip(TopBar,1);if(extraDisplays!=null)extraDisplays.Rebuild();if(Island!=null)Island.Refresh();}
         private Point? PanelDestination(Window window)
         {
+            var frozen=(Point)window.GetValue(PanelMotion.DockPoint);if(!Double.IsNaN(frozen.X)&&!Double.IsNaN(frozen.Y))return frozen;
             if(disposed||suspended||Dock==null||dockVisibility==null)return null;
             var rect=dockVisibility.RestingBounds();if(rect.Right<=rect.Left||rect.Bottom<=rect.Top)return null;
             if(extraDisplays!=null){var target=extraDisplays.DockDestination(window);if(target.HasValue)return target;}
+            var icon=PanelMotion.IconDestination(window,Dock,rect);if(icon.HasValue)return icon;
             return new Point((rect.Left+rect.Right)/2.0,(rect.Top+rect.Bottom)/2.0);
         }
         private void PrepareTestWindow(Window window)
@@ -175,6 +178,7 @@ namespace MacFlow
             edgeTimer=new DispatcherTimer(DispatcherPriority.Background){Interval=TimeSpan.FromMilliseconds(120)};
             edgeTimer.Tick+=delegate {UpdateDockVisibility();};edgeTimer.Start();
             if(!smoke)foregroundEvents=new ForegroundEvents(Application.Current.Dispatcher,UpdateDockVisibility);
+            if(!smoke)nativeDockObserver=new NativeDockObserver(Application.Current.Dispatcher,delegate{return ShellVisible&&!sessionLocked&&Preferences.Animations&&Preferences.NativeDockAnimations!=false;});
             Action loadCatalog=delegate
             {
                 if(catalogStarted||disposed)return;catalogStarted=true;
@@ -299,7 +303,7 @@ namespace MacFlow
         {
             uint pid;Native.GetWindowThreadProcessId(handle,out pid);
             bool external=pid!=0&&pid!=(uint)Process.GetCurrentProcess().Id&&!Native.IsDesktopContext(handle)&&Native.IsWindowVisible(handle)&&!Native.IsIconic(handle)&&Native.GetWindowTextLength(handle)>0;
-            activeTarget=external?new WindowEntry{Handle=handle,ProcessId=pid,Title=Native.Title(handle)}:null;
+            activeTarget=external?new WindowEntry{Handle=handle,ProcessId=pid,Title=Native.Title(handle),Executable=Native.ProcessPath(pid)}:null;
             if(activeControls==null)return;activeControls.Visibility=external?Visibility.Visible:Visibility.Collapsed;
             if(external){int style=Native.GetWindowLong(handle,-16);activeControls.MinimizeButton.IsEnabled=(style&0x20000)!=0;activeControls.ZoomButton.IsEnabled=(style&0x10000)!=0;activeControls.CloseButton.ToolTip="Cerrar · "+activeTarget.Title;active.Text=activeTarget.Title;}else if(Native.IsDesktopContext(handle))active.Text="Escritorio";
         }
@@ -707,7 +711,7 @@ namespace MacFlow
         public void ApplyPreferences(Preferences value, bool? startup)
         {
             value.Validate(); Preferences = value;
-            if (!smoke) { if (startup.HasValue) Startup.Enabled = startup.Value; if (value.AutoHideTaskbar && !suspended) TryAcquire(); else shellRecovery.Reset(lease.Restore); }
+            if (!smoke) { if (startup.HasValue) Startup.Enabled = startup.Value; if (value.AutoHideTaskbar && !suspended) TryAcquire(); else shellRecovery.Reset(value.AutoHideTaskbar?(Action)lease.Restore:lease.ShowPersistently); }
             Save(); Rebuild();if(!smoke)WatchLocalUpdates();
         }
         private void ConfigureWindowsKey()
@@ -855,6 +859,7 @@ namespace MacFlow
         public void OpenTaskManager(){if(nonInteractiveTest)return;OpenUri(TaskManagerPath);}
         public void Dispose()
         {
+            if(nativeDockObserver!=null){nativeDockObserver.Dispose();nativeDockObserver=null;}
             if(assistantEdges!=null){assistantEdges.Dispose();assistantEdges=null;}
             if(assistantSessionChanged!=null){Microsoft.Win32.SystemEvents.SessionSwitch-=assistantSessionChanged;assistantSessionChanged=null;}if(voiceWake!=null){voiceWake.Dispose();voiceWake=null;}
             SoundCue.Stop();

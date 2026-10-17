@@ -47,12 +47,12 @@ namespace MacFlow
             base.OnRender(dc);if(Stage==AssistantStage.Hidden||ActualWidth<=0||ActualHeight<=0)return;double time=Motion.Enabled?elapsed.Elapsed.TotalSeconds:.3;
             dc.PushClip(new RectangleGeometry(new Rect(0,0,ActualWidth,ActualHeight),ActualHeight/2,ActualHeight/2));
             if(Stage==AssistantStage.Appearance)DrawLens(dc,new Point(ActualWidth/2,ActualHeight/2),Math.Min(ActualWidth,ActualHeight)*.455,time);
-            else if(Stage==AssistantStage.Listening)DrawLens(dc,new Point(30,ActualHeight/2),22,time);
+            else if(Stage==AssistantStage.Listening){DrawLens(dc,new Point(Math.Min(30,ActualWidth/2),ActualHeight/2),Math.Min(22,ActualHeight*.42),time);if(ActualWidth>100){for(int i=0;i<28;i++){double x=62+i*(ActualWidth-132)/28,h=1.1+2.8*(.5+.5*Math.Sin(time*3.4+i*.62));dc.PushOpacity(.2+.35*Math.Sin(Math.PI*i/28));dc.DrawRoundedRectangle(reflection,null,new Rect(x,ActualHeight-8-h,2,h),1,1);dc.Pop();}}}
             else if(Stage==AssistantStage.Working)
             {
-                var center=new Point(29,ActualHeight/2);for(int i=0;i<6;i++){double angle=time*1.45+i*Math.PI/3,breath=1+.08*Math.Sin(time*2.3+i),r=(9+2*Math.Sin(time+i*.7))*breath;var p=new Point(center.X+Math.Cos(angle)*r,center.Y+Math.Sin(angle)*r);double intensity=.57+.43*(.5+.5*Math.Sin(angle-time*.4));dc.PushOpacity(intensity);dc.DrawEllipse(halo,null,p,7,7);dc.DrawEllipse(Brushes.White,null,p,1.45,1.45);dc.Pop();}
+                var center=new Point(Math.Min(29,ActualWidth/2),ActualHeight/2);for(int i=0;i<6;i++){double angle=time*1.45+i*Math.PI/3,breath=1+.08*Math.Sin(time*2.3+i),r=(9+2*Math.Sin(time+i*.7))*breath;var p=new Point(center.X+Math.Cos(angle)*r,center.Y+Math.Sin(angle)*r);double intensity=.57+.43*(.5+.5*Math.Sin(angle-time*.4));dc.PushOpacity(intensity);dc.DrawEllipse(halo,null,p,7,7);dc.DrawEllipse(Brushes.White,null,p,1.45,1.45);dc.Pop();}
             }
-            else if(Stage==AssistantStage.Answer){double swell=Motion.Enabled?1+.07*Math.Sin(time*2):1;dc.DrawEllipse(horizon,null,new Point(ActualWidth*.5,ActualHeight+2),ActualWidth*.48,15*swell);}
+            else if(Stage==AssistantStage.Answer){double swell=Motion.Enabled?1+.07*Math.Sin(time*2):1;if(ActualWidth<100)DrawLens(dc,new Point(ActualWidth/2,ActualHeight/2),Math.Min(ActualWidth,ActualHeight)*.43,time);else{dc.DrawEllipse(horizon,null,new Point(ActualWidth*.5,ActualHeight+2),ActualWidth*.48,15*swell);dc.DrawEllipse(reflection,null,new Point(ActualWidth*.5,ActualHeight-.5),ActualWidth*.30,1.1);}}
             dc.Pop();
         }
         private void DrawLens(DrawingContext dc,Point center,double radius,double time)

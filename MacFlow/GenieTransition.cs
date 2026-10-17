@@ -79,12 +79,12 @@ namespace MacFlow
         private static double Smooth(double value){value=Math.Max(0,Math.Min(1,value));return value*value*(3-2*value);}
         private void Update(double progress)
         {
-            double pinch=Smooth(progress/.48),travel=Smooth((progress-.20)/.80);var points=new Point3DCollection(441);
+            double pinch=Smooth(progress/.48),travel=Smooth((progress-.32)/.68);var points=new Point3DCollection(441);
             for(int row=0;row<=48;row++)
             {
-                double along=row/48.0,t=positive?along:1-along,bend=pinch*Smooth(t),cross=(vertical?start.Width:start.Height)*(1-.96*bend)*(1-travel);
+                double along=row/48.0,t=positive?along:1-along,bend=pinch*Smooth(t),cross=(vertical?start.Width:start.Height)*(1-.985*bend)*(1-travel);
                 double center=(vertical?start.Left+start.Width/2:start.Top+start.Height/2);double destination=vertical?target.X:target.Y;center+=(destination-center)*(bend+(1-bend)*travel);
-                double axis=(vertical?start.Top:start.Left)+along*(vertical?start.Height:start.Width),tailPull=.82*bend,axisTravel=tailPull+(1-tailPull)*travel;axis+=((vertical?target.Y:target.X)-axis)*axisTravel;
+                double axis=(vertical?start.Top:start.Left)+along*(vertical?start.Height:start.Width),tailPull=bend,axisTravel=tailPull+(1-tailPull)*travel;axis+=((vertical?target.Y:target.X)-axis)*axisTravel;
                 for(int side=0;side<=8;side++){double across=center+(side/8.0-.5)*cross;double x=vertical?across:axis,y=vertical?axis:across;points.Add(new Point3D(x,canvasHeight-y,0));}
                 if(t==0)TopWidth=cross;if(t==1){TailWidth=cross;Tail=vertical?new Point(center,axis):new Point(axis,center);}
             }

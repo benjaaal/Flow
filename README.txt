@@ -1,9 +1,17 @@
-MacFlow 26.3.0 — Windows 11 x64
+MacFlow 26.4.0 — Windows 11 x64
 
-Descarga oficial: https://github.com/benjaaal/Flow/releases/tag/v26.3.0
-Ejecutá MacFlow-Setup-26.3.0.exe. Si MacFlow ya está instalado, elegí Actualizar.
+Descarga oficial: https://github.com/benjaaal/Flow/releases/tag/v26.4.0
+Ejecutá MacFlow-Setup-26.4.0.exe. Si MacFlow ya está instalado, elegí Actualizar.
 Conserva tus preferencias y vuelve a abrir la aplicación automáticamente.
 También podés buscarla en Configuración → Sistema → Actualizaciones.
+
+NOVEDADES 26.4.0
+Isla con movimiento continuo, expansion por cursor y correccion de DPI.
+Asistente renovado: preguntas a Gemini en Chrome, detener y leer respuesta.
+Gemini real pendiente de prueba; requiere sesion y accesibilidad de Chrome.
+Cierres nativos compatibles al icono del Dock: captura reciente o tarjeta.
+Apagar ocultacion automatica desactiva tambien reglas de apps y Codex.
+Paneles mas legibles. No se garantiza reemplazar animaciones de todas las apps.
 
 BIENVENIDA DESPUÉS DE ACTUALIZAR
 Manzanita y Hola de cristal → demostración guiada → Bienvenido → Iniciar.

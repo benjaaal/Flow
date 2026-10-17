@@ -32,6 +32,7 @@ namespace MacFlow
             IconSize=Math.Min(72,Math.Max(32,IconSize)+4);ContainedDockApplied=true;return true;
         }
         [DataMember] public bool Animations = true;
+        [DataMember] public bool? NativeDockAnimations=true;
         [DataMember] public bool AutoHideTaskbar = false;
         [DataMember] public bool ShowTopBar = true;
         [DataMember] public bool HideInFullscreen = true;
@@ -39,6 +40,8 @@ namespace MacFlow
         [DataMember] public bool LiveGlass = true;
         [DataMember] public bool? Sounds=true;
         [DataMember] public bool DockAutoHide = false;
+        internal bool AnyDockAutoHide{get{return DockAutoHide||HideDockInApps||HideDockInCodex;}}
+        internal void SetDockAutoHide(bool enabled){DockAutoHide=enabled;if(!enabled){HideDockInApps=false;HideDockInCodex=false;}}
         [DataMember] public bool HideDockInApps = true;
         [DataMember] public string DockPosition = "Bottom";
         [DataMember] public bool ShowNetwork = true;

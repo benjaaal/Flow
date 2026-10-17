@@ -40,6 +40,20 @@ namespace MacFlow
         private static readonly DependencyProperty ExitState=DependencyProperty.RegisterAttached("ExitState",typeof(WindowState),typeof(PanelMotion),new PropertyMetadata(WindowState.Normal));
         internal static event Action<Window> Frame;
         internal static Func<Window,Point?> DockDestination;
+        internal static readonly DependencyProperty DockKey=DependencyProperty.RegisterAttached("DockKey",typeof(string),typeof(PanelMotion),new PropertyMetadata(null));
+        internal static readonly DependencyProperty DockPoint=DependencyProperty.RegisterAttached("DockPoint",typeof(Point),typeof(PanelMotion),new PropertyMetadata(new Point(Double.NaN,Double.NaN)));
+        internal static Point? IconDestination(Window source,Window dock,Native.RECT resting)
+        {
+            string key=source.GetValue(DockKey) as string;if(String.IsNullOrEmpty(key))return null;
+            var icon=FindIcon(dock.Content as DependencyObject,key);if(icon==null||!icon.IsLoaded)return null;
+            Native.RECT current;Native.GetWindowRect(new System.Windows.Interop.WindowInteropHelper(dock).Handle,out current);
+            var point=icon.PointToScreen(new Point(icon.ActualWidth/2,icon.ActualHeight/2));return new Point(point.X+resting.Left-current.Left,point.Y+resting.Top-current.Top);
+        }
+        private static FrameworkElement FindIcon(DependencyObject node,string key)
+        {
+            if(node==null)return null;var item=node as System.Windows.Controls.Border;if(item!=null&&String.Equals(item.Tag as string,key,StringComparison.OrdinalIgnoreCase))return item;
+            for(int i=0;i<VisualTreeHelper.GetChildrenCount(node);i++){var found=FindIcon(VisualTreeHelper.GetChild(node,i),key);if(found!=null)return found;}return null;
+        }
         internal static bool IsClosing(Window window){return (bool)window.GetValue(Closing);}
         internal static bool IsTransitioning(Window window){return IsClosing(window)||(bool)window.GetValue(Opening);}
         internal static bool FromTop(Window window)

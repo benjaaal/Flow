@@ -65,9 +65,9 @@ namespace MacFlow
             // Clear material for navigation; a regular material behind text.
             // This is a tint above the real clipped compositor backdrop.
             var colors=dock?dark?new[]{"#18171C24","#08171C24","#1C171C24"}:new[]{"#28FFFFFF","#10FFFFFF","#20F8FBFF"}
-                :dark?new[]{"#501A202A","#3D1A202A","#481A202A"}:new[]{"#58FFFFFF","#44FFFFFF","#50FAFCFF"};
+                :dark?new[]{"#A01A202A","#921A202A","#9C1A202A"}:new[]{"#C0FFFFFF","#ACFFFFFF","#B8FAFCFF"};
             var brush=new LinearGradientBrush{StartPoint=new Point(0,0),EndPoint=new Point(.8,1)};
-            for(int i=0;i<3;i++){var color=(Color)ColorConverter.ConvertFromString(colors[i]);color.A=(byte)Math.Min(220,color.A*Math.Max(.5,GlassOpacity/.18));brush.GradientStops.Add(new GradientStop(color,i==0?0:i==1?.48:1));}brush.Freeze();return brush;
+            for(int i=0;i<3;i++){var color=(Color)ColorConverter.ConvertFromString(colors[i]);color.A=(byte)Math.Min(220,color.A*Math.Max(dock?.5:1,GlassOpacity/.18));brush.GradientStops.Add(new GradientStop(color,i==0?0:i==1?.48:1));}brush.Freeze();return brush;
         }
         public static TextBlock Text(string text, double size, bool bold)
         {
@@ -121,7 +121,7 @@ namespace MacFlow
             bool genie=!PanelMotion.FromTop(window)&&GenieTransition.TryStart(window,Motion.WindowClose);
             if(genie){window.BeginAnimation(UIElement.OpacityProperty,null);window.Opacity=0;CompositorGlass.Resize(window,1);}
             PanelMotion.Close(window);
-            var animation=new DoubleAnimation(0,TimeSpan.FromMilliseconds(duration)){EasingFunction=Motion.Ease(true)};Timeline.SetDesiredFrameRate(animation,60);animation.Completed+=delegate{finish();};window.BeginAnimation(UIElement.OpacityProperty,animation);
+            var animation=new DoubleAnimation(0,TimeSpan.FromMilliseconds(duration)){EasingFunction=Motion.Ease(true)};Timeline.SetDesiredFrameRate(animation,60);animation.Completed+=delegate{finish();};if(genie){var clock=new DoubleAnimation(0,0,TimeSpan.FromMilliseconds(duration));clock.Completed+=delegate{finish();};window.BeginAnimation(UIElement.OpacityProperty,clock);}else window.BeginAnimation(UIElement.OpacityProperty,animation);
         }
         public static void Minimize(Window window)
         {
@@ -134,7 +134,7 @@ namespace MacFlow
             Action cleanup=delegate{fallback.Stop();window.Closed-=closed;window.IsVisibleChanged-=hidden;};
             Action finish=delegate{if(finished)return;finished=true;cleanup();PanelMotion.CompleteClose(window);window.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle,new Action(delegate{PanelMotion.Reset(window);window.BeginAnimation(UIElement.OpacityProperty,null);window.Opacity=1;window.IsHitTestVisible=true;window.SetValue(MinimizingProperty,false);if(window.IsVisible)window.WindowState=WindowState.Minimized;}));};
             closed=delegate{finished=true;cleanup();};hidden=delegate{if(!window.IsVisible)finish();};fallback.Tick+=delegate{finish();};window.Closed+=closed;window.IsVisibleChanged+=hidden;fallback.Start();
-            var fade=new DoubleAnimation(0,TimeSpan.FromMilliseconds(Motion.WindowClose+10)){EasingFunction=new CubicEase{EasingMode=EasingMode.EaseIn}};fade.Completed+=delegate{finish();};window.BeginAnimation(UIElement.OpacityProperty,fade);
+            var fade=new DoubleAnimation(genie?0:window.Opacity,0,TimeSpan.FromMilliseconds(Motion.WindowClose+10)){EasingFunction=new CubicEase{EasingMode=EasingMode.EaseIn}};fade.Completed+=delegate{finish();};window.BeginAnimation(UIElement.OpacityProperty,fade);
         }
         public static Window Panel(string title, double width, double height)
         {

@@ -35,6 +35,7 @@ namespace MacFlow
         }
         public void Maintain(){surfaces.Maintain();}
         public void Restore() { surfaces.Restore();RestoreFile(file); }
+        public void ShowPersistently(){Restore();uint state=Native.TaskbarState();if(!Native.SetTaskbarState(state&~1u))throw new InvalidOperationException("Windows no permitió dejar fija la barra de tareas.");TaskbarSurfaces.RecoverVisible();}
         public static void RestoreFile(string file)
         {
             try

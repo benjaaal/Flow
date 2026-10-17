@@ -174,7 +174,7 @@ namespace MacFlow
         {
             string widgetMode=window.TryFindResource("GlassWidgetSurface") as string;if(widgetMode=="Dark")whiteText=true;else if(widgetMode=="Light")whiteText=false;
             lightText=whiteText;nativeReadability=window.Title.Contains("Conexiones")?(whiteText?-.24:.56):(whiteText?-.32:.66);if(lens!=null)lens.Readability=nativeReadability;
-            if(materialFace!=null&&!SystemParameters.HighContrast)materialFace.Background=widgetMode=="Dark"?(Brush)Design.Brush("#CE15161A"):widgetMode=="Light"?(Brush)Design.Brush("#CFFFFFFF"):Design.MaterialTint(widgetMode=="Clear"||window.Title.Contains("Dock")||window.Title.Contains("barra superior")||window.Title.Contains("Centro de control")||window.Title.Contains("Conexiones"),whiteText);
+            if(materialFace!=null&&!SystemParameters.HighContrast)materialFace.Background=widgetMode=="Dark"?(Brush)Design.Brush("#CE15161A"):widgetMode=="Light"?(Brush)Design.Brush("#CFFFFFFF"):Design.MaterialTint(widgetMode=="Clear"||window.Title.Contains("Dock")||window.Title.Contains("barra superior"),whiteText);
             window.Resources["GlassInk"]=SystemParameters.HighContrast?SystemColors.WindowTextBrush:Design.Brush(whiteText?"#F8FAFF":"#19212D");
             window.Resources["GlassMuted"]=SystemParameters.HighContrast?SystemColors.WindowTextBrush:Design.Brush(whiteText?"#DCE4EF":"#303B4B");
             window.Resources["GlassCardSurface"]=Design.Brush(whiteText?"#161C222B":"#22FFFFFF");window.Resources["GlassTileSurface"]=Design.Brush(whiteText?"#16141A23":"#22FFFFFF");
@@ -199,6 +199,7 @@ namespace MacFlow
         {
             if(disposed||toneBusy||!window.IsVisible||window.WindowState==WindowState.Minimized||SystemParameters.HighContrast)return;
             string fixedMode=window.TryFindResource("GlassWidgetSurface") as string;if(fixedMode=="Dark"||fixedMode=="Light"){if(!toneKnown||lightText!=(fixedMode=="Dark")){toneKnown=true;SetReadability(fixedMode=="Dark");}stableTone=4;return;}
+            if(fixedMode!="Clear"&&!window.Title.Contains("Dock")&&!window.Title.Contains("barra superior")&&!window.Title.Contains("Widget ·")){if(!toneKnown||lightText!=Design.Dark){toneKnown=true;SetReadability(Design.Dark);}stableTone=4;return;}
             var handle=new WindowInteropHelper(window).Handle;Native.RECT rect;if(!Native.GetWindowRect(handle,out rect)||rect.Right-rect.Left<40||rect.Bottom-rect.Top<25)return;
             var source=PresentationSource.FromVisual(window);double dpi=source==null?1:source.CompositionTarget.TransformToDevice.M11;int padding=(int)Math.Round((Inset+10)*dpi);
             // Read five pixels in our own unused glass margin, without saving a

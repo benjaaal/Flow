@@ -1,12 +1,27 @@
-# MacFlow 26.3.0
+# MacFlow 26.4.0
 
 Aplicación nativa para Windows 11 x64, con C# y WPF sobre .NET Framework 4.8.
 
-[Descargar instalador](https://github.com/benjaaal/Flow/releases/tag/v26.3.0).
+[Descargar instalador](https://github.com/benjaaal/Flow/releases/tag/v26.4.0).
 Actualizar conserva las preferencias y vuelve a abrir MacFlow. La instalación
 es por usuario y el inicio con Windows es opcional.
 
-## Renovación 26.3.0
+## Cambios 26.4.0
+
+Isla con resorte continuo, expansión por cursor y corrección de tamaño con DPI.
+Asistente rediseñado bajo la isla, con preguntas a Gemini en Chrome, cancelación y
+lectura. El puente de Gemini necesita comprobación con la sesión real; su lógica
+está probada con proveedor aislado. Sin API ni claves. Voz española de Windows opcional.
+
+Cierres nativos compatibles hacia el icono del Dock mediante una representación
+propia: captura reciente o tarjeta de la app. No sustituye universalmente el
+compositor de Windows. Apagar «Ocultar automáticamente» desactiva todas las reglas
+del Dock; desactivar ocultación de la barra original también quita ABS_AUTOHIDE.
+Cristal de paneles más legible, sin tratar Centro de control como material del Dock.
+
+[Decisiones, comprobación y límites 26.4.0](docs/RENOVACION-26.4.0.md).
+
+## Base 26.3.0
 
 Centro de control con reguladores verticales, gesto con ambos botones y salida
 hacia arriba con rebote. Avisos desde la manzana, widgets compactos y barra/Dock
@@ -44,7 +59,7 @@ El panel de energía tiene símbolos propios y confirmación explícita; Configu
 conserva su barra lateral abierta, con selección suave e iconos uniformes.
 Los widgets tienen materiales transparente, oscuro y claro por separado.
 El cierre curvo usa una malla y una textura transitoria de una ventana propia,
-liberada al terminar. La X de otros programas conserva la animación de Windows.
+liberada al terminar. Desde 26.4.0 se añade una representación al observar cierres nativos compatibles.
 
 [Decisiones, referencias, pruebas y límites](docs/RENOVACION-26.3.0.md).
 El acceso remoto quedó fuera de esta versión por elección del usuario.

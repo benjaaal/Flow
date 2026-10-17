@@ -42,6 +42,7 @@ namespace MacFlow
             if (args.Length == 2 && args[0] == "--features-smoke") return NewFeaturesVisual.Run(args[1]);
             if (args.Length == 2 && args[0] == "--modules-smoke") return ModulesVisual.Run(args[1]);
             if (args.Length == 2 && args[0] == "--renewal-smoke") return RenewalVisual.Run(args[1]);
+            if (args.Length == 2 && args[0] == "--polish-smoke") return PolishVisual.Run(args[1]);
             if (args.Length == 2 && args[0] == "--revision-smoke") return RevisionVisual.Run(args[1]);
             if (args.Length == 2 && args[0] == "--session-smoke") return SessionGreetingVisual.Run(args[1]);
             if (args.Length == 2 && args[0] == "--edges-smoke") return GlassEdgesVisual.Run(args[1]);

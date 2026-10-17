@@ -40,6 +40,19 @@ namespace MacFlow
         [DllImport("user32.dll",SetLastError=true)]private static extern uint SendInput(uint count,Input[] inputs,int size);
         internal static async Task<bool> Write(WindowEntry target,string text)
         {if(String.IsNullOrEmpty(text)||text.Length>4000||!Native.Matches(target)||!Native.Activate(target))return false;await Task.Delay(180);if(Native.GetForegroundWindow()!=target.Handle||!Native.Matches(target))return false;var input=new Input[text.Length*2];for(int i=0;i<text.Length;i++){input[i*2]=new Input{Type=1,Keyboard=new Key{Scan=text[i],Flags=4}};input[i*2+1]=new Input{Type=1,Keyboard=new Key{Scan=text[i],Flags=6}};}return SendInput((uint)input.Length,input,Marshal.SizeOf(typeof(Input)))==input.Length;}
+        internal static Task<bool> WriteFocused(WindowEntry target,string text,CancellationToken cancellation,Func<bool> exactFocus)
+        {
+            return Task.Run(delegate
+            {
+                for(int offset=0;offset<text.Length;offset+=128)
+                {
+                    cancellation.ThrowIfCancellationRequested();if(!Native.Matches(target)||Native.GetForegroundWindow()!=target.Handle||!exactFocus())return false;
+                    int count=Math.Min(128,text.Length-offset);var input=new Input[count*2];for(int i=0;i<count;i++){input[i*2]=new Input{Type=1,Keyboard=new Key{Scan=text[offset+i],Flags=4}};input[i*2+1]=new Input{Type=1,Keyboard=new Key{Scan=text[offset+i],Flags=6}};}
+                    if(SendInput((uint)input.Length,input,Marshal.SizeOf(typeof(Input)))!=input.Length)return false;
+                }
+                return true;
+            });
+        }
     }
     internal static class BrowserVisibleText
     {
