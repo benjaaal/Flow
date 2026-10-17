@@ -106,6 +106,11 @@ namespace MacFlow
         {
             if((bool)window.GetValue(DismissingProperty))return;
             if (!Motion.Enabled) return;
+            if(!PanelMotion.FromTop(window)&&GenieTransition.TryStart(window,Motion.Panel,true))
+            {
+                window.BeginAnimation(UIElement.OpacityProperty,null);window.Opacity=0;CompositorGlass.Resize(window,1);PanelMotion.Open(window);
+                var reveal=new DoubleAnimation(0,0,TimeSpan.FromMilliseconds(Motion.Panel+10));reveal.Completed+=delegate{if(window.IsVisible&&!(bool)window.GetValue(DismissingProperty)&&!(bool)window.GetValue(MinimizingProperty)){window.BeginAnimation(UIElement.OpacityProperty,null);window.Opacity=1;CompositorGlass.Resize(window,1);}};window.BeginAnimation(UIElement.OpacityProperty,reveal);return;
+            }
             var entrance = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(window.Title=="MacFlow · Menú"?Motion.Menu:Motion.Content)) { EasingFunction = Motion.Ease() };
             entrance.Completed += delegate { if(window.IsVisible&&!(bool)window.GetValue(DismissingProperty)&&!(bool)window.GetValue(MinimizingProperty))window.BeginAnimation(UIElement.OpacityProperty,null); };
             window.BeginAnimation(UIElement.OpacityProperty, entrance);

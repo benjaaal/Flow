@@ -26,18 +26,18 @@ namespace MacFlow
             // never substitute another application's pixels or stale content.
             var card=new Border{Width=360,Height=180,Padding=new Thickness(24),CornerRadius=new CornerRadius(22),Background=Design.Brush("#F0181A20")};var stack=new StackPanel();stack.Children.Add(Design.AppIcon(new AppEntry{Name=entry.Title,Executable=entry.Executable,Target=entry.Executable},40));var label=Design.Text(entry.Title,17,true);label.Foreground=Brushes.White;label.Margin=new Thickness(0,16,0,0);label.HorizontalAlignment=HorizontalAlignment.Center;stack.Children.Add(label);card.Child=stack;card.Measure(new Size(360,180));card.Arrange(new Rect(0,0,360,180));var texture=new RenderTargetBitmap(360,180,96,96,PixelFormats.Pbgra32);texture.Render(card);texture.Freeze();return texture;
         }
-        internal static async void AnimateObserved(WindowEntry entry,Native.RECT bounds,BitmapSource image,bool minimized)
+        internal static async void AnimateObserved(WindowEntry entry,Native.RECT bounds,BitmapSource image,bool minimized,bool opening=false)
         {
             if(!Motion.Enabled||GenieTransition.ActiveCount>=2||image==null)return;Window preview=null;
             try
             {
                 var screen=System.Windows.Forms.Screen.FromPoint(new System.Drawing.Point((bounds.Left+bounds.Right)/2,(bounds.Top+bounds.Bottom)/2));double scale=DisplaySpace.Of(screen).Scale;bool card=image.PixelWidth==360&&image.PixelHeight==180;
                 double width=card?360:(bounds.Right-bounds.Left)/scale,height=card?180:(bounds.Bottom-bounds.Top)/scale;
-                preview=new Window{Title=minimized?"MacFlow · Minimizar ventana":"MacFlow · Cerrar ventana",Width=width,Height=height,WindowStyle=WindowStyle.None,ResizeMode=ResizeMode.NoResize,AllowsTransparency=true,Background=Brushes.Transparent,ShowInTaskbar=false,ShowActivated=false,Topmost=true,IsHitTestVisible=false,Content=new Image{Source=image,Stretch=Stretch.Fill}};
+                preview=new Window{Title=opening?"MacFlow · Abrir ventana":minimized?"MacFlow · Minimizar ventana":"MacFlow · Cerrar ventana",Width=width,Height=height,WindowStyle=WindowStyle.None,ResizeMode=ResizeMode.NoResize,AllowsTransparency=true,Background=Brushes.Transparent,ShowInTaskbar=false,ShowActivated=false,Topmost=true,IsHitTestVisible=false,Content=new Image{Source=image,Stretch=Stretch.Fill}};
                 var view=preview;preview.SourceInitialized+=delegate{Native.NoActivate(view);var h=new WindowInteropHelper(view).Handle;Native.SetWindowLong(h,-20,Native.GetWindowLong(h,-20)|0x20);};
                 preview.SetValue(PanelMotion.DockKey,entry.Key);preview.Show();Native.SetWindowPos(new WindowInteropHelper(preview).Handle,new IntPtr(-1),bounds.Left,bounds.Top,(int)(width*scale),(int)(height*scale),0x50);
                 var point=PanelMotion.DockDestination==null?null:PanelMotion.DockDestination(preview);if(point.HasValue)preview.SetValue(PanelMotion.DockPoint,point.Value);
-                var started=PreviewStarted;if(started!=null)started(preview);Design.Dismiss(preview);await Task.Delay(Motion.WindowClose+150);
+                var started=PreviewStarted;if(started!=null)started(preview);if(opening)Design.Reveal(preview);else Design.Dismiss(preview);await Task.Delay(Motion.WindowClose+150);
             }
             catch(Exception ex){Log.Write("Animación de cierre nativo: "+ex.Message);}
             finally{if(preview!=null&&preview.IsVisible)preview.Close();}

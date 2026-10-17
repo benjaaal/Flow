@@ -1,8 +1,10 @@
-# MacFlow 26.4.0
+# MacFlow 26.4.1
+
+Dock corregido: agrupación estable entre versiones, iconos centrados y apertura/restauración con la animación inversa del cierre. [Detalles y límites](docs/CORRECCION-26.4.1.md).
 
 Aplicación nativa para Windows 11 x64, con C# y WPF sobre .NET Framework 4.8.
 
-[Descargar instalador](https://github.com/benjaaal/Flow/releases/tag/v26.4.0).
+[Descargar instalador](https://github.com/benjaaal/Flow/releases/tag/v26.4.1).
 Actualizar conserva las preferencias y vuelve a abrir MacFlow. La instalación
 es por usuario y el inicio con Windows es opcional.
 

@@ -99,7 +99,7 @@ namespace MacFlow
         [DataMember] public string Target;
         [DataMember] public string Executable;
         [DataMember] public string IconPath;
-        public string Key { get { return String.IsNullOrEmpty(Executable) ? (Target ?? "").ToLowerInvariant() : Executable.ToLowerInvariant(); } }
+        public string Key { get { return AppIdentity.Key(String.IsNullOrEmpty(Executable)?Target:Executable); } }
         public override string ToString() { return Name; }
     }
 
@@ -109,7 +109,32 @@ namespace MacFlow
         public uint ProcessId;
         public string Title;
         public string Executable;
-        public string Key { get { return (Executable ?? "").ToLowerInvariant(); } }
+        public string Key { get { return AppIdentity.Key(Executable); } }
+    }
+
+    internal static class AppIdentity
+    {
+        internal static string Key(string executable)
+        {
+            string value=(executable??"").Trim().Replace('/','\\').ToLowerInvariant();
+            string file=Path.GetFileName(value);
+            // These launchers install each update into a different directory.
+            // Keep Player, Studio, Codex and ChatGPT as separate applications.
+            if(value.Contains("\\roblox\\versions\\")){
+                if(file=="robloxplayerbeta.exe"||file=="robloxplayerlauncher.exe")return "app:roblox:player";
+                if(file=="robloxstudiobeta.exe"||file=="robloxstudiolauncherbeta.exe")return "app:roblox:studio";
+            }
+            if(file=="codex.exe"&&value.Contains("\\openai.codex_"))return "app:openai:codex";
+            if(file=="chatgpt.exe"&&value.Contains("\\openai.chatgpt"))return "app:openai:chatgpt";
+            return value;
+        }
+        internal static List<AppEntry> DockEntries(IEnumerable<AppEntry> pins,IEnumerable<WindowEntry> windows)
+        {
+            var result=new List<AppEntry>();var keys=new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach(var entry in pins)if(keys.Add(entry.Key))result.Add(entry);
+            foreach(var window in windows)if(!String.IsNullOrEmpty(window.Executable)&&keys.Add(window.Key))result.Add(new AppEntry{Name=Path.GetFileNameWithoutExtension(window.Executable),Target=window.Executable,Executable=window.Executable});
+            return result;
+        }
     }
 
     public sealed class SettingsStore

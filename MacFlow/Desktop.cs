@@ -331,12 +331,7 @@ namespace MacFlow
             double reserve=DockMetrics.Reserve(Preferences.IconSize);
             var items = new StackPanel { Orientation = vertical?Orientation.Vertical:Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Bottom,Margin=vertical?new Thickness(0,reserve,0,reserve):new Thickness(reserve,0,reserve,0) };
 
-            var entries = new List<AppEntry>(Preferences.Pins);
-            var running = Windows.Where(p => !String.IsNullOrEmpty(p.Executable)).GroupBy(p => p.Key).Select(p => p.First());
-            foreach (var w in running)
-            {
-                if (!entries.Any(p => p.Key == w.Key)) entries.Add(new AppEntry { Name = System.IO.Path.GetFileNameWithoutExtension(w.Executable), Target = w.Executable, Executable = w.Executable });
-            }
+            var entries = AppIdentity.DockEntries(Preferences.Pins,Windows);
             // Keep the Dock usable on small screens; overflow is exposed through a real window menu.
             int max = Math.Max(3, (int)((vertical?ScreenSize().Height:ScreenSize().Width) / (Preferences.IconSize + 20)) - 6);
             foreach (var entry in entries.Take(max)) items.Children.Add(DockItem(entry));
@@ -352,8 +347,8 @@ namespace MacFlow
         private UIElement DockUtility(string symbol, string tooltip, Action action)
         {
             var size=Preferences.IconSize;var group=new TransformGroup();group.Children.Add(new ScaleTransform(1,1));group.Children.Add(new TranslateTransform());
-            var icon=new Border{Width=size,Height=size,Tag="utility:"+symbol,Child=DockAppMotion.Host(new Image{Source=FeatureIcons.Get(symbol),Width=size,Height=size,Stretch=Stretch.Uniform}),RenderTransform=group,RenderTransformOrigin=new Point(.5,1),CacheMode=new BitmapCache(1.5)};
-            var button=Design.Button("",action,false);button.Content=icon;button.Width=DockMetrics.Slot(size);button.Height=DockMetrics.Row(size);button.VerticalContentAlignment=VerticalAlignment.Bottom;button.Padding=new Thickness(0);button.Margin=new Thickness(0);button.ToolTip=tooltip;button.Background=Brushes.Transparent;button.BorderThickness=new Thickness(0);button.RenderTransform=null;
+            var icon=new Border{Width=size,Height=size,Tag="utility:"+symbol,Child=DockAppMotion.Host(new Image{Source=FeatureIcons.Get(symbol),Width=size,Height=size,Stretch=Stretch.Uniform}),RenderTransform=group,RenderTransformOrigin=new Point(.5,.5),CacheMode=new BitmapCache(1.5)};
+            var button=Design.Button("",action,false);button.Content=icon;button.Width=DockMetrics.Slot(size);button.Height=DockMetrics.Row(size);button.VerticalContentAlignment=VerticalAlignment.Center;button.Padding=new Thickness(0);button.Margin=new Thickness(0);button.ToolTip=tooltip;button.Background=Brushes.Transparent;button.BorderThickness=new Thickness(0);button.RenderTransform=null;
             var cell=new StackPanel{Width=DockMetrics.Slot(size),VerticalAlignment=VerticalAlignment.Bottom,Tag=icon};cell.Children.Add(button);cell.Children.Add(new Border{Height=DockMetrics.Indicator});return cell;
         }
         internal UIElement DockItem(AppEntry entry,bool primary=true)
@@ -362,9 +357,9 @@ namespace MacFlow
             var cell = new StackPanel { Width = Preferences.IconSize + 12, VerticalAlignment = VerticalAlignment.Bottom };
             var transform = new ScaleTransform(1, 1);
             var motion=new TransformGroup();motion.Children.Add(transform);motion.Children.Add(new TranslateTransform());
-            var icon = new Border { Child = DockAppMotion.Host(Design.AppIcon(entry, Preferences.IconSize)), Width = Preferences.IconSize, Height = Preferences.IconSize, RenderTransformOrigin = new Point(.5, 1), RenderTransform = motion,CacheMode=new BitmapCache(1.5) };if(primary)dockIcons[entry.Key]=icon;
+            var icon = new Border { Child = DockAppMotion.Host(Design.AppIcon(entry, Preferences.IconSize)), Width = Preferences.IconSize, Height = Preferences.IconSize, RenderTransformOrigin = new Point(.5, .5), RenderTransform = motion,CacheMode=new BitmapCache(1.5) };if(primary)dockIcons[entry.Key]=icon;
             var button = Design.Button("", delegate {if(Directory.Exists(entry.Target)){OpenStack(entry.Target);return;}if(String.Equals(entry.Executable??entry.Target,System.Reflection.Assembly.GetExecutingAssembly().Location,StringComparison.OrdinalIgnoreCase)){OpenSettings();return;}var current=Windows.Where(w=>w.Key==entry.Key&&Native.Matches(w)).ToList();if(current.Count==1){if(!Native.Activate(current[0]))Notify("Windows no permitió activar esta ventana. Podés usar Alt+Tab.");}else if(current.Count>1)WindowMenu(entry,current);else Launch(entry);}, false);
-            button.Content = icon; button.Background = Brushes.Transparent; button.BorderThickness=new Thickness(0); button.RenderTransform=null; button.Padding = new Thickness(0); button.Margin = new Thickness(0); button.Width = DockMetrics.Slot(Preferences.IconSize);button.Height = DockMetrics.Row(Preferences.IconSize);button.VerticalContentAlignment=VerticalAlignment.Bottom;button.ToolTip = entry.Name + (matching.Count > 0 ? " · " + matching.Count + " ventana(s)" : "");
+            button.Content = icon; button.Background = Brushes.Transparent; button.BorderThickness=new Thickness(0); button.RenderTransform=null; button.Padding = new Thickness(0); button.Margin = new Thickness(0); button.Width = DockMetrics.Slot(Preferences.IconSize);button.Height = DockMetrics.Row(Preferences.IconSize);button.VerticalContentAlignment=VerticalAlignment.Center;button.ToolTip = entry.Name + (matching.Count > 0 ? " · " + matching.Count + " ventana(s)" : "");
             icon.Tag=entry.Key;cell.Tag=icon;
             Point dragStart=new Point(); bool canDrag=false;
             button.PreviewMouseLeftButtonDown+=delegate(object sender,MouseButtonEventArgs e){dragStart=e.GetPosition(button);canDrag=Preferences.Pins.Any(p=>p.Key==entry.Key);};
@@ -440,7 +435,7 @@ namespace MacFlow
         public void Pin(AppEntry entry)
         {
             var found = Preferences.Pins.FirstOrDefault(p => p.Key == entry.Key);
-            if (found != null) Preferences.Pins.Remove(found); else if (Preferences.Pins.Count < 24) Preferences.Pins.Add(entry); else { Notify("El Dock admite hasta 24 aplicaciones fijadas."); return; }
+            if (found != null) Preferences.Pins.RemoveAll(p=>p.Key==entry.Key); else if (Preferences.Pins.Count < 24) Preferences.Pins.Add(entry); else { Notify("El Dock admite hasta 24 aplicaciones fijadas."); return; }
             Save(); DrawDock(); if (Search != null) RefreshSearch();
         }
         private void WindowMenu(AppEntry entry, List<WindowEntry> windows)

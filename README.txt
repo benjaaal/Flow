@@ -1,7 +1,9 @@
-MacFlow 26.4.0 — Windows 11 x64
+MacFlow 26.4.1 — Windows 11 x64
+Dock sin duplicados por versión, iconos centrados y apertura inversa desde el Dock.
+Apps ajenas: representación compatible; no reemplaza el compositor de Windows.
 
-Descarga oficial: https://github.com/benjaaal/Flow/releases/tag/v26.4.0
-Ejecutá MacFlow-Setup-26.4.0.exe. Si MacFlow ya está instalado, elegí Actualizar.
+Descarga oficial: https://github.com/benjaaal/Flow/releases/tag/v26.4.1
+Ejecutá MacFlow-Setup-26.4.1.exe. Si MacFlow ya está instalado, elegí Actualizar.
 Conserva tus preferencias y vuelve a abrir la aplicación automáticamente.
 También podés buscarla en Configuración → Sistema → Actualizaciones.
 

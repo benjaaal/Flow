@@ -18,7 +18,7 @@ namespace MacFlow
         [DllImport("gdi32.dll")]private static extern bool DeleteObject(IntPtr value);
         internal static int ActiveCount;
         internal static event Action<Window,GenieSurface> Started;
-        internal static bool TryStart(Window source,int duration)
+        internal static bool TryStart(Window source,int duration,bool opening=false)
         {
             if(!Motion.Enabled||RenderCapability.Tier==0||!source.IsVisible||PanelMotion.IsTransitioning(source)||PanelMotion.DockDestination==null||ActiveCount>=2)return false;
             Window overlay=null;Action abort=null;
@@ -44,6 +44,7 @@ namespace MacFlow
                 double left=Math.Min(rect.Left,destination.Value.X)-3,top=Math.Min(rect.Top,destination.Value.Y)-3,right=Math.Max(rect.Right,destination.Value.X)+3,bottom=Math.Max(rect.Bottom,destination.Value.Y)+3;
                 var start=new Rect((rect.Left-left)/scale,(rect.Top-top)/scale,width/scale,height/scale);var target=new Point((destination.Value.X-left)/scale,(destination.Value.Y-top)/scale);
                 var surface=new GenieSurface(texture,start,target,Native.GlassRadius(source),(right-left)/scale,(bottom-top)/scale);
+                if(opening)surface.SetValue(GenieSurface.ProgressProperty,1.0);
                 overlay=new Window{Title="MacFlow · Transición al Dock",Width=(right-left)/scale,Height=(bottom-top)/scale,Left=left/scale,Top=top/scale,WindowStyle=WindowStyle.None,ResizeMode=ResizeMode.NoResize,AllowsTransparency=true,Background=Brushes.Transparent,ShowInTaskbar=false,ShowActivated=false,Topmost=true,IsHitTestVisible=false,Content=surface};
                 var view=overlay;overlay.SourceInitialized+=delegate{Native.NoActivate(view);var handle=new WindowInteropHelper(view).Handle;Native.SetWindowLong(handle,-20,Native.GetWindowLong(handle,-20)|0x20);};
                 var timeout=new DispatcherTimer(DispatcherPriority.Background){Interval=TimeSpan.FromMilliseconds(duration+160)};bool ended=false,counted=false;EventHandler sourceClosed=null;DependencyPropertyChangedEventHandler hidden=null;
@@ -51,7 +52,7 @@ namespace MacFlow
                 abort=stop;sourceClosed=delegate{stop();};hidden=delegate{if(!source.IsVisible)stop();};source.Closed+=sourceClosed;source.IsVisibleChanged+=hidden;timeout.Tick+=delegate{stop();};overlay.Closed+=delegate{if(counted){ActiveCount--;counted=false;}if(!ended)stop();};
                 overlay.Show();ActiveCount++;counted=true;Native.SetWindowPos(new WindowInteropHelper(overlay).Handle,new IntPtr(-1),(int)left,(int)top,(int)(right-left),(int)(bottom-top),0x50);
                 var notify=Started;if(notify!=null)notify(source,surface);
-                var motion=new DoubleAnimation(0,1,TimeSpan.FromMilliseconds(duration)){FillBehavior=FillBehavior.HoldEnd};Timeline.SetDesiredFrameRate(motion,60);motion.Completed+=delegate{stop();};surface.BeginAnimation(GenieSurface.ProgressProperty,motion);timeout.Start();return true;
+                var motion=new DoubleAnimation(opening?1:0,opening?0:1,TimeSpan.FromMilliseconds(duration)){FillBehavior=FillBehavior.HoldEnd};Timeline.SetDesiredFrameRate(motion,60);motion.Completed+=delegate{stop();};surface.BeginAnimation(GenieSurface.ProgressProperty,motion);timeout.Start();return true;
             }
             catch(Exception ex){if(abort!=null)abort();else if(overlay!=null&&overlay.IsVisible)overlay.Close();Log.Write("Transición curva no disponible: "+ex.Message);return false;}
         }

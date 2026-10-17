@@ -66,7 +66,7 @@ $setup = Join-Path $deliverables ('MacFlow-Setup-'+$packageVersion+'.exe')
 if ($LASTEXITCODE -ne 0) { throw 'Falló la compilación del instalador.' }
 Copy-Item -LiteralPath (Join-Path $root 'MacFlow\App.config') -Destination ($setup + '.config') -Force
 $packageInfo=Get-Item -LiteralPath $setup
-$packageJson=@{Product='MacFlow';Architecture='x64';Version=$packageVersion;Installer=$packageInfo.Name;Sha256=(Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash;Size=$packageInfo.Length;FeedUrl=$UpdateFeedUrl;Notes='26.4.0: Isla con resorte continuo y expansion por cursor; asistente renovado con puente a Gemini en Chrome sin API ni claves (pendiente de prueba real). Cierres nativos compatibles hacia el icono del Dock con captura reciente o tarjeta. Correccion de no ocultar Dock y barra original. Paneles legibles y movimiento reducido. Sin inyeccion ni cambios al arranque protegido.'} | ConvertTo-Json
+$packageJson=@{Product='MacFlow';Architecture='x64';Version=$packageVersion;Installer=$packageInfo.Name;Sha256=(Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash;Size=$packageInfo.Length;FeedUrl=$UpdateFeedUrl;Notes='26.4.1: corrige iconos duplicados del Dock por favoritos repetidos y carpetas de version de Roblox/Codex. Conserva Player, Studio, ChatGPT y Codex como apps distintas. Apertura y restauracion con la malla inversa desde el Dock. Iconos centrados y contenidos al ampliar; correccion aplicada por monitor. Incluye mejoras de 26.4.0.'} | ConvertTo-Json
 [System.IO.File]::WriteAllText((Join-Path $deliverables 'MacFlow-update.json'),$packageJson,[System.Text.UTF8Encoding]::new($false))
 if ($RunTests) {
     $tests = Join-Path $deliverables 'verification'
