@@ -9,27 +9,28 @@ namespace MacFlow
     internal sealed class IslandMotion : IDisposable
     {
         private readonly Window window;private readonly Border plate;private readonly Action position;
-        private double width,height,currentWidth,currentHeight,vw,vh,previous=-1;private bool attached,disposed;
+        private double width,height,currentWidth,currentHeight,vw,vh,vt,top,currentTop,previous=-1;private bool attached,disposed;
         internal bool Running{get{return attached;}}
-        internal IslandMotion(Window view,Border shell,Action center){window=view;plate=shell;position=center;width=currentWidth=view.Width;height=currentHeight=view.Height;view.Closed+=delegate{Dispose();};}
-        internal void To(double w,double h)
+        internal IslandMotion(Window view,Border shell,Action center){window=view;plate=shell;position=center;width=currentWidth=view.Width;height=currentHeight=view.Height;top=currentTop=Double.IsNaN(view.Top)?0:view.Top;view.Closed+=delegate{Dispose();};}
+        internal void To(double w,double h){To(w,h,Double.IsNaN(window.Top)?0:window.Top);}
+        internal void To(double w,double h,double y)
         {
-            if(disposed)return;width=w;height=h;
-            if(!Motion.Enabled||!window.IsVisible){currentWidth=w;currentHeight=h;Apply(w,h);Stop();return;}
-            if(Math.Abs(window.Width-w)<.08&&Math.Abs(window.Height-h)<.08&&!attached)return;
+            if(disposed)return;width=w;height=h;top=y;if(!attached)currentTop=Double.IsNaN(window.Top)?y:window.Top;
+            if(!Motion.Enabled||!window.IsVisible){currentWidth=w;currentHeight=h;currentTop=y;Apply(w,h);Stop();return;}
+            if(Math.Abs(currentWidth-w)<.08&&Math.Abs(currentHeight-h)<.08&&Math.Abs(currentTop-y)<.08&&!attached)return;
             if(attached)return;previous=-1;attached=true;CompositionTarget.Rendering+=Frame;
         }
         private void Frame(object sender,EventArgs args)
         {
             if(disposed||!window.IsVisible){Stop();return;}
             double now=((RenderingEventArgs)args).RenderingTime.TotalSeconds,dt=previous<0?1.0/60:Math.Min(.05,now-previous);if(dt<=0)return;previous=now;
-            double w=currentWidth,h=currentHeight;
+            double w=currentWidth,h=currentHeight,y=currentTop;
             Motion.Spring(ref w,ref vw,width,Motion.Enabled?dt:0,23,.88);Motion.Spring(ref h,ref vh,height,Motion.Enabled?dt:0,23,.88);
-            bool settled=Math.Abs(w-width)<.12&&Math.Abs(h-height)<.12&&Math.Abs(vw)+Math.Abs(vh)<1;
-            currentWidth=settled?width:w;currentHeight=settled?height:h;Apply(currentWidth,currentHeight);if(settled)Stop();
+            Motion.Spring(ref y,ref vt,top,Motion.Enabled?dt:0,23,.98);bool settled=Math.Abs(w-width)<.12&&Math.Abs(h-height)<.12&&Math.Abs(y-top)<.12&&Math.Abs(vw)+Math.Abs(vh)+Math.Abs(vt)<1;
+            currentTop=settled?top:y;currentWidth=settled?width:w;currentHeight=settled?height:h;Apply(currentWidth,currentHeight);if(settled)Stop();
         }
-        private void Apply(double w,double h){window.Width=Math.Max(32,w);window.Height=Math.Max(24,h);plate.CornerRadius=new CornerRadius(Math.Min(30,h/2));position();}
-        internal void Stop(){if(attached)CompositionTarget.Rendering-=Frame;attached=false;previous=-1;vw=vh=0;}
+        private void Apply(double w,double h){window.Top=currentTop;window.Width=Math.Max(32,w);window.Height=Math.Max(24,h);plate.CornerRadius=new CornerRadius(Math.Min(30,h/2));position();}
+        internal void Stop(){if(attached)CompositionTarget.Rendering-=Frame;attached=false;previous=-1;vw=vh=vt=0;}
         public void Dispose(){disposed=true;Stop();}
     }
     // Playback indicator, not an audio meter: driven only by Playing and only

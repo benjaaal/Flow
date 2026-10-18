@@ -20,7 +20,7 @@ namespace MacFlow
         private static readonly object BrushGate=new object();
         private static readonly System.Collections.Generic.Dictionary<string,SolidColorBrush> BrushCache=new System.Collections.Generic.Dictionary<string,SolidColorBrush>(StringComparer.OrdinalIgnoreCase);
         private static readonly DependencyProperty ScaleTargetProperty=DependencyProperty.RegisterAttached("ScaleTarget",typeof(double),typeof(Design),new PropertyMetadata(1.0));
-        private static readonly DependencyProperty DismissingProperty=DependencyProperty.RegisterAttached("Dismissing",typeof(bool),typeof(Design),new PropertyMetadata(false));
+        internal static readonly DependencyProperty DismissingProperty=DependencyProperty.RegisterAttached("Dismissing",typeof(bool),typeof(Design),new PropertyMetadata(false));
         private static readonly DependencyProperty MinimizingProperty=DependencyProperty.RegisterAttached("Minimizing",typeof(bool),typeof(Design),new PropertyMetadata(false));
         private static readonly DependencyProperty RestoreHookProperty=DependencyProperty.RegisterAttached("RestoreHook",typeof(bool),typeof(Design),new PropertyMetadata(false));
         public static void InstallTheme()
@@ -65,7 +65,7 @@ namespace MacFlow
             // Clear material for navigation; a regular material behind text.
             // This is a tint above the real clipped compositor backdrop.
             var colors=dock?dark?new[]{"#18171C24","#08171C24","#1C171C24"}:new[]{"#28FFFFFF","#10FFFFFF","#20F8FBFF"}
-                :dark?new[]{"#A01A202A","#921A202A","#9C1A202A"}:new[]{"#C0FFFFFF","#ACFFFFFF","#B8FAFCFF"};
+                :dark?new[]{"#C0222226","#BC222226","#C0222226"}:new[]{"#DCF8F8FA","#D8F8F8FA","#DCF8F8FA"};
             var brush=new LinearGradientBrush{StartPoint=new Point(0,0),EndPoint=new Point(.8,1)};
             for(int i=0;i<3;i++){var color=(Color)ColorConverter.ConvertFromString(colors[i]);color.A=(byte)Math.Min(220,color.A*Math.Max(dock?.5:1,GlassOpacity/.18));brush.GradientStops.Add(new GradientStop(color,i==0?0:i==1?.48:1));}brush.Freeze();return brush;
         }
@@ -104,7 +104,7 @@ namespace MacFlow
         }
         public static void Reveal(Window window)
         {
-            if((bool)window.GetValue(DismissingProperty))return;
+            if(!WindowLife.Alive(window)||(bool)window.GetValue(DismissingProperty))return;
             if (!Motion.Enabled) return;
             if(!PanelMotion.FromTop(window)&&GenieTransition.TryStart(window,Motion.Panel,true))
             {
@@ -118,10 +118,10 @@ namespace MacFlow
         }
         public static void Dismiss(Window window,Action after=null)
         {
-            if((bool)window.GetValue(DismissingProperty))return;window.SetValue(DismissingProperty,true);window.IsHitTestVisible=false;
+            if(!WindowLife.Alive(window)||(bool)window.GetValue(DismissingProperty))return;window.SetValue(DismissingProperty,true);window.IsHitTestVisible=false;
             if(!Motion.Enabled){window.Close();if(after!=null)after();return;}
             int duration=Motion.WindowClose+10;bool finished=false;var fallback=new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Background){Interval=TimeSpan.FromMilliseconds(duration+80)};
-            Action finish=delegate{if(finished)return;finished=true;fallback.Stop();PanelMotion.CompleteClose(window);window.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle,new Action(delegate{window.Close();if(after!=null)after();}));};
+            Action finish=delegate{if(finished)return;finished=true;fallback.Stop();PanelMotion.CompleteClose(window);window.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle,new Action(delegate{if(!WindowLife.Alive(window))return;window.Close();if(after!=null)after();}));};
             fallback.Tick+=delegate{finish();};window.Closed+=delegate{finished=true;fallback.Stop();};fallback.Start();
             bool genie=!PanelMotion.FromTop(window)&&GenieTransition.TryStart(window,Motion.WindowClose);
             if(genie){window.BeginAnimation(UIElement.OpacityProperty,null);window.Opacity=0;CompositorGlass.Resize(window,1);}
@@ -130,21 +130,21 @@ namespace MacFlow
         }
         public static void Minimize(Window window)
         {
-            if(window.WindowState==WindowState.Minimized||(bool)window.GetValue(MinimizingProperty)||(bool)window.GetValue(DismissingProperty))return;
-            if(!(bool)window.GetValue(RestoreHookProperty)){window.SetValue(RestoreHookProperty,true);bool minimized=false;window.StateChanged+=delegate{if(window.WindowState==WindowState.Minimized)minimized=true;else if(minimized){minimized=false;Reveal(window);}};}
+            if(!WindowLife.Alive(window)||window.WindowState==WindowState.Minimized||(bool)window.GetValue(MinimizingProperty)||(bool)window.GetValue(DismissingProperty))return;
+            if(!(bool)window.GetValue(RestoreHookProperty)){window.SetValue(RestoreHookProperty,true);bool minimized=false;window.StateChanged+=delegate{if(!WindowLife.Alive(window)||window.WindowState==WindowState.Minimized)minimized=true;else if(minimized){minimized=false;Reveal(window);}};}
             if(!Motion.Enabled){window.WindowState=WindowState.Minimized;return;}window.SetValue(MinimizingProperty,true);window.IsHitTestVisible=false;
             bool genie=!PanelMotion.FromTop(window)&&GenieTransition.TryStart(window,Motion.WindowClose);if(genie){window.BeginAnimation(UIElement.OpacityProperty,null);window.Opacity=0;CompositorGlass.Resize(window,1);}
             PanelMotion.Close(window);
             bool finished=false;var fallback=new System.Windows.Threading.DispatcherTimer{Interval=TimeSpan.FromMilliseconds(Motion.WindowClose+90)};EventHandler closed=null;DependencyPropertyChangedEventHandler hidden=null;
             Action cleanup=delegate{fallback.Stop();window.Closed-=closed;window.IsVisibleChanged-=hidden;};
-            Action finish=delegate{if(finished)return;finished=true;cleanup();PanelMotion.CompleteClose(window);window.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle,new Action(delegate{PanelMotion.Reset(window);window.BeginAnimation(UIElement.OpacityProperty,null);window.Opacity=1;window.IsHitTestVisible=true;window.SetValue(MinimizingProperty,false);if(window.IsVisible)window.WindowState=WindowState.Minimized;}));};
+            Action finish=delegate{if(finished)return;finished=true;cleanup();PanelMotion.CompleteClose(window);window.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle,new Action(delegate{if(!WindowLife.Alive(window))return;PanelMotion.Reset(window);window.BeginAnimation(UIElement.OpacityProperty,null);window.Opacity=1;window.IsHitTestVisible=true;window.SetValue(MinimizingProperty,false);if(window.IsVisible)window.WindowState=WindowState.Minimized;}));};
             closed=delegate{finished=true;cleanup();};hidden=delegate{if(!window.IsVisible)finish();};fallback.Tick+=delegate{finish();};window.Closed+=closed;window.IsVisibleChanged+=hidden;fallback.Start();
             var fade=new DoubleAnimation(genie?0:window.Opacity,0,TimeSpan.FromMilliseconds(Motion.WindowClose+10)){EasingFunction=new CubicEase{EasingMode=EasingMode.EaseIn}};fade.Completed+=delegate{finish();};window.BeginAnimation(UIElement.OpacityProperty,fade);
         }
         public static Window Panel(string title, double width, double height)
         {
             var w = new Window { Title = title, Width = width, Height = height, WindowStyle = WindowStyle.None, AllowsTransparency = false, ResizeMode = ResizeMode.NoResize, ShowInTaskbar = false, Topmost = true, Background = Brush(Dark ? "#202938" : "#ECF2FA"), FontFamily = new FontFamily("Segoe UI") };
-            w.SourceInitialized += delegate { Native.Glass(w, Dark); };
+            WindowLife.Track(w);w.SourceInitialized += delegate { Native.Glass(w, Dark); };
             w.KeyDown += delegate(object sender, KeyEventArgs e) { if (e.Key == Key.Escape) {e.Handled=true;Dismiss(w);} };
             return w;
         }

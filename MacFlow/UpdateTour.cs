@@ -87,23 +87,21 @@ namespace MacFlow
                 case 0:
                     title.Text="Todo empieza en el Dock.";description.Text="Acercá el cursor y los iconos crecen dentro del cristal. Tus aplicaciones, siempre a mano.";CreateDockPreview();break;
                 case 1:
-                    title.Text="Deslizá. Y tomá el control.";description.Text="Arrastrá hacia abajo desde la batería o los indicadores con clic izquierdo o derecho. El Centro de control se abre y se retira hacia arriba con un rebote suave.";
-                    example=new ControlCenter(desktop){Height=360};ShowExample();SlidePreview(125);CreatePointer(example.Width-34,28,205);break;
+                    title.Text="Deslizá. Y tomá el control.";description.Text="Arrastrá hacia abajo desde la batería o los indicadores con clic izquierdo o derecho. Música, brillo y sonido comparten una distribución compacta; los accesos quedan debajo.";
+                    example=new ControlCenter(desktop);var controlBody=(UIElement)example.Content;example.Content=null;example.Content=new Viewbox{Child=controlBody,Stretch=Stretch.Uniform};ShowExample();SlidePreview(80);CreatePointer(example.Width-34,28,160);break;
                 case 2:
-                    title.Text="Encontrá tu forma de usar MacFlow.";description.Text="Configuración se renovó: buscá un ajuste, elegí tu tema y personalizá el inicio, el Dock y los gestos. Todo en un solo lugar.";
-                    var settings=new SettingsWindow(desktop,true);var settingsContent=settings.TourPreview();settings.Close();
-                    example=Design.Panel("MacFlow · Configuración · Demostración",560,250);example.Content=settingsContent;ShowExample();SlidePreview(18);break;
-                case 3:
-                    title.Text="Pequeños espacios, más tuyos.";description.Text="Widgets más limpios, datos grandes y tres materiales: transparente, oscuro o claro. Usá su menú para elegir tamaño y acomodalos arrastrando el fondo.";
+                    title.Text="Un momento para vos.";description.Text="Ctrl + Windows abre Privacidad: reloj, música y avisos, mientras tus tareas siguen. Creá tu PIN y registrá tu rostro localmente. Ctrl + Windows + Alt recupera el escritorio.";
+                    example=new PrivacyScreen(desktop,true){Width=560,Height=400};ShowExample();SlidePreview(18);break;                case 3:
+                    title.Text="Pequeños espacios, más tuyos.";description.Text="Galería en dos columnas, datos grandes y materiales consistentes: transparente, oscuro o claro. Usá su menú para elegir tamaño y acomodalos arrastrando el fondo.";
                     example=new DesktopWidget(desktop.Widgets,new WidgetSpec{Kind="Calendar",Size="S",Surface="Dark"}){Width=164,Height=164};ShowExample();SlidePreview(18);break;
                 case 4:
-                    title.Text="Lo que pasa, siempre a la vista.";description.Text="La cápsula negra reúne música, temporizadores y acciones recientes. Tocala para expandir sus controles. Los avisos de MacFlow bajan desde la manzana con un rebote suave.";
+                    title.Text="Lo que pasa, siempre a la vista.";description.Text="La cápsula negra reúne música, temporizadores y acciones recientes. En reposo no reacciona al clic. Con actividad, se despliega debajo de la barra sin cubrirla. Los avisos de MacFlow bajan desde la manzana con un rebote suave.";
                     var provider=new MediaFixture();provider.State.Playing=true;provider.State.Title="Música · Demostración";provider.State.Artist="Controles conectados al reproductor de Windows";islandPreview=new ActivityIsland(desktop,provider,true);example=islandPreview.View;ShowExample();SlidePreview(18);break;
                 case 5:
-                    title.Text="Todo empieza en la manzana.";description.Text="Un clic abre el menú y dos abren Configuración. Windows abre la búsqueda escrita con un contorno de luz. Hey Siri activa la voz cuando Windows tiene reconocimiento español disponible.";
+                    title.Text="Preguntá con tus palabras.";description.Text="El asistente distingue acciones locales y preguntas libres. Las preguntas se envían a Gemini en Chrome; la luz acompaña el trabajo y se apaga al terminar. Incluye reconocimiento local en español; Hey Siri activa la escucha.";
                     // Read-only instance of the actual menu: a tour must never
                     // execute a power action or change the user's preferences.
-                    example=new GlassMenu("MacFlow",new[]{new GlassCommand("Aplicaciones",null,"grid"),new GlassCommand("Buscar",null,"search"),new GlassCommand("Tus ventanas",null,"windows"),new GlassCommand("Configuración",null,"settings"),new GlassCommand("Suspender…",null,"moon"),new GlassCommand("Reiniciar…",null,"power"),new GlassCommand("Apagar…",null,"power")},false);ShowExample();SlidePreview(24);break;
+                    example=new AssistantWindow(desktop,null);ShowExample();SlidePreview(24);break;
             }
             Motion.Fade(title,0,1,300);Motion.Fade(description,0,1,380);
             forward.Content=index==5?"Continuar":"Siguiente";

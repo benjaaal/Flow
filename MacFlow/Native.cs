@@ -216,6 +216,7 @@ namespace MacFlow
         }
         public static void Glass(Window window, bool dark)
         {
+            WindowLife.Track(window);
             if(new WindowInteropHelper(window).Handle==IntPtr.Zero)return;
             // Background handling adapted from WPF UI WindowBackdrop.cs (MIT).
             // Copyright (C) Leszek Pomianowski and WPF UI Contributors.

@@ -37,13 +37,13 @@ namespace MacFlow
         {
             if(disposed)return;
             foreach(var id in windows.Keys.Where(id=>!State.Items.Any(x=>x.Id==id)).ToList()){Design.Dismiss(windows[id]);windows.Remove(id);}
-            foreach(var x in State.Items){if(!String.IsNullOrEmpty(x.Monitor)&&!System.Windows.Forms.Screen.AllScreens.Any(s=>s.DeviceName==x.Monitor)){x.Monitor="";Save();}WidgetCatalog.Place(x,State.Items,Available(x),x.Column,x.Row);DesktopWidget window;if(!windows.TryGetValue(x.Id,out window)){window=new DesktopWidget(this,x);windows.Add(x.Id,window);}window.Place();window.RefreshAppearance();}
+            foreach(var x in State.Items){if(!String.IsNullOrEmpty(x.Monitor)&&!System.Windows.Forms.Screen.AllScreens.Any(s=>s.DeviceName==x.Monitor)){x.Monitor="";Save();}WidgetCatalog.Place(x,State.Items,Available(x),x.Column,x.Row);DesktopWidget window;if(!windows.TryGetValue(x.Id,out window)){window=new DesktopWidget(this,x);WindowLife.Track(window);var owned=window;var id=x.Id;window.Closed+=delegate{DesktopWidget current;if(windows.TryGetValue(id,out current)&&current==owned)windows.Remove(id);};windows.Add(x.Id,window);}window.Place();window.RefreshAppearance();}
             SetVisible(desktopRequested);
         }
         internal void SetVisible(bool value)
         {
-            desktopRequested=value;visible=false;var free=new Dictionary<string,bool>();
-            foreach(var w in windows.Values){bool show=value;if(!show&&!Desktop.IsTesting&&Desktop.ShellVisible){string key=w.Spec.Monitor??"";if(!free.TryGetValue(key,out show)){var area=Area(w.Spec).Pixels;show=!Desktop.Windows.Any(app=>{Native.RECT r;return !Native.IsIconic(app.Handle)&&Native.GetWindowRect(app.Handle,out r)&&area.IntersectsWith(new Rect(r.Left,r.Top,Math.Max(0,r.Right-r.Left),Math.Max(0,r.Bottom-r.Top)));});free[key]=show;}}show=show&&Desktop.Preferences.ShowWidget&&Desktop.ShellVisible;if(show){visible=true;if(!w.IsVisible){w.Show();w.SetActive(true);}}else if(w.IsVisible&&!w.IsKeyboardFocusWithin){w.SetActive(false);w.Hide();}}
+            if(disposed)return;desktopRequested=value;visible=false;var free=new Dictionary<string,bool>();
+            foreach(var w in windows.Values.ToArray()){if(!WindowLife.Alive(w))continue;bool show=value;if(!show&&!Desktop.IsTesting&&Desktop.ShellVisible){string key=w.Spec.Monitor??"";if(!free.TryGetValue(key,out show)){var area=Area(w.Spec).Pixels;show=!Desktop.Windows.Any(app=>{Native.RECT r;return !Native.IsIconic(app.Handle)&&Native.GetWindowRect(app.Handle,out r)&&area.IntersectsWith(new Rect(r.Left,r.Top,Math.Max(0,r.Right-r.Left),Math.Max(0,r.Bottom-r.Top)));});free[key]=show;}}show=show&&Desktop.Preferences.ShowWidget&&Desktop.ShellVisible;if(show){visible=true;if(!w.IsVisible){w.Show();w.SetActive(true);}}else if(w.IsVisible&&!w.IsKeyboardFocusWithin){w.SetActive(false);w.Hide();}}
         }
         private async void Tick(object sender,EventArgs e)
         {
@@ -53,7 +53,7 @@ namespace MacFlow
             Desktop.RefreshLiveActivity();if(!visible||sampling||++ticks%5!=1)return;sampling=true;
             try{var snapshot=await System.Threading.Tasks.Task.Run((Func<DeviceSnapshot>)DeviceMetrics.Read);if(!disposed)Metrics=snapshot;}catch(Exception ex){Log.Write(ex.Message);}finally{sampling=false;}
         }
-        public void Dispose(){if(disposed)return;Save();disposed=true;timer.Stop();foreach(var w in windows.Values)w.Close();windows.Clear();}
+        public void Dispose(){if(disposed)return;Save();disposed=true;timer.Stop();foreach(var w in windows.Values.ToArray())WindowLife.Close(w);windows.Clear();}
     }
     internal sealed class DesktopWidget : Window
     {
@@ -171,18 +171,28 @@ namespace MacFlow
     {
         private readonly WidgetManager owner;private readonly StackPanel editor=new StackPanel();private readonly ComboBox installed=new ComboBox();private readonly CancellationTokenSource stop=new CancellationTokenSource();
         private ComboBox appChoice;
-        internal WidgetGallery(WidgetManager manager,string select):base("Widgets",800,640)
+        internal WidgetGallery(WidgetManager manager,string select):base("Widgets",900,660)
         {
-            owner=manager;var grid=new Grid();grid.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(260)});grid.ColumnDefinitions.Add(new ColumnDefinition());
+            owner=manager;var grid=new Grid();grid.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(440)});grid.ColumnDefinitions.Add(new ColumnDefinition());
             var library=new StackPanel();library.Children.Add(Design.Text("Tu escritorio, a tu medida.",19,true));library.Children.Add(Caption("Arrastrá el espacio libre del widget. Elegí su tamaño y material desde ⋯."));
-            var query=ModuleUI.Input("",50);query.ToolTip="Buscar widgets";System.Windows.Automation.AutomationProperties.SetName(query,"Buscar widgets");library.Children.Add(ModuleUI.Field(query));var choices=new StackPanel();library.Children.Add(choices);
+            var query=ModuleUI.Input("",50);query.ToolTip="Buscar widgets";System.Windows.Automation.AutomationProperties.SetName(query,"Buscar widgets");var search=new Grid();search.Children.Add(ModuleUI.Field(query));var placeholder=Design.Text("Buscar widgets",13,false);placeholder.Foreground=Design.Muted;placeholder.Margin=new Thickness(14,0,14,0);placeholder.IsHitTestVisible=false;search.Children.Add(placeholder);library.Children.Add(search);var choices=new WrapPanel();library.Children.Add(choices);
             string[] glyphs={"performance","performance","grid","sun","battery","performance","play","folder","check","performance","performance","grid","network"};
-            for(int i=0;i<WidgetCatalog.Kinds.Length;i++){string kind=WidgetCatalog.Kinds[i],name=WidgetCatalog.Names[i];var button=ModuleUI.Button("",delegate{if(!owner.Add(kind)){MessageBox.Show("No hay espacio libre. Quitá o reducí un widget.","MacFlow");return;}Populate(owner.State.Items.Last().Id);},false);System.Windows.Automation.AutomationProperties.SetName(button,"+ "+name);button.Tag=name;var card=new DockPanel();card.Children.Add(new Border{Width=34,Height=34,CornerRadius=new CornerRadius(11),Background=Design.Brush("#188DAEFF"),Child=Design.Symbol(glyphs[i],20,Design.Ink),Margin=new Thickness(0,0,12,0)});var labels=new StackPanel();labels.Children.Add(Design.Text(name,13,true));labels.Children.Add(Caption("Añadir al escritorio"));card.Children.Add(labels);button.Content=card;button.HorizontalContentAlignment=HorizontalAlignment.Stretch;button.Padding=new Thickness(12,9,12,9);button.Margin=new Thickness(0,4,0,4);choices.Children.Add(button);}
-            query.TextChanged+=delegate{foreach(Button button in choices.Children)button.Visibility=SettingsWindow.SearchMatches((string)button.Tag,query.Text.Trim())?Visibility.Visible:Visibility.Collapsed;};
+            for(int i=0;i<WidgetCatalog.Kinds.Length;i++){string kind=WidgetCatalog.Kinds[i],name=WidgetCatalog.Names[i];var button=ModuleUI.Button("",delegate{if(!owner.Add(kind)){MessageBox.Show("No hay espacio libre. Quitá o reducí un widget.","MacFlow");return;}Populate(owner.State.Items.Last().Id);},false);System.Windows.Automation.AutomationProperties.SetName(button,"+ "+name);button.Tag=name;var card=new StackPanel{Width=174};card.Children.Add(Preview(kind,glyphs[i]));var labels=new StackPanel();labels.Children.Add(Design.Text(name,13,true));labels.Children.Add(Caption("+ Añadir al escritorio"));card.Children.Add(labels);button.Content=card;button.HorizontalContentAlignment=HorizontalAlignment.Stretch;button.Padding=new Thickness(12,9,12,9);button.Margin=new Thickness(0,4,10,6);choices.Children.Add(button);}
+            query.TextChanged+=delegate{placeholder.Visibility=query.Text.Length==0?Visibility.Visible:Visibility.Collapsed;foreach(Button button in choices.Children)button.Visibility=SettingsWindow.SearchMatches((string)button.Tag,query.Text.Trim())?Visibility.Visible:Visibility.Collapsed;};
             grid.Children.Add(new ScrollViewer{Content=library,VerticalScrollBarVisibility=ScrollBarVisibility.Auto});Grid.SetColumn(editor,1);editor.Margin=new Thickness(24,0,0,0);grid.Children.Add(new ScrollViewer{Content=editor,VerticalScrollBarVisibility=ScrollBarVisibility.Auto});Grid.SetColumn(grid.Children[1],1);Body.Children.Add(grid);
             installed.SelectionChanged+=delegate{Edit(installed.SelectedItem as WidgetSpec);};Closed+=delegate{stop.Cancel();stop.Dispose();};Populate(select);
         }
-        private void Populate(string select){installed.ItemsSource=owner.State.Items.ToList();installed.SelectedItem=owner.State.Items.FirstOrDefault(x=>x.Id==select)??owner.State.Items.FirstOrDefault();Edit(installed.SelectedItem as WidgetSpec);}
+        private UIElement Preview(string kind,string glyph)
+        {
+            var body=new StackPanel();string value=kind=="Digital"?DateTime.Now.ToString("HH:mm"):kind=="Calendar"?DateTime.Today.Day.ToString():kind=="Timer"?"05:00":kind=="Stopwatch"?"00:00":kind=="Battery"?owner.Metrics.PowerKnown&&owner.Metrics.Power.BatteryLifePercent<=100?owner.Metrics.Power.BatteryLifePercent+"%":"—":kind=="Performance"?owner.Metrics.Cpu.HasValue?owner.Metrics.Cpu.Value.ToString("0")+"%":"—":"";
+            if(kind=="Calendar"){var month=Design.Text(DateTime.Today.ToString("MMMM",CultureInfo.GetCultureInfo("es-AR")).ToUpperInvariant(),10,true);month.Foreground=Design.Brush("#F06464");body.Children.Add(month);}
+            else body.Children.Add(new Border{Child=Design.Symbol(glyph,20,Design.Ink),HorizontalAlignment=HorizontalAlignment.Left,Margin=new Thickness(0,0,0,6)});
+            if(value.Length>0)body.Children.Add(Design.Text(value,kind=="Calendar"?38:32,false));
+            else if(kind=="Notes"||kind=="Tasks"){for(int n=0;n<2;n++)body.Children.Add(new Border{Height=5,CornerRadius=new CornerRadius(2),Background=Design.Brush(Design.Dark?"#36FFFFFF":"#26000000"),Margin=new Thickness(0,9,15+n*18,0)});}
+            else if(kind=="Analog"){var hands=new System.Windows.Shapes.Path{Data=Geometry.Parse("M40,7 A33,33 0 1 1 39.9,7 M40,18 L40,40 60,48"),Stroke=Design.Ink,StrokeThickness=2,Width=72,Height=72,Stretch=Stretch.Uniform};body.Children.Clear();body.Children.Add(hands);}
+            else{var caption=Design.Text(kind=="Weather"?"Elegí una ciudad":kind=="Music"?"Tu música":kind=="Network"?"Conexión":"Tus aplicaciones",13,true);body.Children.Add(caption);}
+            return new Border{Height=116,CornerRadius=new CornerRadius(20),Background=Design.Brush(Design.Dark?"#D52E2E33":"#C8FAFAFC"),Padding=new Thickness(15,12,15,10),Child=body,Margin=new Thickness(0,0,0,10)};
+        }        private void Populate(string select){installed.ItemsSource=owner.State.Items.ToList();installed.SelectedItem=owner.State.Items.FirstOrDefault(x=>x.Id==select)??owner.State.Items.FirstOrDefault();Edit(installed.SelectedItem as WidgetSpec);}
         internal void SelectWidget(string id){if(id!=null)Populate(id);}
         internal void RefreshApps(){if(appChoice!=null)appChoice.ItemsSource=owner.Desktop.Apps;}
         private void Edit(WidgetSpec x)

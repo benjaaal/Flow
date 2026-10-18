@@ -35,6 +35,7 @@ namespace MacFlow
             }
             if (args.Length > 0 && args[0] == "--restore") { new TaskbarLease(data).Restore();TaskbarSurfaces.RecoverVisible(); return 0; }
             if (args.Length == 2 && args[0] == "--self-test") return SelfTests.Run(args[1]);
+            if (args.Length == 2 && args[0] == "--stability-smoke") return StabilityVisual.Run(args[1]);
             if (args.Length == 2 && args[0] == "--icons-smoke") return IconsVisual.Run(args[1]);
             if (args.Length == 2 && args[0] == "--media-smoke") return MediaRegression.Probe(args[1]);
             if (args.Length == 2 && args[0] == "--connections-smoke") return ConnectivityVisual.Run(args[1]);
@@ -66,10 +67,14 @@ namespace MacFlow
                 if (!created) { if(!smoke&&!(args.Length>0&&args[0]=="--background")){for(int attempt=0;attempt<20;attempt++){if(SignalSettings(args.Length>0&&args[0]=="--welcome"?WelcomeEvent:SettingsEvent))return 0;Thread.Sleep(50);}}return 0; }
                 if(!smoke)LaunchDiagnostics.Begin(data,args.Length>0&&args[0]=="--background");
                 var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown }; Desktop desktop = null;
+                bool failing=false;
                 app.DispatcherUnhandledException += delegate(object sender, DispatcherUnhandledExceptionEventArgs e)
                 {
-                    Log.Write("Error UI: " + e.Exception); if (!smoke) new TaskbarLease(data).Restore(); e.Handled = true;
-                    if(!smoke)MessageBox.Show("MacFlow encontró un error y restauró la barra de tareas.\n" + e.Exception.Message, "MacFlow");else File.WriteAllText(Path.Combine(args[1],"smoke.txt"),"FAIL: "+e.Exception);app.Shutdown(1);
+                    e.Handled=true;Log.Write("Error UI: " + e.Exception);if(failing)return;failing=true;
+                    // Stop event producers before a modal dialog starts a nested
+                    // dispatcher loop. Otherwise the same timer can reenter here.
+                    try{if(desktop!=null)desktop.Dispose();}catch(Exception cleanup){Log.Write("Cierre tras error: "+cleanup);}finally{if(!smoke)new TaskbarLease(data).Restore();}
+                    app.Shutdown(1);if(!smoke)MessageBox.Show("MacFlow encontró un error y restauró la barra de tareas.\n" + e.Exception.Message, "MacFlow");else File.WriteAllText(Path.Combine(args[1],"smoke.txt"),"FAIL: "+e.Exception);app.Shutdown(1);
                 };
                 AppDomain.CurrentDomain.UnhandledException += delegate(object sender, UnhandledExceptionEventArgs e) { Log.Write("Error de proceso: " + e.ExceptionObject); if (!smoke) new TaskbarLease(data).Restore(); };
                 using (var stop = new EventWaitHandle(false, EventResetMode.AutoReset, smoke ? StopEvent + ".Smoke" : StopEvent))

@@ -96,3 +96,8 @@ Weather: https://open-meteo.com/ — CC BY 4.0 data. Geocoding: GeoNames, CC BY 
 The bundled free endpoint is for non-commercial use, is contacted only after selecting a city, and can be unavailable. A commercial distribution must configure an appropriate licensed service. No location is inferred automatically.
 
 MacFlow 26.1.2 adds an original clipped Windows.UI.Composition host-backdrop implementation using documented Microsoft APIs. No desktop texture is captured for this material. Welcome letter shaders use wallpaper luminance for neutral reflections and output translucent alpha; no wallpaper hue is painted into the glyphs. App closing previews take at most one requested-window frame with PrintWindow, keep it briefly in memory, never persist or upload it, and do not restyle, hide, cloak, resize or inject into the source app. Native external X buttons retain Windows behavior. Apple welcome and SF Symbols pages were reviewed for visual proportions; no proprietary SF Symbols artwork or font is redistributed.
+
+## Native local modules (26.5.0)
+OpenCV, OpenCvSharp, YuNet, SFace, MiniFASNetV2, Vosk Spanish es-0.42, NAudio and their runtime libraries are bundled unmodified. Full licenses and attribution: NATIVE-THIRD-PARTY.txt. Original integration code is in BuildTools/FaceWorker.cs, BuildTools/VoiceWorker.cs and MacFlow/. Model downloads are pinned with SHA-256.
+Sources: https://github.com/opencv/opencv_zoo ; https://github.com/shimat/opencvsharp ; https://github.com/minivision-ai/Silent-Face-Anti-Spoofing ; https://github.com/alphacep/vosk-api ; https://github.com/naudio/NAudio .
+

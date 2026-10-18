@@ -34,7 +34,7 @@ namespace MacFlow
     }
     internal static class UpdateService
     {
-        internal const long MaximumSize=64*1024*1024;
+        internal const long MaximumSize=256*1024*1024;
         private sealed class Client:WebClient
         {
             protected override WebRequest GetWebRequest(Uri address){if(address.Scheme!="https")throw new IOException("El canal necesita HTTPS.");var request=base.GetWebRequest(address);request.Timeout=20000;var http=request as HttpWebRequest;if(http!=null)http.ReadWriteTimeout=20000;return request;}

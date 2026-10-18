@@ -13,7 +13,7 @@ namespace MacFlow
     internal sealed class ActivityIsland : IDisposable
     {
         private readonly Desktop desktop;private readonly IMediaSource media;private readonly Window window,anchor;private readonly bool preview;
-        private readonly Border plate,compactIcon,art;private readonly TextBlock compactTitle,title,subtitle;private readonly StackPanel commands;private readonly Grid compact,expandedBody;
+        private readonly Border plate,compactIcon,art;private bool canExpand;private readonly TextBlock compactTitle,title,subtitle;private readonly StackPanel commands;private readonly Grid compact,expandedBody;
         private readonly Grid assistantLayer;private readonly AssistantVisual assistantVisual;private readonly TextBlock assistantText;private readonly StackPanel assistantActions;
         private readonly IslandMotion morph;private readonly ActivityWave wave;private readonly DispatcherTimer hover,collapse;private bool hoverExpanded;private string contentState;
         private readonly DispatcherTimer flashTimer;private MediaState state=new MediaState();private WidgetSpec timer;private bool focus,disposed,busy,pending,expanded,hiding;private int generation;private string flash,flashSymbol,actionSignature;
@@ -33,12 +33,12 @@ namespace MacFlow
             var remove=Control("close","Quitar isla dinámica",delegate{Remove();},26);Grid.SetColumn(remove,2);remove.VerticalAlignment=VerticalAlignment.Top;info.Children.Add(remove);expandedBody.Children.Add(info);
             commands=new StackPanel{Orientation=Orientation.Horizontal,HorizontalAlignment=HorizontalAlignment.Center,VerticalAlignment=VerticalAlignment.Center};Grid.SetRow(commands,1);expandedBody.Children.Add(commands);layers.Children.Add(expandedBody);
             assistantLayer=new Grid{Visibility=Visibility.Collapsed};assistantVisual=new AssistantVisual();assistantLayer.Children.Add(assistantVisual);assistantText=Label("",12,false);assistantText.Margin=new Thickness(59,0,64,0);assistantText.VerticalAlignment=VerticalAlignment.Center;assistantLayer.Children.Add(assistantText);assistantActions=new StackPanel{Orientation=Orientation.Horizontal,HorizontalAlignment=HorizontalAlignment.Right,VerticalAlignment=VerticalAlignment.Center,Margin=new Thickness(0,0,9,0)};assistantActions.Children.Add(Control("keyboard","Escribir una orden",desktop.ShowAssistantInput,25));assistantActions.Children.Add(Control("close","Detener y cerrar asistente",desktop.StopAssistantVoice,25));foreach(Button button in assistantActions.Children){button.Margin=new Thickness(1);button.Padding=new Thickness(6);}assistantLayer.Children.Add(assistantActions);assistantLayer.MouseLeftButtonUp+=delegate{desktop.ShowAssistantInput();};layers.Children.Add(assistantLayer);
-            plate=new Border{CornerRadius=new CornerRadius(24),Background=Design.Brush("#FF030304"),Child=layers};window.Content=plate;
+            plate=new Border{CornerRadius=new CornerRadius(24),Background=Design.Brush("#FF030304"),Child=layers};window.Content=plate;WindowLife.Track(window);
             morph=new IslandMotion(window,plate,delegate{if(!preview)CenterOnBar();Native.SetGlassClip(window,1);});
             hover=new DispatcherTimer{Interval=TimeSpan.FromMilliseconds(480)};collapse=new DispatcherTimer{Interval=TimeSpan.FromMilliseconds(750)};
-            hover.Tick+=delegate{hover.Stop();if(!expanded&&!hiding&&!desktop.AssistantOn(anchor)){hoverExpanded=true;expanded=true;Refresh();}};
+            hover.Tick+=delegate{hover.Stop();if(canExpand&&!expanded&&!hiding&&!desktop.AssistantOn(anchor)){hoverExpanded=true;expanded=true;Refresh();}};
             collapse.Tick+=delegate{collapse.Stop();if(hoverExpanded&&!window.IsMouseOver){hoverExpanded=false;expanded=false;Refresh();}};
-            window.MouseEnter+=delegate{collapse.Stop();if(!preview&&!expanded&&!desktop.AssistantOn(anchor))hover.Start();};window.MouseLeave+=delegate{hover.Stop();if(hoverExpanded)collapse.Start();};
+            window.MouseEnter+=delegate{collapse.Stop();if(canExpand&&!preview&&!expanded&&!desktop.AssistantOn(anchor))hover.Start();};window.MouseLeave+=delegate{hover.Stop();if(hoverExpanded)collapse.Start();};
             window.SourceInitialized+=delegate{Native.NoActivate(window);Native.RemoveGlassFrame(window);Native.SetGlassClip(window,1);};window.SizeChanged+=delegate{if(!preview&&!hiding)CenterOnBar();Native.SetGlassClip(window,1);};
             window.KeyDown+=delegate(object s,System.Windows.Input.KeyEventArgs e){if(e.Key==System.Windows.Input.Key.Escape){expanded=false;Refresh();}};
             flashTimer=new DispatcherTimer(DispatcherPriority.Background){Interval=TimeSpan.FromSeconds(2.2)};flashTimer.Tick+=delegate{flashTimer.Stop();flash=null;Refresh();};media.Changed+=MediaChanged;if(preview)window.Loaded+=delegate{ReadMedia();};else ReadMedia();
@@ -50,12 +50,12 @@ namespace MacFlow
         private void MediaChanged(){if(disposed||window.Dispatcher.HasShutdownStarted)return;window.Dispatcher.BeginInvoke(new Action(ReadMedia));}
         private async void ReadMedia(){if(disposed)return;if(busy){pending=true;return;}busy=true;try{do{pending=false;try{state=await media.Read();}catch{state=new MediaState();}if(!disposed)Refresh();}while(pending&&!disposed);}finally{busy=false;}}
         internal void Flash(string text,string symbol){if(disposed)return;flash=text;flashSymbol=symbol;flashTimer.Stop();flashTimer.Start();Refresh();}
-        internal void Toggle(){hover.Stop();collapse.Stop();hoverExpanded=false;expanded=!expanded;if(!preview&&!desktop.IsTesting)SoundCue.Play("open");Refresh();}
+        internal void Toggle(){if(disposed||!canExpand||desktop.AssistantOn(anchor))return;hover.Stop();collapse.Stop();hoverExpanded=false;expanded=!expanded;if(!preview&&!desktop.IsTesting)SoundCue.Play("open");Refresh();}
         internal void Remove(){desktop.SetIslandEnabled(false);Hide();}
         internal void Refresh()
         {
-            if(disposed)return;bool assistantActive=desktop.AssistantOn(anchor);if(!preview&&(!desktop.ShellVisible||!desktop.FeedbackAllowedOn(anchor)&&!assistantActive||desktop.Preferences.ShowActivityIsland==false&&!assistantActive||!desktop.Preferences.ShowTopBar&&!assistantActive)){Hide();return;}
-            bool voice=assistantActive&&(desktop.AssistantListening||desktop.AssistantSpeaking);timer=desktop.Widgets==null?null:desktop.Widgets.State.Items.FirstOrDefault(t=>(t.Kind=="Timer"||t.Kind=="Stopwatch")&&t.Running);focus=timer==null&&desktop.Focus.Session.State=="Running";bool active=voice||flash!=null||timer!=null||focus||state.Playing||(expanded&&state.CanToggle);
+            if(disposed||!WindowLife.Alive(window))return;bool assistantActive=desktop.AssistantOn(anchor);if(!preview&&(!desktop.ShellVisible||!desktop.FeedbackAllowedOn(anchor)&&!assistantActive||desktop.Preferences.ShowActivityIsland==false&&!assistantActive||!desktop.Preferences.ShowTopBar&&!assistantActive)){Hide();return;}
+            bool voice=assistantActive&&(desktop.AssistantListening||desktop.AssistantSpeaking);timer=desktop.Widgets==null?null:desktop.Widgets.State.Items.FirstOrDefault(t=>(t.Kind=="Timer"||t.Kind=="Stopwatch")&&t.Running);focus=timer==null&&desktop.Focus.Session.State=="Running";canExpand=timer!=null||focus||state.CanToggle;if(!canExpand)expanded=false;bool active=voice||flash!=null||timer!=null||focus||state.CanToggle;
             string symbol=voice?"mic":flash!=null?flashSymbol:timer!=null?"timer":focus?"moon":state.CanToggle?"music":"apple";
             string current=voice?(desktop.AssistantListening?"Escuchando…":"Leyendo en voz alta…"):flash??(timer!=null?Format(timer.Kind=="Timer"?timer.Remaining(DateTime.UtcNow):timer.Elapsed(DateTime.UtcNow)):focus?Format(desktop.Focus.Session.Remaining(DateTime.UtcNow)):state.CanToggle?state.Title:"Sin actividades en curso");
             compactIcon.Child=active?Design.Symbol(symbol,18,Design.Brush(timer!=null||focus?"#FFA62B":"#F0F0F5")):null;compactTitle.Text=active?current:"";compact.Visibility=expanded||!active?Visibility.Collapsed:Visibility.Visible;expandedBody.Visibility=expanded?Visibility.Visible:Visibility.Collapsed;
@@ -68,9 +68,9 @@ namespace MacFlow
             string nextState=assistantActive?"assistant:"+desktop.AssistantMode:expanded?"expanded":"compact";
             if(contentState!=nextState){contentState=nextState;var incoming=assistantActive?(UIElement)assistantLayer:expanded?expandedBody:compact;Motion.Fade(incoming,0,1,180);}
             if(hiding){++generation;hiding=false;window.BeginAnimation(Window.TopProperty,null);window.BeginAnimation(UIElement.OpacityProperty,null);window.Opacity=1;}
-            if(!preview){window.Top=anchor.Top+4;CenterOnBar();}
-            if(!window.IsVisible){window.Show();if(!preview){var area=DisplaySpace.For(anchor);DisplaySpace.Place(window,area,(area.Width-window.Width)/2,7);}Motion.Fade(window,0,1,220);}
-            bool lens=assistantActive&&desktop.AssistantMode==AssistantStage.Appearance;morph.To(assistantActive?(lens?84:366):expanded?366:active?190:126,assistantActive?(lens?84:58):expanded?174:32);Native.SetGlassClip(window,1);window.ToolTip=assistantActive?desktop.AssistantMessage:active?current:"Actividad en vivo · clic para abrir";
+            if(!preview)CenterOnBar();
+            if(!window.IsVisible){if(!preview)window.Top=anchor.Top+4;window.Show();CenterOnBar();Motion.Fade(window,0,1,220);}
+            bool lens=assistantActive&&desktop.AssistantMode==AssistantStage.Appearance;morph.To(assistantActive?(lens?84:366):expanded?366:active?190:126,assistantActive?(lens?84:58):expanded?174:32,preview?window.Top:assistantActive||expanded?anchor.Top+anchor.Height+8:anchor.Top+4);Native.SetGlassClip(window,1);window.ToolTip=assistantActive?desktop.AssistantMessage:active?current:null;
         }
         private static string Format(double seconds){var value=TimeSpan.FromSeconds(Math.Max(0,Math.Ceiling(seconds)));return value.TotalHours>=1?((int)value.TotalHours).ToString("00")+value.ToString(@"\:mm\:ss"):value.ToString(@"mm\:ss");}
         private async void Command(MediaCommand command){try{await media.Command(command);}catch{}if(!disposed)ReadMedia();}
@@ -80,6 +80,6 @@ namespace MacFlow
             assistantVisual.Set(AssistantStage.Hidden);wave.Set(false);morph.Stop();hover.Stop();collapse.Stop();if(!window.IsVisible||hiding)return;expanded=false;hoverExpanded=false;hiding=true;int token=++generation;if(!Motion.Enabled){window.Hide();hiding=false;return;}
             double top=window.Top,end=(anchor==null?0:DisplaySpace.UpperEdge(anchor))-window.Height-8;var slide=new DoubleAnimationUsingKeyFrames{FillBehavior=FillBehavior.Stop};slide.KeyFrames.Add(new EasingDoubleKeyFrame(top,KeyTime.FromTimeSpan(TimeSpan.Zero)));slide.KeyFrames.Add(new EasingDoubleKeyFrame(top+4,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(65)),Motion.Ease()));slide.KeyFrames.Add(new EasingDoubleKeyFrame(end-4,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(310)),new CubicEase{EasingMode=EasingMode.EaseInOut}));slide.KeyFrames.Add(new EasingDoubleKeyFrame(end,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(370)),Motion.Ease()));Timeline.SetDesiredFrameRate(slide,60);slide.Completed+=delegate{if(!disposed&&token==generation){window.Hide();hiding=false;}};window.BeginAnimation(Window.TopProperty,slide);Motion.Fade(window,window.Opacity,0,350);
         }
-        public void Dispose(){if(disposed)return;disposed=true;flashTimer.Stop();hover.Stop();collapse.Stop();morph.Dispose();wave.Dispose();assistantVisual.Dispose();media.Changed-=MediaChanged;media.Dispose();window.Close();}
+        public void Dispose(){if(disposed)return;disposed=true;flashTimer.Stop();hover.Stop();collapse.Stop();morph.Dispose();wave.Dispose();assistantVisual.Dispose();media.Changed-=MediaChanged;media.Dispose();WindowLife.Close(window);}
     }
 }

@@ -25,12 +25,12 @@ $icon = [System.Drawing.Icon]::FromHandle($bitmap.GetHicon())
 $iconPath = Join-Path $bin 'MacFlow.ico'
 $stream = [System.IO.File]::Create($iconPath)
 $icon.Save($stream); $stream.Dispose(); $icon.Dispose(); $pen.Dispose(); $graphics.Dispose(); $bitmap.Dispose()
-$references = @('System.dll','System.Core.dll','System.Numerics.dll','System.Management.dll','System.Drawing.dll','System.Windows.Forms.dll','System.Runtime.Serialization.dll','System.IO.Compression.dll','System.IO.Compression.FileSystem.dll','Microsoft.CSharp.dll','WPF\WindowsBase.dll','WPF\PresentationCore.dll','WPF\PresentationFramework.dll','WPF\System.Speech.dll','WPF\UIAutomationClient.dll','WPF\UIAutomationTypes.dll','System.Xaml.dll') | ForEach-Object { '/reference:' + (Join-Path $framework $_) }
+$references = @('System.dll','System.Security.dll','System.Core.dll','System.Numerics.dll','System.Management.dll','System.Drawing.dll','System.Windows.Forms.dll','System.Runtime.Serialization.dll','System.IO.Compression.dll','System.IO.Compression.FileSystem.dll','Microsoft.CSharp.dll','WPF\WindowsBase.dll','WPF\PresentationCore.dll','WPF\PresentationFramework.dll','WPF\System.Speech.dll','WPF\UIAutomationClient.dll','WPF\UIAutomationTypes.dll','System.Xaml.dll') | ForEach-Object { '/reference:' + (Join-Path $framework $_) }
 $common = @('/nologo','/target:winexe','/platform:x64','/optimize+','/langversion:5','/utf8output',('/resource:' + (Join-Path $root 'MacFlow\Theme.xaml') + ',MacFlow.Theme.xaml'),('/win32manifest:' + (Join-Path $root 'MacFlow\app.manifest')),('/win32icon:' + $iconPath)) + $references
 $common+=('/resource:'+$channelFile+',MacFlow.Channel.json')
 $radioRuntime = Get-ChildItem -LiteralPath (Join-Path $env:WINDIR 'Microsoft.NET/assembly/GAC_MSIL/System.Runtime') -Filter System.Runtime.dll -Recurse | Select-Object -First 1
 if (!$radioRuntime) { throw 'No se encontró la proyección WinRT de .NET Framework.' }
-$common += @(('/reference:'+$radioRuntime.FullName),('/reference:'+(Join-Path $env:WINDIR 'System32/WinMetadata/Windows.Devices.winmd')),('/reference:'+(Join-Path $env:WINDIR 'System32/WinMetadata/Windows.Foundation.winmd')),('/reference:'+(Join-Path $env:WINDIR 'System32/WinMetadata/Windows.Media.winmd')))
+$common += @(('/reference:'+$radioRuntime.FullName),('/reference:'+(Join-Path $env:WINDIR 'System32/WinMetadata/Windows.Devices.winmd')),('/reference:'+(Join-Path $env:WINDIR 'System32/WinMetadata/Windows.Foundation.winmd')),('/reference:'+(Join-Path $env:WINDIR 'System32/WinMetadata/Windows.Media.winmd')),('/reference:'+(Join-Path $env:WINDIR 'System32/WinMetadata/Windows.Storage.winmd')))
 $common += @(('/reference:'+(Join-Path $env:WINDIR 'System32/WinMetadata/Windows.UI.winmd')),('/reference:'+(Join-Path $env:WINDIR 'System32/WinMetadata/Windows.System.winmd'))); $vectorRuntime=Get-ChildItem -LiteralPath (Join-Path $env:WINDIR 'Microsoft.NET/assembly/GAC_MSIL/System.Numerics.Vectors') -Filter System.Numerics.Vectors.dll -Recurse | Select-Object -First 1; $common += ('/reference:'+$vectorRuntime.FullName)
 $winrtInterop = Get-ChildItem -LiteralPath (Join-Path $env:WINDIR 'Microsoft.NET/assembly/GAC_MSIL/System.Runtime.InteropServices.WindowsRuntime') -Filter System.Runtime.InteropServices.WindowsRuntime.dll -Recurse | Select-Object -First 1
 $common += ('/reference:'+$winrtInterop.FullName)
@@ -53,10 +53,13 @@ Copy-Item -LiteralPath (Join-Path $root 'MacFlow\App.config') -Destination (Join
 Copy-Item -LiteralPath (Join-Path $root 'README.txt') -Destination (Join-Path $bin 'README.txt') -Force
 Copy-Item -LiteralPath (Join-Path $root 'LICENSE.txt') -Destination (Join-Path $bin 'LICENSE.txt') -Force
 Copy-Item -LiteralPath (Join-Path $root 'THIRD-PARTY-NOTICES.md') -Destination (Join-Path $bin 'THIRD-PARTY-NOTICES.md') -Force
+& (Join-Path $root 'BuildTools/BuildFace.ps1') -Bin $bin -Compiler $csc
+& (Join-Path $root 'BuildTools/BuildVoice.ps1') -Bin $bin -Compiler $csc
+Copy-Item -LiteralPath (Join-Path $root 'NATIVE-THIRD-PARTY.txt') -Destination $bin -Force
 $payload = Join-Path $build 'payload.zip'
 if (Test-Path -LiteralPath $payload) { Remove-Item -LiteralPath $payload }
-Compress-Archive -LiteralPath @((Join-Path $bin 'MacFlow.exe'),(Join-Path $bin 'MacFlow.exe.config'),$iconPath,(Join-Path $bin 'README.txt'),(Join-Path $bin 'LICENSE.txt'),(Join-Path $bin 'THIRD-PARTY-NOTICES.md')) -DestinationPath $payload
-$shared = @('Models.cs','CompositorGlass.cs','Native.cs','Services.cs','Startup.cs','TaskbarSurfaces.cs','Design.cs','Motion.cs','DisplaySpace.cs','GenieTransition.cs','SystemSymbols.cs','FeatureIcons.cs','IconThemes.cs','PanelMotion.cs','GlassPiece.cs','LiquidMaterial.cs','CrystalLight.cs','WallpaperLibrary.cs','SystemFeatures.cs','UpdateService.cs','AssemblyInfo.cs','WindowsMenuKey.cs') | ForEach-Object { Join-Path $root ('MacFlow\' + $_) }
+Compress-Archive -LiteralPath @(Get-ChildItem -LiteralPath $bin -File | ForEach-Object FullName) -DestinationPath $payload
+$shared = @('Models.cs','WindowLife.cs','CompositorGlass.cs','Native.cs','Services.cs','Startup.cs','TaskbarSurfaces.cs','Design.cs','Motion.cs','DisplaySpace.cs','GenieTransition.cs','SystemSymbols.cs','FeatureIcons.cs','IconThemes.cs','PanelMotion.cs','GlassPiece.cs','LiquidMaterial.cs','CrystalLight.cs','WallpaperLibrary.cs','SystemFeatures.cs','UpdateService.cs','AssemblyInfo.cs','WindowsMenuKey.cs') | ForEach-Object { Join-Path $root ('MacFlow\' + $_) }
 $versionSource=[System.IO.File]::ReadAllText((Join-Path $root 'MacFlow/AssemblyInfo.cs'))
 $versionMatch=[regex]::Match($versionSource,'AssemblyFileVersion\("(\d+\.\d+\.\d+)\.0"\)')
 if(!$versionMatch.Success){throw 'La versión del producto no es válida.'}
@@ -66,9 +69,10 @@ $setup = Join-Path $deliverables ('MacFlow-Setup-'+$packageVersion+'.exe')
 if ($LASTEXITCODE -ne 0) { throw 'Falló la compilación del instalador.' }
 Copy-Item -LiteralPath (Join-Path $root 'MacFlow\App.config') -Destination ($setup + '.config') -Force
 $packageInfo=Get-Item -LiteralPath $setup
-$packageJson=@{Product='MacFlow';Architecture='x64';Version=$packageVersion;Installer=$packageInfo.Name;Sha256=(Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash;Size=$packageInfo.Length;FeedUrl=$UpdateFeedUrl;Notes='26.4.1: corrige iconos duplicados del Dock por favoritos repetidos y carpetas de version de Roblox/Codex. Conserva Player, Studio, ChatGPT y Codex como apps distintas. Apertura y restauracion con la malla inversa desde el Dock. Iconos centrados y contenidos al ampliar; correccion aplicada por monitor. Incluye mejoras de 26.4.0.'} | ConvertTo-Json
+$packageJson=@{Product='MacFlow';Architecture='x64';Version=$packageVersion;Installer=$packageInfo.Name;Sha256=(Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash;Size=$packageInfo.Length;FeedUrl=$UpdateFeedUrl;Notes='26.5.0: isla inerte en reposo y expansion bajo la barra; ventanas y widgets corregidos; Centro de control y Privacidad renovados; Hey Siri local incluido; PIN y rostro experimental con comprobacion contra fotos; pliegue manual y compatible; nuevas demostraciones.'} | ConvertTo-Json
 [System.IO.File]::WriteAllText((Join-Path $deliverables 'MacFlow-update.json'),$packageJson,[System.Text.UTF8Encoding]::new($false))
 if ($RunTests) {
+    & (Join-Path $root 'BuildTools/TestNativeModels.ps1') -Bin $bin -Output (Join-Path $deliverables 'verification')
     $tests = Join-Path $deliverables 'verification'
     New-Item -ItemType Directory -Force -Path $tests | Out-Null
     $app = Start-Process -FilePath (Join-Path $bin 'MacFlow.exe') -ArgumentList @('--self-test',('"' + $tests + '"')) -PassThru -WindowStyle Hidden
