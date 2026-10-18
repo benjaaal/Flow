@@ -1,5 +1,6 @@
-param([switch]$RunTests,[string]$OutputDirectory,[string]$UpdateFeedUrl)
+﻿param([switch]$RunTests,[switch]$CoreBridge,[string]$OutputDirectory,[string]$UpdateFeedUrl)
 $ErrorActionPreference = 'Stop'
+$ProgressPreference = 'SilentlyContinue'
 if ($UpdateFeedUrl) { $channelUri=$null; if (![Uri]::TryCreate($UpdateFeedUrl,[UriKind]::Absolute,[ref]$channelUri) -or $channelUri.Scheme -ne 'https' -or $channelUri.UserInfo -or $channelUri.Fragment) {throw 'El canal publicado debe ser un enlace HTTPS al manifiesto.'} }
 $root = $PSScriptRoot
 $deliverables = if ($OutputDirectory) { [System.IO.Path]::GetFullPath($OutputDirectory) } else { Split-Path -Parent $root }
@@ -45,7 +46,13 @@ if ($LASTEXITCODE -ne 0) { throw 'Falló el shader de tapa.' }
 if ($LASTEXITCODE -ne 0) { throw 'Falló el shader de iluminación.' }
 & $shaderCompiler (Join-Path $root 'MacFlow/WelcomeApple.hlsl') (Join-Path $build 'WelcomeApple.ps')
 if ($LASTEXITCODE -ne 0) { throw 'Fallo el shader del saludo.' }
-$appSources = Get-ChildItem -LiteralPath (Join-Path $root 'MacFlow') -Filter '*.cs' | ForEach-Object FullName
+$assemblySource=Join-Path $root 'MacFlow/AssemblyInfo.cs'
+if($CoreBridge){
+    $assemblySource=Join-Path $build 'CoreAssemblyInfo.cs'
+    [IO.File]::WriteAllText($assemblySource,([IO.File]::ReadAllText((Join-Path $root 'MacFlow/AssemblyInfo.cs')) -replace '26\.5\.1\.0','26.5.0.0'))
+    $common+='/define:CORE_BRIDGE'
+}
+$appSources = @(Get-ChildItem -LiteralPath (Join-Path $root 'MacFlow') -Filter '*.cs' | Where-Object Name -ne 'AssemblyInfo.cs' | ForEach-Object FullName)+@($assemblySource)
 $wallpaperResources=Get-ChildItem -LiteralPath (Join-Path $root 'MacFlow/Assets/Wallpapers') -Filter '*.png' | ForEach-Object { '/resource:'+$_.FullName+',MacFlow.Wallpaper.'+$_.Name }
 & $csc @common @wallpaperResources ('/resource:' + (Join-Path $build 'WelcomeApple.ps') + ',MacFlow.WelcomeApple.ps') ('/resource:' + (Join-Path $build 'LiquidGlass.ps') + ',MacFlow.LiquidGlass.ps') ('/resource:' + (Join-Path $build 'LidFold.ps') + ',MacFlow.LidFold.ps') ('/resource:' + (Join-Path $build 'CrystalLight.ps') + ',MacFlow.CrystalLight.ps') ('/out:' + (Join-Path $bin 'MacFlow.exe')) '/main:MacFlow.Program' @appSources
 if ($LASTEXITCODE -ne 0) { throw 'Falló la compilación de MacFlow.' }
@@ -53,14 +60,19 @@ Copy-Item -LiteralPath (Join-Path $root 'MacFlow\App.config') -Destination (Join
 Copy-Item -LiteralPath (Join-Path $root 'README.txt') -Destination (Join-Path $bin 'README.txt') -Force
 Copy-Item -LiteralPath (Join-Path $root 'LICENSE.txt') -Destination (Join-Path $bin 'LICENSE.txt') -Force
 Copy-Item -LiteralPath (Join-Path $root 'THIRD-PARTY-NOTICES.md') -Destination (Join-Path $bin 'THIRD-PARTY-NOTICES.md') -Force
-& (Join-Path $root 'BuildTools/BuildFace.ps1') -Bin $bin -Compiler $csc
-& (Join-Path $root 'BuildTools/BuildVoice.ps1') -Bin $bin -Compiler $csc
+if(!$CoreBridge){
+    & (Join-Path $root 'BuildTools/BuildFace.ps1') -Bin $bin -Compiler $csc
+    & (Join-Path $root 'BuildTools/BuildVoice.ps1') -Bin $bin -Compiler $csc
+}
 Copy-Item -LiteralPath (Join-Path $root 'NATIVE-THIRD-PARTY.txt') -Destination $bin -Force
 $payload = Join-Path $build 'payload.zip'
 if (Test-Path -LiteralPath $payload) { Remove-Item -LiteralPath $payload }
-Compress-Archive -LiteralPath @(Get-ChildItem -LiteralPath $bin -File | ForEach-Object FullName) -DestinationPath $payload
+$coreFiles=@('MacFlow.exe','MacFlow.exe.config','MacFlow.ico','README.txt','LICENSE.txt','THIRD-PARTY-NOTICES.md','NATIVE-THIRD-PARTY.txt')
+$payloadFiles=@(Get-ChildItem -LiteralPath $bin -File | Where-Object { !$CoreBridge -or $_.Name -in $coreFiles } | ForEach-Object FullName)
+Compress-Archive -LiteralPath $payloadFiles -DestinationPath $payload
 $shared = @('Models.cs','WindowLife.cs','CompositorGlass.cs','Native.cs','Services.cs','Startup.cs','TaskbarSurfaces.cs','Design.cs','Motion.cs','DisplaySpace.cs','GenieTransition.cs','SystemSymbols.cs','FeatureIcons.cs','IconThemes.cs','PanelMotion.cs','GlassPiece.cs','LiquidMaterial.cs','CrystalLight.cs','WallpaperLibrary.cs','SystemFeatures.cs','UpdateService.cs','AssemblyInfo.cs','WindowsMenuKey.cs') | ForEach-Object { Join-Path $root ('MacFlow\' + $_) }
-$versionSource=[System.IO.File]::ReadAllText((Join-Path $root 'MacFlow/AssemblyInfo.cs'))
+$shared=@($shared | Where-Object { [IO.Path]::GetFileName($_) -ne 'AssemblyInfo.cs' })+@($assemblySource)
+$versionSource=[System.IO.File]::ReadAllText($assemblySource)
 $versionMatch=[regex]::Match($versionSource,'AssemblyFileVersion\("(\d+\.\d+\.\d+)\.0"\)')
 if(!$versionMatch.Success){throw 'La versión del producto no es válida.'}
 $packageVersion=$versionMatch.Groups[1].Value
@@ -69,10 +81,12 @@ $setup = Join-Path $deliverables ('MacFlow-Setup-'+$packageVersion+'.exe')
 if ($LASTEXITCODE -ne 0) { throw 'Falló la compilación del instalador.' }
 Copy-Item -LiteralPath (Join-Path $root 'MacFlow\App.config') -Destination ($setup + '.config') -Force
 $packageInfo=Get-Item -LiteralPath $setup
-$packageJson=@{Product='MacFlow';Architecture='x64';Version=$packageVersion;Installer=$packageInfo.Name;Sha256=(Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash;Size=$packageInfo.Length;FeedUrl=$UpdateFeedUrl;Notes='26.5.0: isla inerte en reposo y expansion bajo la barra; ventanas y widgets corregidos; Centro de control y Privacidad renovados; Hey Siri local incluido; PIN y rostro experimental con comprobacion contra fotos; pliegue manual y compatible; nuevas demostraciones.'} | ConvertTo-Json
+if($CoreBridge -and $packageInfo.Length -gt 64MB){throw 'La actualización base supera el límite de 26.4.1.'}
+$releaseNotes=if($CoreBridge){'26.5.0 base liviana: mejoras visuales, estabilidad y privacidad con PIN. Voz y rostro disponibles al actualizar a 26.5.1.'}else{'26.5.1 completa: incluye modelos locales de voz y reconocimiento facial experimental.'}
+$packageJson=@{Product='MacFlow';Architecture='x64';Version=$packageVersion;Installer=$packageInfo.Name;Sha256=(Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash;Size=$packageInfo.Length;FeedUrl=$UpdateFeedUrl;Notes=$releaseNotes} | ConvertTo-Json
 [System.IO.File]::WriteAllText((Join-Path $deliverables 'MacFlow-update.json'),$packageJson,[System.Text.UTF8Encoding]::new($false))
 if ($RunTests) {
-    & (Join-Path $root 'BuildTools/TestNativeModels.ps1') -Bin $bin -Output (Join-Path $deliverables 'verification')
+    if(!$CoreBridge){ & (Join-Path $root 'BuildTools/TestNativeModels.ps1') -Bin $bin -Output (Join-Path $deliverables 'verification') }
     $tests = Join-Path $deliverables 'verification'
     New-Item -ItemType Directory -Force -Path $tests | Out-Null
     $app = Start-Process -FilePath (Join-Path $bin 'MacFlow.exe') -ArgumentList @('--self-test',('"' + $tests + '"')) -PassThru -WindowStyle Hidden

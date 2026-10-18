@@ -81,6 +81,7 @@ namespace MacFlow
         private void StopFace(){++generation;var child=worker;worker=null;if(child!=null){try{if(!child.HasExited)child.Kill();}catch(InvalidOperationException){}finally{child.Dispose();}}camera.Source=null;cameraShell.Visibility=Visibility.Collapsed;}
         private async void StartFace(bool enroll)
         {
+            if(!File.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"MacFlow.Face.exe"))){message.Text="El reconocimiento facial se incluye en 26.5.1. Por ahora usá tu PIN y actualizá desde Configuración → Sistema.";return;}
             if(closed||!profile.Configured||enroll&&!canEnroll)return;if(!enroll&&String.IsNullOrEmpty(profile.Face)){message.Text="Registrá tu rostro después de verificar el PIN.";return;}StopFace();int token=generation;cameraShell.Visibility=Visibility.Visible;pinPanel.Visibility=Visibility.Collapsed;message.Text=enroll?"Registro local · mirá la cámara y mové suavemente la cabeza":"Buscando tu rostro…";
             try
             {

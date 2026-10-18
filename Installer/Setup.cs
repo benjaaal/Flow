@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -130,7 +130,11 @@ namespace MacFlowSetup
     {
         private const string RegistryPath = "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\MacFlow";
         private const string Marker = "MacFlow install v1";
-        private static readonly string[] Owned = { "MacFlow.exe", "MacFlow.exe.config", "MacFlow.ico", "README.txt", "LICENSE.txt", "THIRD-PARTY-NOTICES.md", "Uninstall.exe", "Uninstall.exe.config", "install.manifest", "MacFlow.Face.exe", "MacFlow.Face.exe.config", "OpenCvSharp.dll", "OpenCvSharpExtern.dll", "System.Memory.dll", "System.Runtime.CompilerServices.Unsafe.dll", "System.Buffers.dll", "System.Numerics.Vectors.dll", "yunet.onnx", "sface.onnx", "antispoof.onnx", "NATIVE-THIRD-PARTY.txt", "MacFlow.Voice.exe", "MacFlow.Voice.exe.config", "Vosk.dll", "NAudio.dll", "libvosk.dll", "libgcc_s_seh-1.dll", "libstdc++-6.dll", "libwinpthread-1.dll", "voice-es.zip", "voice-en.zip" };
+#if CORE_BRIDGE
+        private static readonly string[] Owned = { "MacFlow.exe", "MacFlow.exe.config", "MacFlow.ico", "README.txt", "LICENSE.txt", "THIRD-PARTY-NOTICES.md", "NATIVE-THIRD-PARTY.txt", "Uninstall.exe", "Uninstall.exe.config", "install.manifest" };
+#else
+        private static readonly string[] Owned = { "MacFlow.exe", "MacFlow.exe.config", "MacFlow.ico", "README.txt", "LICENSE.txt", "THIRD-PARTY-NOTICES.md", "Uninstall.exe", "Uninstall.exe.config", "install.manifest", "MacFlow.Face.exe", "MacFlow.Face.exe.config", "OpenCvSharp.dll", "OpenCvSharpExtern.dll", "System.Memory.dll", "System.Runtime.CompilerServices.Unsafe.dll", "System.Buffers.dll", "System.Numerics.Vectors.dll", "yunet.onnx", "sface.onnx", "antispoof.onnx", "NATIVE-THIRD-PARTY.txt", "MacFlow.Voice.exe", "MacFlow.Voice.exe.config", "Vosk.dll", "NAudio.dll", "libvosk.dll", "libgcc_s_seh-1.dll", "libstdc++-6.dll", "libwinpthread-1.dll", "voice-es.zip", "voice-en.zip" };
+#endif
         private static string Identity { get { return System.Security.Principal.WindowsIdentity.GetCurrent().User.Value; } }
         public static void StopDesktop()
         {

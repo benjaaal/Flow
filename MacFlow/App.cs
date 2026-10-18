@@ -316,6 +316,13 @@ namespace MacFlow
                 ClickRegression.Run(results);
                 ConnectivityRegression.Run(directory,results);
                 MediaRegression.Run(results);
+                string stableFeed="https://github.com/benjaaal/Flow/releases/latest/download/MacFlow-update.json",completeFeed="https://github.com/benjaaal/Flow/releases/download/v26.5.1/MacFlow-update.json";
+#if CORE_BRIDGE
+                if(UpdateService.ResolveFeed(stableFeed)!=completeFeed)throw new Exception("La base no ofrece la segunda etapa");
+#else
+                if(UpdateService.ResolveFeed(completeFeed)!=stableFeed)throw new Exception("El paquete completo no vuelve al canal estable");
+#endif
+                if(UpdateService.ResolveFeed("https://example.invalid/custom.json")!="https://example.invalid/custom.json")throw new Exception("Se alteró un canal personalizado");results.Add("PASS canal de dos etapas conserva canales personalizados y permite futuras actualizaciones.");
                 results.Add("PASS: " + results.Count + " comprobaciones"); File.WriteAllLines(Path.Combine(directory, "self-tests.txt"), results); return 0;
             }
             catch (Exception ex) { results.Add("FAIL: " + ex); File.WriteAllLines(Path.Combine(directory, "self-tests.txt"), results); return 1; }

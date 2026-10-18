@@ -47,7 +47,8 @@ namespace MacFlow
             if(package==null||package.Product!="MacFlow"||package.Architecture!="x64")throw new IOException("Este paquete no corresponde a MacFlow para Windows de 64 bits.");
             string name="MacFlow-Setup-"+package.ParsedVersion+".exe";
             if(package.Installer!=name||Path.GetFileName(package.Installer)!=package.Installer)throw new IOException("El nombre del instalador no coincide con la versión.");
-            if(!Regex.IsMatch(package.Sha256??"","^[a-fA-F0-9]{64}$")||package.Size<=0||package.Size>MaximumSize)throw new IOException("El paquete no tiene información de integridad válida.");
+            if(!Regex.IsMatch(package.Sha256??"","^[a-fA-F0-9]{64}$")||package.Size<=0)throw new IOException("El paquete no tiene SHA-256 o tamaño válidos.");
+            if(package.Size>MaximumSize)throw new IOException("El paquete supera el tamaño admitido por esta versión de MacFlow.");
             if(!String.IsNullOrWhiteSpace(package.FeedUrl)&&!ValidFeed(package.FeedUrl))throw new IOException("El enlace del canal de actualización no es válido.");
         }
         internal static UpdatePackage FromRelease(ReleaseInfo release,string repository,Version current)
@@ -103,8 +104,19 @@ namespace MacFlow
             if(package.ParsedVersion<=current)return null;
             package.Download=new Uri(origin,package.Installer);package.FeedUrl=origin.AbsoluteUri;return package;
         }
+        internal static string ResolveFeed(string feed)
+        {
+            const string latest="https://github.com/benjaaal/Flow/releases/latest/download/MacFlow-update.json";
+            const string complete="https://github.com/benjaaal/Flow/releases/download/v26.5.1/MacFlow-update.json";
+#if CORE_BRIDGE
+            return String.Equals(feed,latest,StringComparison.OrdinalIgnoreCase)?complete:feed;
+#else
+            return String.Equals(feed,complete,StringComparison.OrdinalIgnoreCase)?latest:feed;
+#endif
+        }
         internal static async Task<UpdatePackage> CheckFeed(string feed,CancellationToken token)
         {
+            feed=ResolveFeed(feed);
             if(!ValidFeed(feed))throw new IOException("El enlace del canal debe usar HTTPS.");ServicePointManager.SecurityProtocol=SecurityProtocolType.Tls12;
             var request=(HttpWebRequest)WebRequest.Create(feed);request.Timeout=20000;request.ReadWriteTimeout=20000;request.UserAgent="MacFlow/"+Product.VersionText;
             using(token.Register(request.Abort))using(var response=(HttpWebResponse)await request.GetResponseAsync())
