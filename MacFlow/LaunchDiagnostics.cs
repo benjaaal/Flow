@@ -16,13 +16,17 @@ namespace MacFlow
         private static readonly Stopwatch watch=Stopwatch.StartNew();
         private static LaunchRecord record;
         private static string path;
+        private static bool firstFrameRecorded;
         internal static void Begin(string folder,bool background)
         {
+            watch.Restart();firstFrameRecorded=false;
             record=new LaunchRecord{Version=Product.VersionText,StartedUtc=DateTime.UtcNow.ToString("o",CultureInfo.InvariantCulture),Mode=background?"Windows":"Manual",Phase="Proceso iniciado"};path=Path.Combine(folder,"last-launch.json");Mark("Proceso iniciado");
         }
         internal static void Mark(string phase)
         {
-            if(record==null)return;record.Phase=phase;record.ElapsedMs=Math.Round(watch.Elapsed.TotalMilliseconds,1);if(phase=="Dock visible")record.FirstFrameMs=record.ElapsedMs;
+            if(record==null||phase=="Dock visible"&&firstFrameRecorded)return;
+            record.Phase=phase;record.ElapsedMs=Math.Round(watch.Elapsed.TotalMilliseconds,1);
+            if(phase=="Dock visible"){record.FirstFrameMs=record.ElapsedMs;firstFrameRecorded=true;}
             try{Directory.CreateDirectory(Path.GetDirectoryName(path));var temp=path+".tmp";using(var file=File.Create(temp))new DataContractJsonSerializer(typeof(LaunchRecord)).WriteObject(file,record);if(File.Exists(path))File.Replace(temp,path,null);else File.Move(temp,path);}catch(Exception ex){Log.Write("Diagnóstico de inicio: "+ex.Message);}
         }
         internal static LaunchRecord Read(string folder)

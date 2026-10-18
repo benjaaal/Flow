@@ -16,25 +16,61 @@ namespace MacFlow
     {
         private readonly string file;
         private readonly TaskbarSurfaces surfaces;
+        private Process supervisor;
+        private bool supervisorConfirmed;
+        private bool acquired;
+        internal Func<IntPtr,bool> ReplacementReady{set{surfaces.ReplacementReady=value;}}
         public TaskbarLease(string directory) { file = Path.Combine(directory, "taskbar.restore");surfaces=new TaskbarSurfaces(file+".visibility"); }
         public void Acquire()
         {
-            if (File.Exists(file)) {surfaces.Acquire();return;}
+            if(acquired){Maintain();return;}
+            RecoverBeforeAcquire(file,Restore);
+            if(!surfaces.AllReplacementsReady())throw new IOException("Esperando las superficies de las dos pantallas. Se conserva Windows.");
             var original = Native.TaskbarState(); var applied = original | 1;
             Directory.CreateDirectory(Path.GetDirectoryName(file));
             using (var stream = new FileStream(file, FileMode.CreateNew, FileAccess.Write, FileShare.Read))
             using (var writer = new StreamWriter(stream)) { writer.Write(original + "|" + applied); writer.Flush(); stream.Flush(true); }
             try
             {
-                Process.Start(new ProcessStartInfo(Assembly.GetExecutingAssembly().Location, "--watch " + Process.GetCurrentProcess().Id + " \"" + file + "\"") { UseShellExecute = false, CreateNoWindow = true, WindowStyle = ProcessWindowStyle.Hidden });
+                EnsureSupervisor();
                 surfaces.Remember();
                 if (!Native.SetTaskbarState(applied)) { Restore(); throw new InvalidOperationException("Windows no aceptó el ocultamiento automático. Podés activarlo desde Configuración > Personalización > Barra de tareas."); }
                 surfaces.Acquire();
+                acquired=true;
             }
             catch { Restore(); throw; }
         }
-        public void Maintain(){surfaces.Maintain();}
-        public void Restore() { surfaces.Restore();RestoreFile(file); }
+        internal static void RecoverBeforeAcquire(string path,Action restore)
+        {
+            restore();
+            if(File.Exists(path)||File.Exists(path+".visibility"))throw new IOException("La recuperación anterior sigue pendiente. Se conserva la barra de Windows.");
+        }
+        private bool SupervisorAlive
+        {get{try{return supervisor!=null&&!supervisor.HasExited;}catch{return false;}}}
+        private void EnsureSupervisor()
+        {
+            if(SupervisorAlive)
+            {
+                if(supervisorConfirmed)return;
+                throw new IOException("El supervisor todavía no confirmó la recuperación. Se conserva la barra de Windows.");
+            }
+            if(supervisor!=null){supervisor.Dispose();supervisor=null;}
+            supervisorConfirmed=false;
+            string readyName="Local\\MacFlow.WatchReady."+System.Security.Principal.WindowsIdentity.GetCurrent().User.Value+"."+Process.GetCurrentProcess().Id;
+            using(var ready=new EventWaitHandle(false,EventResetMode.ManualReset,readyName))
+            {
+                ready.Reset();
+                supervisor=Process.Start(new ProcessStartInfo(Assembly.GetExecutingAssembly().Location,"--watch "+Process.GetCurrentProcess().Id+" \""+file+"\" \""+readyName+"\""){UseShellExecute=false,CreateNoWindow=true,WindowStyle=ProcessWindowStyle.Hidden});
+                if(!ready.WaitOne(2000)||!SupervisorAlive)throw new IOException("El supervisor no confirmó la recuperación. Se conserva la barra de Windows.");
+                supervisorConfirmed=true;
+            }
+        }
+        public void Maintain()
+        {
+            if(acquired&&!SupervisorAlive){Restore();throw new IOException("El supervisor se cerró. Se solicitó restaurar la barra de Windows.");}
+            surfaces.Maintain();
+        }
+        public void Restore() { acquired=false;surfaces.Restore();RestoreFile(file); }
         public void ShowPersistently(){Restore();uint state=Native.TaskbarState();if(!Native.SetTaskbarState(state&~1u))throw new InvalidOperationException("Windows no permitió dejar fija la barra de tareas.");TaskbarSurfaces.RecoverVisible();}
         public static void RestoreFile(string file)
         {

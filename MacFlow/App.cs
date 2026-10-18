@@ -26,11 +26,22 @@ namespace MacFlow
         public static int Main(string[] args)
         {
             var data = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MacFlow");
-            if (args.Length == 3 && args[0] == "--watch")
+            if ((args.Length == 3 || args.Length == 4) && args[0] == "--watch")
             {
                 int pid; if (!Int32.TryParse(args[1], out pid)) return 2;
                 string expected = Path.Combine(data, "taskbar.restore"); if (!String.Equals(Path.GetFullPath(args[2]), expected, StringComparison.OrdinalIgnoreCase)) return 2;
-                try { Process.GetProcessById(pid).WaitForExit(); } catch (ArgumentException) { } catch (Exception ex) { Log.Write("Supervisor: " + ex.Message); return 2; }
+                if(args.Length==4&&args[3]!="Local\\MacFlow.WatchReady."+Identity+"."+pid)return 2;
+                try
+                {
+                    using(var parent=Process.GetProcessById(pid))
+                    {
+                        // Open the parent handle before confirming supervision.
+                        var parentHandle=parent.Handle;
+                        if(args.Length==4)using(var ready=EventWaitHandle.OpenExisting(args[3]))ready.Set();
+                        parent.WaitForExit();
+                    }
+                }
+                catch (ArgumentException) { } catch (Exception ex) { Log.Write("Supervisor: " + ex.Message); return 2; }
                 TaskbarLease.RestoreFile(expected); return 0;
             }
             if (args.Length > 0 && args[0] == "--restore") { new TaskbarLease(data).Restore();TaskbarSurfaces.RecoverVisible(); return 0; }
@@ -156,7 +167,7 @@ namespace MacFlow
         {
             var panel=new ConnectivityPanel(wifi,ConnectivityRegression.Sample,mode=>{},item=>{}){ShowActivated=false,IsHitTestVisible=false,ShowInTaskbar=false,Left=SystemParameters.PrimaryScreenWidth-440,Top=60};panel.SourceInitialized+=delegate{Native.NoActivate(panel);};panel.Show();Design.Reveal(panel);return panel;
         }
-        private static void Render(Window window, string path)
+        internal static void Render(Window window, string path)
         {
             window.UpdateLayout();
             var bitmap = new RenderTargetBitmap(Math.Max(1, (int)Math.Ceiling(window.ActualWidth)), Math.Max(1, (int)Math.Ceiling(window.ActualHeight)), 96, 96, PixelFormats.Pbgra32); bitmap.Render(window);
@@ -181,6 +192,22 @@ namespace MacFlow
             directory = Path.GetFullPath(directory); Directory.CreateDirectory(directory); Log.DirectoryPath = directory; var results = new List<string>();
             try
             {
+                var recoveryFixture=Path.Combine(directory,"pending-taskbar-test");
+                File.WriteAllText(recoveryFixture,"invalid");bool recoveryBlocked=false;
+                try{TaskbarLease.RecoverBeforeAcquire(recoveryFixture,delegate{});}catch(IOException){recoveryBlocked=true;}
+                Assert(recoveryBlocked,"Recuperación: un registro pendiente impide adquirir la barra",results);
+                TaskbarLease.RecoverBeforeAcquire(recoveryFixture,delegate{File.Delete(recoveryFixture);});
+                File.WriteAllText(recoveryFixture+".visibility","pending");recoveryBlocked=false;
+                try{TaskbarLease.RecoverBeforeAcquire(recoveryFixture,delegate{});}catch(IOException){recoveryBlocked=true;}
+                Assert(recoveryBlocked,"Recuperación: visibilidad pendiente también bloquea la adquisición",results);File.Delete(recoveryFixture+".visibility");
+                Assert(!Desktop.CleanupStep("fallo controlado de prueba",delegate{throw new InvalidOperationException("fixture");}),"Cierre: un componente fallido queda registrado",results);
+                bool cleanupContinued=false;Desktop.CleanupStep("siguiente componente de prueba",delegate{cleanupContinued=true;});
+                Assert(cleanupContinued,"Cierre: el siguiente componente puede liberarse tras otro fallo",results);
+                var launchFixture=Path.Combine(directory,"launch-diagnostics-test");LaunchDiagnostics.Begin(launchFixture,false);LaunchDiagnostics.Mark("Dock visible");
+                double firstFrame=LaunchDiagnostics.Read(launchFixture).FirstFrameMs;LaunchDiagnostics.Mark("Otra fase");LaunchDiagnostics.Mark("Dock visible");var launchRecord=LaunchDiagnostics.Read(launchFixture);
+                Assert(launchRecord.FirstFrameMs==firstFrame&&launchRecord.Phase=="Otra fase","Inicio: reaparecer el Dock no sobrescribe el primer cuadro",results);
+                LaunchDiagnostics.Begin(launchFixture,false);
+                Assert(LaunchDiagnostics.Read(launchFixture).FirstFrameMs==0,"Inicio: una medición nueva reinicia el primer cuadro",results);
                 var store = new SettingsStore(Path.Combine(directory, "settings-tests")); var p = new Preferences { IconSize = 999, Theme = "bad", Accent = "invalid" }; p.Pins.Add(new AppEntry { Name = "Test", Target = "explorer.exe" }); store.Save(p); var restored = store.Load();
                 Assert(restored.IconSize == 72 && restored.Theme == "Dark" && restored.Accent == "#8DAEFF" && restored.Pins.Count == 1, "Preferencias: persistencia y validación", results);
                 restored.IconSize = 32; store.Save(restored); Assert(store.Load().IconSize == 32, "Reemplazo atómico de preferencias existentes", results);
@@ -191,6 +218,7 @@ namespace MacFlow
                 ModuleRegression.Run(Path.Combine(directory,"modules"),results);
                 StartupRegression.Run(Path.Combine(directory,"startup"),results);
                 ModernizationRegression.Run(Path.Combine(directory,"modernization"),results);
+                RedesignRegression.Run(results);
                 Assert(LiquidMaterial.LightInkForLuminance(.2,false,false)&&!LiquidMaterial.LightInkForLuminance(.8,false,true),"Cristal: tinta legible sobre material oscuro y claro",results);
                 Assert(LiquidMaterial.LightInkForLuminance(.55,true,true)&&!LiquidMaterial.LightInkForLuminance(.48,true,false),"Cristal: histéresis evita parpadeos de texto cerca del umbral",results);
                 double maxSpring=0;bool finiteSpring=true;for(int sample=0;sample<=200;sample++){double position=SpringEase.Progress(sample/200.0);finiteSpring&=!Double.IsNaN(position)&&!Double.IsInfinity(position);maxSpring=Math.Max(maxSpring,position);}
@@ -316,13 +344,7 @@ namespace MacFlow
                 ClickRegression.Run(results);
                 ConnectivityRegression.Run(directory,results);
                 MediaRegression.Run(results);
-                string stableFeed="https://github.com/benjaaal/Flow/releases/latest/download/MacFlow-update.json",completeFeed="https://github.com/benjaaal/Flow/releases/download/v26.5.0/MacFlow-update.json";
-#if CORE_BRIDGE
-                if(UpdateService.ResolveFeed(stableFeed)!=completeFeed)throw new Exception("La base no ofrece la segunda etapa");
-#else
-                if(UpdateService.ResolveFeed(completeFeed)!=stableFeed)throw new Exception("El paquete completo no vuelve al canal estable");
-#endif
-                if(UpdateService.ResolveFeed("https://example.invalid/custom.json")!="https://example.invalid/custom.json")throw new Exception("Se alteró un canal personalizado");results.Add("PASS canal de dos etapas conserva canales personalizados y permite futuras actualizaciones.");
+                Assert(UpdateService.ResolveFeed("https://github.com/benjaaal/Flow/releases/download/v26.5.0/MacFlow-update.json")=="https://github.com/benjaaal/Flow/releases/latest/download/MacFlow-update.json"&&UpdateService.ResolveFeed("https://example.invalid/custom.json")=="https://example.invalid/custom.json","Canal: conserva la reparación remota y los canales personalizados",results);
                 results.Add("PASS: " + results.Count + " comprobaciones"); File.WriteAllLines(Path.Combine(directory, "self-tests.txt"), results); return 0;
             }
             catch (Exception ex) { results.Add("FAIL: " + ex); File.WriteAllLines(Path.Combine(directory, "self-tests.txt"), results); return 1; }

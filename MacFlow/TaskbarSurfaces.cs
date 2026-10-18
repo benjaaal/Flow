@@ -26,6 +26,8 @@ namespace MacFlow
         private IntPtr locationHook;
         private bool active;
         private DateTime enumerated=DateTime.MinValue;
+        internal Func<IntPtr,bool> ReplacementReady;
+        internal bool AllReplacementsReady(){return ReplacementReady==null||discover().All(ReplacementReady);}
         public TaskbarSurfaces(string path):this(path,Discover,IsShell,true){}
         internal TaskbarSurfaces(string path,Func<IEnumerable<IntPtr>> discovery,Func<IntPtr,bool> validation,bool watch)
         {file=path;discover=discovery;valid=validation;events=watch;callback=delegate(IntPtr h,uint e,IntPtr hwnd,int objectId,int child,uint thread,uint time){if(active&&objectId==0&&child==0&&valid(hwnd)){try{TrackAndHide(hwnd);}catch(Exception ex){Log.Write("Ocultación de barra: "+ex.Message);}}};}
@@ -46,7 +48,7 @@ namespace MacFlow
         {
             if(!active)return;
             if(DateTime.UtcNow-enumerated>TimeSpan.FromSeconds(1)){enumerated=DateTime.UtcNow;foreach(var h in discover())TrackAndHide(h);}
-            foreach(var entry in entries.Values.ToArray())if(Identity(entry)&&valid(entry.Handle)&&Native.IsWindowVisible(entry.Handle))Native.ShowWindowAsync(entry.Handle,0);
+            foreach(var entry in entries.Values.ToArray())if(Identity(entry)&&valid(entry.Handle)&&(ReplacementReady==null||ReplacementReady(entry.Handle))&&Native.IsWindowVisible(entry.Handle))Native.ShowWindowAsync(entry.Handle,0);
         }
         private bool Identity(Entry entry){uint pid;Native.GetWindowThreadProcessId(entry.Handle,out pid);return Native.IsWindow(entry.Handle)&&pid==entry.Process;}
         private void TrackAndHide(IntPtr h)
@@ -56,7 +58,7 @@ namespace MacFlow
         {
             if(!valid(h))return;uint pid;Native.GetWindowThreadProcessId(h,out pid);Entry entry;
             if(!entries.TryGetValue(h,out entry)||entry.Process!=pid){var previous=entry;entry=new Entry{Handle=h,Process=pid,Visible=Native.IsWindowVisible(h)};entries[h]=entry;try{Persist();}catch{if(previous==null)entries.Remove(h);else entries[h]=previous;throw;}}
-            if(hide&&Native.IsWindowVisible(h))Native.ShowWindowAsync(h,0);
+            if(hide&&(ReplacementReady==null||ReplacementReady(h))&&Native.IsWindowVisible(h))Native.ShowWindowAsync(h,0);
         }
         private void Persist()
         {
@@ -75,17 +77,17 @@ namespace MacFlow
             try
             {
                 if(!File.Exists(path))return;var lines=File.ReadAllLines(path);if(lines.Length==0||lines[0]!="MacFlow taskbar visibility v1")throw new IOException("Registro de visibilidad inválido");
-                bool applied=false,showAfterRestart=false;
+                bool showAfterRestart=false;var knownHidden=new HashSet<IntPtr>();
                 foreach(var line in lines.Skip(1))
                 {
                     var parts=line.Split('|');long handle;uint pid;int visible;
                     if(parts.Length!=3||!Int64.TryParse(parts[0],out handle)||handle==0||!UInt32.TryParse(parts[1],out pid)||pid==0||!Int32.TryParse(parts[2],out visible)||visible<0||visible>1)throw new IOException("Registro de visibilidad inválido");
                     var h=new IntPtr(handle);uint current;Native.GetWindowThreadProcessId(h,out current);
                     if(!Native.IsWindow(h)||current!=pid){if(visible==1)showAfterRestart=true;continue;}
-                    if(!validation(h))continue;applied=true;
+                    if(!validation(h))continue;if(visible==0)knownHidden.Add(h);
                     if(visible==1&&!Native.IsWindowVisible(h)&&!Native.ShowWindowAsync(h,4))throw new IOException("Windows no aceptó restaurar la barra");
                 }
-                if(!applied&&showAfterRestart)foreach(var h in discovery())if(validation(h)&&!Native.IsWindowVisible(h)&&!Native.ShowWindowAsync(h,4))throw new IOException("Windows no aceptó restaurar la barra nueva");
+                if(showAfterRestart)foreach(var h in discovery())if(validation(h)&&!knownHidden.Contains(h)&&!Native.IsWindowVisible(h)&&!Native.ShowWindowAsync(h,4))throw new IOException("Windows no aceptó restaurar la barra nueva");
                 File.Delete(path);
             }
             catch(Exception ex){Log.Write("Restauración de visibilidad: "+ex.Message);}

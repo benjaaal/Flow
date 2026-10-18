@@ -1,6 +1,8 @@
-﻿param([switch]$RunTests,[switch]$CoreBridge,[string]$OutputDirectory,[string]$UpdateFeedUrl)
+param([switch]$RunTests,[switch]$CoreBridge,[switch]$CoreOnly,[string]$OutputDirectory,[string]$UpdateFeedUrl)
 $ErrorActionPreference = 'Stop'
+if($CoreBridge){throw 'La publicación 27.0.0 requiere el paquete completo.'}
 $ProgressPreference = 'SilentlyContinue'
+if($CoreOnly -and ($RunTests -or $CoreBridge)){throw 'CoreOnly compila solo el núcleo; ejecutá sus pruebas por separado.'}
 if ($UpdateFeedUrl) { $channelUri=$null; if (![Uri]::TryCreate($UpdateFeedUrl,[UriKind]::Absolute,[ref]$channelUri) -or $channelUri.Scheme -ne 'https' -or $channelUri.UserInfo -or $channelUri.Fragment) {throw 'El canal publicado debe ser un enlace HTTPS al manifiesto.'} }
 $root = $PSScriptRoot
 $deliverables = if ($OutputDirectory) { [System.IO.Path]::GetFullPath($OutputDirectory) } else { Split-Path -Parent $root }
@@ -31,7 +33,7 @@ $common = @('/nologo','/target:winexe','/platform:x64','/optimize+','/langversio
 $common+=('/resource:'+$channelFile+',MacFlow.Channel.json')
 $radioRuntime = Get-ChildItem -LiteralPath (Join-Path $env:WINDIR 'Microsoft.NET/assembly/GAC_MSIL/System.Runtime') -Filter System.Runtime.dll -Recurse | Select-Object -First 1
 if (!$radioRuntime) { throw 'No se encontró la proyección WinRT de .NET Framework.' }
-$common += @(('/reference:'+$radioRuntime.FullName),('/reference:'+(Join-Path $env:WINDIR 'System32/WinMetadata/Windows.Devices.winmd')),('/reference:'+(Join-Path $env:WINDIR 'System32/WinMetadata/Windows.Foundation.winmd')),('/reference:'+(Join-Path $env:WINDIR 'System32/WinMetadata/Windows.Media.winmd')),('/reference:'+(Join-Path $env:WINDIR 'System32/WinMetadata/Windows.Storage.winmd')))
+$common += @(('/reference:'+$radioRuntime.FullName),('/reference:'+(Join-Path $env:WINDIR 'System32/WinMetadata/Windows.Devices.winmd')),('/reference:'+(Join-Path $env:WINDIR 'System32/WinMetadata/Windows.Foundation.winmd')),('/reference:'+(Join-Path $env:WINDIR 'System32/WinMetadata/Windows.Media.winmd')),('/reference:'+(Join-Path $env:WINDIR 'System32/WinMetadata/Windows.Storage.winmd')),('/reference:'+(Join-Path $env:WINDIR 'System32/WinMetadata/Windows.Security.winmd')))
 $common += @(('/reference:'+(Join-Path $env:WINDIR 'System32/WinMetadata/Windows.UI.winmd')),('/reference:'+(Join-Path $env:WINDIR 'System32/WinMetadata/Windows.System.winmd'))); $vectorRuntime=Get-ChildItem -LiteralPath (Join-Path $env:WINDIR 'Microsoft.NET/assembly/GAC_MSIL/System.Numerics.Vectors') -Filter System.Numerics.Vectors.dll -Recurse | Select-Object -First 1; $common += ('/reference:'+$vectorRuntime.FullName)
 $winrtInterop = Get-ChildItem -LiteralPath (Join-Path $env:WINDIR 'Microsoft.NET/assembly/GAC_MSIL/System.Runtime.InteropServices.WindowsRuntime') -Filter System.Runtime.InteropServices.WindowsRuntime.dll -Recurse | Select-Object -First 1
 $common += ('/reference:'+$winrtInterop.FullName)
@@ -49,7 +51,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Fallo el shader del saludo.' }
 $assemblySource=Join-Path $root 'MacFlow/AssemblyInfo.cs'
 if($CoreBridge){
     $assemblySource=Join-Path $build 'CoreAssemblyInfo.cs'
-    [IO.File]::WriteAllText($assemblySource,([IO.File]::ReadAllText((Join-Path $root 'MacFlow/AssemblyInfo.cs')) -replace '26\.5\.0\.0','26.4.2.0'))
+    [IO.File]::WriteAllText($assemblySource,([IO.File]::ReadAllText((Join-Path $root 'MacFlow/AssemblyInfo.cs')) -replace '26\.5\.1\.0','26.5.0.0'))
     $common+='/define:CORE_BRIDGE'
 }
 $appSources = @(Get-ChildItem -LiteralPath (Join-Path $root 'MacFlow') -Filter '*.cs' | Where-Object Name -ne 'AssemblyInfo.cs' | ForEach-Object FullName)+@($assemblySource)
@@ -60,6 +62,7 @@ Copy-Item -LiteralPath (Join-Path $root 'MacFlow\App.config') -Destination (Join
 Copy-Item -LiteralPath (Join-Path $root 'README.txt') -Destination (Join-Path $bin 'README.txt') -Force
 Copy-Item -LiteralPath (Join-Path $root 'LICENSE.txt') -Destination (Join-Path $bin 'LICENSE.txt') -Force
 Copy-Item -LiteralPath (Join-Path $root 'THIRD-PARTY-NOTICES.md') -Destination (Join-Path $bin 'THIRD-PARTY-NOTICES.md') -Force
+if($CoreOnly){Get-Item -LiteralPath (Join-Path $bin 'MacFlow.exe') | Select-Object FullName,Length;return}
 if(!$CoreBridge){
     & (Join-Path $root 'BuildTools/BuildFace.ps1') -Bin $bin -Compiler $csc
     & (Join-Path $root 'BuildTools/BuildVoice.ps1') -Bin $bin -Compiler $csc
@@ -82,8 +85,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Falló la compilación del instalador.' }
 Copy-Item -LiteralPath (Join-Path $root 'MacFlow\App.config') -Destination ($setup + '.config') -Force
 $packageInfo=Get-Item -LiteralPath $setup
 if($CoreBridge -and $packageInfo.Length -gt 64MB){throw 'La actualización base supera el límite de 26.4.1.'}
-$releaseNotes=if($CoreBridge){'26.4.2 base liviana: mejoras visuales, estabilidad y privacidad con PIN. Voz y rostro disponibles al actualizar a 26.5.0.'}else{'26.5.0 completa: incluye modelos locales de voz y reconocimiento facial experimental.'}
-$packageJson=@{Product='MacFlow';Architecture='x64';Version=$packageVersion;Installer=$packageInfo.Name;Sha256=(Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash;Size=$packageInfo.Length;FeedUrl=$UpdateFeedUrl;Notes=$releaseNotes} | ConvertTo-Json
+$packageJson=@{Product='MacFlow';Architecture='x64';Version=$packageVersion;Installer=$packageInfo.Name;Sha256=(Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash;Size=$packageInfo.Length;FeedUrl=$UpdateFeedUrl;Notes='27.0.0: nuevo diseño nativo, cristal, bloqueo por deslizamiento, Windows Hello, Siri con resumen de pestañas en Gemini web y mejoras de voz, monitores y recuperación de Windows.'} | ConvertTo-Json
 [System.IO.File]::WriteAllText((Join-Path $deliverables 'MacFlow-update.json'),$packageJson,[System.Text.UTF8Encoding]::new($false))
 if ($RunTests) {
     if(!$CoreBridge){ & (Join-Path $root 'BuildTools/TestNativeModels.ps1') -Bin $bin -Output (Join-Path $deliverables 'verification') }

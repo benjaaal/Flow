@@ -20,7 +20,7 @@ namespace MacFlow
         internal AssistantVisual()
         {
             IsHitTestVisible=false;
-            lens=Freeze(new RadialGradientBrush(new GradientStopCollection{new GradientStop(Color.FromRgb(3,4,8),0),new GradientStop(Color.FromRgb(4,7,12),.64),new GradientStop(Color.FromRgb(54,63,75),.94),new GradientStop(Color.FromRgb(163,178,190),1)}){GradientOrigin=new Point(.47,.23),Center=new Point(.5,.5),RadiusX=.5,RadiusY=.5});
+            lens=Freeze(new RadialGradientBrush(new GradientStopCollection{new GradientStop(Color.FromRgb(36,36,40),0),new GradientStop(Color.FromRgb(12,12,15),.68),new GradientStop(Color.FromRgb(58,59,64),.94),new GradientStop(Color.FromRgb(168,172,180),1)}){GradientOrigin=new Point(.38,.18),Center=new Point(.5,.5),RadiusX=.5,RadiusY=.5});
             reflection=Freeze(new LinearGradientBrush(new GradientStopCollection{new GradientStop(Color.FromArgb(0,58,182,255),0),new GradientStop(Color.FromArgb(175,55,184,255),.2),new GradientStop(Color.FromArgb(245,188,238,255),.43),new GradientStop(Colors.White,.52),new GradientStop(Color.FromArgb(235,255,208,156),.63),new GradientStop(Color.FromArgb(105,255,153,91),.83),new GradientStop(Colors.Transparent,1)},new Point(0,.3),new Point(1,.7)));
             horizon=Freeze(new RadialGradientBrush(new GradientStopCollection{new GradientStop(Color.FromArgb(165,247,240,227),0),new GradientStop(Color.FromArgb(85,127,202,233),.32),new GradientStop(Color.FromArgb(28,197,149,219),.63),new GradientStop(Colors.Transparent,1)}){RadiusX=.5,RadiusY=.5});
             halo=Freeze(new RadialGradientBrush(new GradientStopCollection{new GradientStop(Color.FromArgb(225,242,250,255),0),new GradientStop(Color.FromArgb(95,188,225,255),.25),new GradientStop(Colors.Transparent,1)}));
@@ -34,13 +34,13 @@ namespace MacFlow
         }
         private void UpdateClock()
         {
-            bool needs=!disposed&&IsLoaded&&IsVisible&&Stage!=AssistantStage.Hidden&&Motion.Enabled&&(Stage!=AssistantStage.Answer||elapsed.Elapsed.TotalSeconds<2.2);
+            bool needs=!disposed&&IsLoaded&&IsVisible&&Stage!=AssistantStage.Hidden&&Motion.Enabled&&(Stage!=AssistantStage.Answer||elapsed.Elapsed.TotalSeconds<1.6)&&(Stage!=AssistantStage.Appearance||elapsed.Elapsed.TotalSeconds<.8);
             if(needs&&!attached){attached=true;CompositionTarget.Rendering+=Frame;}else if(!needs)Detach();
         }
         private void Detach(){if(attached){CompositionTarget.Rendering-=Frame;attached=false;}}
         private void Frame(object sender,EventArgs args)
         {
-            if(disposed||!IsVisible||!Motion.Enabled){Detach();return;}double time=elapsed.Elapsed.TotalSeconds;if(time-lastFrame<1.0/62)return;lastFrame=time;InvalidateVisual();if(Stage==AssistantStage.Answer&&time>2.2)Detach();
+            if(disposed||!IsVisible||!Motion.Enabled){Detach();return;}double time=elapsed.Elapsed.TotalSeconds;if(time-lastFrame<1.0/31)return;lastFrame=time;InvalidateVisual();if(Stage==AssistantStage.Answer&&time>1.6||Stage==AssistantStage.Appearance&&time>.8)Detach();
         }
         protected override void OnRender(DrawingContext dc)
         {
@@ -50,7 +50,7 @@ namespace MacFlow
             else if(Stage==AssistantStage.Listening){DrawLens(dc,new Point(Math.Min(30,ActualWidth/2),ActualHeight/2),Math.Min(22,ActualHeight*.42),time);if(ActualWidth>100){for(int i=0;i<28;i++){double x=62+i*(ActualWidth-132)/28,h=1.1+2.8*(.5+.5*Math.Sin(time*3.4+i*.62));dc.PushOpacity(.2+.35*Math.Sin(Math.PI*i/28));dc.DrawRoundedRectangle(reflection,null,new Rect(x,ActualHeight-8-h,2,h),1,1);dc.Pop();}}}
             else if(Stage==AssistantStage.Working)
             {
-                var center=new Point(Math.Min(29,ActualWidth/2),ActualHeight/2);for(int i=0;i<6;i++){double angle=time*1.45+i*Math.PI/3,breath=1+.08*Math.Sin(time*2.3+i),r=(9+2*Math.Sin(time+i*.7))*breath;var p=new Point(center.X+Math.Cos(angle)*r,center.Y+Math.Sin(angle)*r);double intensity=.57+.43*(.5+.5*Math.Sin(angle-time*.4));dc.PushOpacity(intensity);dc.DrawEllipse(halo,null,p,7,7);dc.DrawEllipse(Brushes.White,null,p,1.45,1.45);dc.Pop();}
+                var center=new Point(Math.Min(29,ActualWidth/2),ActualHeight/2);for(int i=0;i<6;i++){double angle=time*1.45+i*Math.PI/3,breath=1+.08*Math.Sin(time*2.3+i),r=(9+2*Math.Sin(time+i*.7))*breath;var p=new Point(center.X+Math.Cos(angle)*r,center.Y+Math.Sin(angle)*r);double intensity=.57+.43*(.5+.5*Math.Sin(angle-time*.4));dc.PushOpacity(intensity);dc.DrawEllipse(halo,null,p,4.5,4.5);dc.DrawEllipse(Brushes.White,null,p,1.35,1.35);dc.Pop();}
             }
             else if(Stage==AssistantStage.Answer){double swell=Motion.Enabled?1+.07*Math.Sin(time*2):1;if(ActualWidth<100)DrawLens(dc,new Point(ActualWidth/2,ActualHeight/2),Math.Min(ActualWidth,ActualHeight)*.43,time);else{dc.DrawEllipse(horizon,null,new Point(ActualWidth*.5,ActualHeight+2),ActualWidth*.48,15*swell);dc.DrawEllipse(reflection,null,new Point(ActualWidth*.5,ActualHeight-.5),ActualWidth*.30,1.1);}}
             dc.Pop();
@@ -61,7 +61,11 @@ namespace MacFlow
             dc.PushClip(new EllipseGeometry(center,radius-.8,radius-.8));
             dc.PushTransform(new RotateTransform(-5+Math.Sin(time*1.2)*3,center.X,center.Y));
             dc.DrawEllipse(horizon,null,new Point(center.X,center.Y+radius*.37+sway),radius*1.18,radius*.44);
-            dc.DrawEllipse(reflection,null,new Point(center.X,center.Y+radius*.15+sway),radius*1.08,radius*.12);
+            var ribbon=new StreamGeometry();using(var g=ribbon.Open()){
+                g.BeginFigure(new Point(center.X-radius*1.2,center.Y+radius*.3+sway),true,true);
+                g.BezierTo(new Point(center.X-radius*.4,center.Y-radius*.1),new Point(center.X+radius*.4,center.Y+radius*.5),new Point(center.X+radius*1.2,center.Y-radius*.15),true,false);
+                g.BezierTo(new Point(center.X+radius*.4,center.Y+radius*.65),new Point(center.X-radius*.4,center.Y+radius*.2),new Point(center.X-radius*1.2,center.Y+radius*.48),true,false);
+            }ribbon.Freeze();dc.PushOpacity(.65);dc.DrawGeometry(reflection,null,ribbon);dc.Pop();
             dc.DrawEllipse(glint,null,new Point(center.X-radius*.28,center.Y+radius*.62),radius*.36,radius*.13);
             dc.Pop();dc.Pop();
         }

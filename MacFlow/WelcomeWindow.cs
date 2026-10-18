@@ -63,8 +63,8 @@ namespace MacFlow
         }
         internal void Play(double delay=200)
         {
-            BeginAnimation(ProgressProperty,null);Progress=Design.Animations?0:1;if(!Design.Animations)return;
-            var animation=new DoubleAnimation(0,1,TimeSpan.FromMilliseconds(1850)){BeginTime=TimeSpan.FromMilliseconds(delay),EasingFunction=new CubicEase{EasingMode=EasingMode.EaseInOut}};
+            BeginAnimation(ProgressProperty,null);Progress=Motion.Enabled?0:1;if(!Motion.Enabled)return;
+            var animation=new DoubleAnimationUsingKeyFrames{BeginTime=TimeSpan.FromMilliseconds(delay)};animation.KeyFrames.Add(new LinearDoubleKeyFrame(0,KeyTime.FromTimeSpan(TimeSpan.Zero)));double written=0;foreach(var stroke in strokes){written+=stroke.Length;animation.KeyFrames.Add(new EasingDoubleKeyFrame(written/Math.Max(1,total),KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(1550*written/Math.Max(1,total))),new SineEase{EasingMode=EasingMode.EaseInOut}));}
             Timeline.SetDesiredFrameRate(animation,60);animation.Completed+=delegate{Progress=1;BeginAnimation(ProgressProperty,null);};BeginAnimation(ProgressProperty,animation);
         }
         protected override void OnRender(DrawingContext dc)
