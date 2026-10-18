@@ -1,9 +1,9 @@
 MacFlow — Windows 11 x64
 
 ACTUALIZACIÓN EN DOS ETAPAS
-26.5.0 BASE LIVIANA: compatible con el límite de 64 MB de 26.4.1. Incluye mejoras visuales, estabilidad, Dock, isla, Centro de control, widgets y Privacidad con PIN. Conserva preferencias. No incluye todavía voz ni motor facial.
+26.4.2 BASE LIVIANA: compatible con el límite de 64 MB de 26.4.1. Incluye mejoras visuales, estabilidad, Dock, isla, Centro de control, widgets y Privacidad con PIN. Conserva preferencias. No incluye todavía voz ni motor facial.
 26.5.1 COMPLETA: desde Configuración → Sistema → Actualizaciones en la base. Incluye los modelos locales de voz español/inglés y reconocimiento facial experimental. El actualizador de la base admite hasta 256 MB.
-La publicación 26.5.0 permanece como entrada del canal para versiones antiguas. La base consulta 26.5.1 y la completa vuelve al canal estable para futuras actualizaciones. Los canales personalizados se conservan.
+La publicación 26.4.2 permanece como entrada del canal para versiones antiguas. La base consulta 26.5.1 y la completa vuelve al canal estable para futuras actualizaciones. Los canales personalizados se conservan.
 
 USO
 Hey Siri: activalo en Sistema después de instalar 26.5.1. Dictado español local. Windows debe permitir el micrófono a aplicaciones de escritorio. Preguntas libres mediante Gemini en Chrome: requiere sesión y accesibilidad.
