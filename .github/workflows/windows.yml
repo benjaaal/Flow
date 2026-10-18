@@ -14,7 +14,7 @@ jobs:
       - name: Build and test lightweight 26.4.2 bridge
         shell: powershell
         run: ./build.ps1 -CoreBridge -RunTests -OutputDirectory ./artifacts/core -UpdateFeedUrl https://github.com/benjaaal/Flow/releases/latest/download/MacFlow-update.json
-      - name: Build and test complete 26.5.1 with local models
+      - name: Build and test complete 26.5.0 with local models
         shell: powershell
         run: ./build.ps1 -RunTests -OutputDirectory ./artifacts/full -UpdateFeedUrl https://github.com/benjaaal/Flow/releases/latest/download/MacFlow-update.json
       - uses: actions/upload-artifact@v4
@@ -25,7 +25,7 @@ jobs:
             artifacts/core/MacFlow-update.json
             artifacts/core/verification/*.txt
             artifacts/core/verification/installer/installer-tests.txt
-            artifacts/full/MacFlow-Setup-26.5.1.exe*
+            artifacts/full/MacFlow-Setup-26.5.0.exe*
             artifacts/full/MacFlow-update.json
             artifacts/full/verification/*.txt
             artifacts/full/verification/installer/installer-tests.txt
@@ -55,24 +55,20 @@ jobs:
             if((Get-FileHash $installer -Algorithm SHA256).Hash -ne $package.Sha256){throw 'SHA256 incorrecto'}
             if((Get-Item $installer).Length -ne $package.Size){throw 'Tamaño incorrecto'}
             if($kind -eq 'core' -and ($package.Version -ne '26.4.2' -or $package.Size -gt 64MB)){throw 'La base no es compatible'}
-            if($kind -eq 'full' -and $package.Version -ne '26.5.1'){throw 'Versión completa incorrecta'}
+            if($kind -eq 'full' -and $package.Version -ne '26.5.0'){throw 'Versión completa incorrecta'}
           }
-          $ErrorActionPreference='Continue'
-          gh release view v26.5.1 --repo $env:GH_REPO --json tagName 2>$null
-          $exists=$LASTEXITCODE -eq 0
-          $ErrorActionPreference='Stop'
-          if(!$exists){
-            gh release create v26.5.1 artifacts/full/MacFlow-Setup-26.5.1.exe artifacts/full/MacFlow-Setup-26.5.1.exe.config artifacts/full/MacFlow-update.json --repo $env:GH_REPO --target $env:GITHUB_SHA --title 'MacFlow 26.5.1 — Voz y rostro' --notes 'Segunda etapa: modelos locales de voz español/inglés y reconocimiento facial experimental. Primero instalar la base 26.4.2; después buscar actualizaciones desde MacFlow. Conserva preferencias.' --latest=false
-            if($LASTEXITCODE -ne 0){throw 'Falló la publicación completa'}
-          }
+          gh release upload v26.5.0 artifacts/full/MacFlow-Setup-26.5.0.exe artifacts/full/MacFlow-Setup-26.5.0.exe.config artifacts/full/MacFlow-update.json --repo $env:GH_REPO --clobber
+          if($LASTEXITCODE -ne 0){throw 'Falló la publicación completa'}
+          gh release edit v26.5.0 --repo $env:GH_REPO --title 'MacFlow 26.5.0 — Completa' --notes 'Versión completa con voz local español/inglés, reconocimiento facial experimental propio con controles contra fotos, PIN y renovación de MacFlow. Desde 26.4.1 instalar primero 26.4.2, que repara el límite del actualizador. No equivale a Face ID de Apple.'
+          if($LASTEXITCODE -ne 0){throw 'Falló la información de la versión completa'}
           $ErrorActionPreference='Continue'
           gh release view v26.4.2 --repo $env:GH_REPO --json tagName 2>$null
           $baseExists=$LASTEXITCODE -eq 0
           $ErrorActionPreference='Stop'
           if(!$baseExists){
-            gh release create v26.4.2 artifacts/core/MacFlow-Setup-26.4.2.exe artifacts/core/MacFlow-Setup-26.4.2.exe.config artifacts/core/MacFlow-update.json --repo $env:GH_REPO --target $env:GITHUB_SHA --title 'MacFlow 26.4.2 — Reparación del actualizador' --notes 'Actualización liviana compatible con 26.4.1. Corrige el límite de tamaño y mejora los mensajes de integridad. Modelos de voz y rostro disponibles después en 26.5.1.' --latest
+            gh release create v26.4.2 artifacts/core/MacFlow-Setup-26.4.2.exe artifacts/core/MacFlow-Setup-26.4.2.exe.config artifacts/core/MacFlow-update.json --repo $env:GH_REPO --target $env:GITHUB_SHA --title 'MacFlow 26.4.2 — Reparación del actualizador' --notes 'Actualización liviana compatible con 26.4.1. Corrige el límite de tamaño y mejora los mensajes de integridad. Modelos de voz y rostro disponibles después en 26.5.0.' --latest
             if($LASTEXITCODE -ne 0){throw 'Falló la publicación base'}
           }
-          $notes='Paquete base liviano, reconstruido para versiones 26.4.1 y anteriores con límite de 64 MB. Incluye mejoras visuales, estabilidad y Privacidad con PIN. Voz y reconocimiento facial se instalan después mediante la actualización 26.5.1. Conserva preferencias. Código del paquete base: https://github.com/'+$env:GH_REPO+'/commit/'+$env:GITHUB_SHA
+          $notes='Paquete base liviano, reconstruido para versiones 26.4.1 y anteriores con límite de 64 MB. Incluye mejoras visuales, estabilidad y Privacidad con PIN. Voz y reconocimiento facial se instalan después mediante la actualización 26.5.0. Conserva preferencias. Código del paquete base: https://github.com/'+$env:GH_REPO+'/commit/'+$env:GITHUB_SHA
           gh release edit v26.4.2 --repo $env:GH_REPO --title 'MacFlow 26.4.2 — Base liviana' --notes $notes --latest
           if($LASTEXITCODE -ne 0){throw 'Falló el canal compatible'}

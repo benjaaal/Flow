@@ -316,7 +316,7 @@ namespace MacFlow
                 ClickRegression.Run(results);
                 ConnectivityRegression.Run(directory,results);
                 MediaRegression.Run(results);
-                string stableFeed="https://github.com/benjaaal/Flow/releases/latest/download/MacFlow-update.json",completeFeed="https://github.com/benjaaal/Flow/releases/download/v26.5.1/MacFlow-update.json";
+                string stableFeed="https://github.com/benjaaal/Flow/releases/latest/download/MacFlow-update.json",completeFeed="https://github.com/benjaaal/Flow/releases/download/v26.5.0/MacFlow-update.json";
 #if CORE_BRIDGE
                 if(UpdateService.ResolveFeed(stableFeed)!=completeFeed)throw new Exception("La base no ofrece la segunda etapa");
 #else

@@ -107,7 +107,7 @@ namespace MacFlow
         internal static string ResolveFeed(string feed)
         {
             const string latest="https://github.com/benjaaal/Flow/releases/latest/download/MacFlow-update.json";
-            const string complete="https://github.com/benjaaal/Flow/releases/download/v26.5.1/MacFlow-update.json";
+            const string complete="https://github.com/benjaaal/Flow/releases/download/v26.5.0/MacFlow-update.json";
 #if CORE_BRIDGE
             return String.Equals(feed,latest,StringComparison.OrdinalIgnoreCase)?complete:feed;
 #else

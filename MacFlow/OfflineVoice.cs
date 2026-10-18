@@ -21,7 +21,7 @@ namespace MacFlow
         {if(disposed)return;if(mode==value&&worker!=null)return;mode=value;if(value=="pause"){transcript=error=null;Report(false,"Micrófono en pausa");}if(worker==null){if(value=="pause")return;Start();}else if(ready)Send(value);}
         private void Start()
         {
-            if(startInfo==null&&!File.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"MacFlow.Voice.exe"))){const string pending="La voz se incluye en MacFlow 26.5.1. Abrí Configuración → Sistema → Actualizaciones para instalarla.";Report(false,pending);var failed=error;transcript=error=null;if(failed!=null)failed(pending);return;}
+            if(startInfo==null&&!File.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"MacFlow.Voice.exe"))){const string pending="La voz se incluye en MacFlow 26.5.0. Abrí Configuración → Sistema → Actualizaciones para instalarla.";Report(false,pending);var failed=error;transcript=error=null;if(failed!=null)failed(pending);return;}
             if(disposed||worker!=null)return;Report(false,"Preparando voz local en español…");
             try{var info=startInfo==null?new ProcessStartInfo(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"MacFlow.Voice.exe"),"\""+profile+"\""){UseShellExecute=false,CreateNoWindow=true,RedirectStandardInput=true,RedirectStandardOutput=true,RedirectStandardError=true}:startInfo();var child=new Process{StartInfo=info,EnableRaisingEvents=true};worker=child;
                 child.OutputDataReceived+=delegate(object s,DataReceivedEventArgs e){if(e.Data==null||dispatcher.HasShutdownStarted)return;string line=e.Data;dispatcher.BeginInvoke(DispatcherPriority.Normal,new Action(delegate{if(disposed||worker!=child)return;Receive(line);}));};

@@ -82,7 +82,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Falló la compilación del instalador.' }
 Copy-Item -LiteralPath (Join-Path $root 'MacFlow\App.config') -Destination ($setup + '.config') -Force
 $packageInfo=Get-Item -LiteralPath $setup
 if($CoreBridge -and $packageInfo.Length -gt 64MB){throw 'La actualización base supera el límite de 26.4.1.'}
-$releaseNotes=if($CoreBridge){'26.4.2 base liviana: mejoras visuales, estabilidad y privacidad con PIN. Voz y rostro disponibles al actualizar a 26.5.1.'}else{'26.5.1 completa: incluye modelos locales de voz y reconocimiento facial experimental.'}
+$releaseNotes=if($CoreBridge){'26.4.2 base liviana: mejoras visuales, estabilidad y privacidad con PIN. Voz y rostro disponibles al actualizar a 26.5.0.'}else{'26.5.0 completa: incluye modelos locales de voz y reconocimiento facial experimental.'}
 $packageJson=@{Product='MacFlow';Architecture='x64';Version=$packageVersion;Installer=$packageInfo.Name;Sha256=(Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash;Size=$packageInfo.Length;FeedUrl=$UpdateFeedUrl;Notes=$releaseNotes} | ConvertTo-Json
 [System.IO.File]::WriteAllText((Join-Path $deliverables 'MacFlow-update.json'),$packageJson,[System.Text.UTF8Encoding]::new($false))
 if ($RunTests) {
