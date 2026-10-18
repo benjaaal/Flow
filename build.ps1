@@ -49,7 +49,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Fallo el shader del saludo.' }
 $assemblySource=Join-Path $root 'MacFlow/AssemblyInfo.cs'
 if($CoreBridge){
     $assemblySource=Join-Path $build 'CoreAssemblyInfo.cs'
-    [IO.File]::WriteAllText($assemblySource,([IO.File]::ReadAllText((Join-Path $root 'MacFlow/AssemblyInfo.cs')) -replace '26\.5\.1\.0','26.4.2.0'))
+    [IO.File]::WriteAllText($assemblySource,([IO.File]::ReadAllText((Join-Path $root 'MacFlow/AssemblyInfo.cs')) -replace '26\.5\.0\.0','26.4.2.0'))
     $common+='/define:CORE_BRIDGE'
 }
 $appSources = @(Get-ChildItem -LiteralPath (Join-Path $root 'MacFlow') -Filter '*.cs' | Where-Object Name -ne 'AssemblyInfo.cs' | ForEach-Object FullName)+@($assemblySource)
