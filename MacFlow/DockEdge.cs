@@ -14,7 +14,7 @@ namespace MacFlow
         [StructLayout(LayoutKind.Sequential)]private struct PixelPoint{public int X,Y;}
         [DllImport("user32.dll")]private static extern IntPtr WindowFromPoint(PixelPoint point);
         [DllImport("user32.dll")]private static extern IntPtr GetAncestor(IntPtr h,uint flags);
-        private IntPtr handle,lastForeground;
+        private IntPtr handle,lastForeground;private System.Drawing.Rectangle bounds;
         private DateTime recovered=DateTime.MinValue;
         public DockEdge(Action reveal)
         {
@@ -25,7 +25,7 @@ namespace MacFlow
         public void KeepEdgeAvailable()
         {
             if(!IsVisible||handle==IntPtr.Zero)return;var foreground=Native.GetForegroundWindow();bool changed=foreground!=lastForeground;lastForeground=foreground;
-            var cursor=Forms.Cursor.Position;var screen=Forms.Screen.PrimaryScreen.Bounds;bool near=cursor.X>=screen.Left&&cursor.X<screen.Right&&cursor.Y>=screen.Bottom-64&&cursor.Y<screen.Bottom;
+            var cursor=Forms.Cursor.Position;var screen=bounds;bool near=cursor.X>=screen.Left&&cursor.X<screen.Right&&cursor.Y>=screen.Bottom-64&&cursor.Y<screen.Bottom;
             if(!changed&&!near)return;
             if(near&&GetAncestor(WindowFromPoint(new PixelPoint{X=cursor.X,Y=screen.Bottom-1}),2)==handle)return;
             if(DateTime.UtcNow-recovered<TimeSpan.FromMilliseconds(250))return;recovered=DateTime.UtcNow;
@@ -34,9 +34,10 @@ namespace MacFlow
         }
         public void Position(Window dock)
         {
-            var source=PresentationSource.FromVisual(dock);if(source==null)return;var matrix=source.CompositionTarget.TransformFromDevice;var screen=Forms.Screen.PrimaryScreen.Bounds;
-            var top=matrix.Transform(new Point(screen.Left,screen.Bottom-4));var bottom=matrix.Transform(new Point(screen.Right,screen.Bottom));
-            Left=top.X;Top=top.Y;Width=bottom.X-top.X;Height=bottom.Y-top.Y;
+            var dockHandle=new WindowInteropHelper(dock).Handle;if(dockHandle==IntPtr.Zero)return;var screen=Forms.Screen.FromHandle(dockHandle);var area=DisplaySpace.Of(screen);var next=screen.Bounds;
+            if(bounds==next&&handle!=IntPtr.Zero)return;bounds=next;Left=area.Dips.Left;Top=(bounds.Bottom-6)/area.Scale;Width=bounds.Width/area.Scale;Height=6/area.Scale;
+            var own=new WindowInteropHelper(this).EnsureHandle();Native.SetWindowPos(own,new IntPtr(-1),bounds.Left,bounds.Bottom-6,bounds.Width,6,0x14);
+
         }
     }
 }

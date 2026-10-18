@@ -281,6 +281,8 @@ namespace MacFlow
             window.Background=Brushes.Black;var source=HwndSource.FromHwnd(h);if(source!=null){source.CompositionTarget.BackgroundColor=Colors.Black;source.AddHook(PresentationHook);}
         }
         private static IntPtr PresentationHook(IntPtr h,int message,IntPtr w,IntPtr l,ref bool handled){if(message==0x47)CompositorGlass.QueueReorder();return IntPtr.Zero;}
+        [DllImport("user32.dll")]internal static extern IntPtr GetWindowDpiAwarenessContext(IntPtr window);
+        [DllImport("user32.dll")]internal static extern IntPtr SetThreadDpiAwarenessContext(IntPtr context);
         public static void NoActivate(Window window)
         {
             var h = new WindowInteropHelper(window).Handle; SetWindowLong(h, -20, GetWindowLong(h, -20) | 0x08000000 | 0x80);

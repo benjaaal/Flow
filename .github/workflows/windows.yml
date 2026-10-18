@@ -26,6 +26,13 @@ jobs:
           $app=Start-Process -FilePath './artifacts/portable/MacFlow.exe' -ArgumentList @('--revision-smoke',('"'+$out+'"')) -PassThru -WindowStyle Hidden
           if(!$app.WaitForExit(60000)){Stop-Process -Id $app.Id;throw 'Native layout test timeout'}
           if($app.ExitCode -ne 0){Get-Content "$out/revision-tests.txt";throw 'Native layout validation failed'}
+      - name: Validate Dock containment and native geometry
+        shell: powershell
+        run: |
+          $out=Join-Path $PWD 'artifacts/verification/dock'
+          $app=Start-Process -FilePath './artifacts/portable/MacFlow.exe' -ArgumentList @('--dock-smoke',('"'+$out+'"')) -PassThru -WindowStyle Hidden
+          if(!$app.WaitForExit(60000)){Stop-Process -Id $app.Id;throw 'Dock test timeout'}
+          if($app.ExitCode -ne 0){Get-Content "$out/visual-test.txt";throw 'Dock geometry validation failed'}
       - name: Publish build artifacts
         uses: actions/upload-artifact@v4
         with:

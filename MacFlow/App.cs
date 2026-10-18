@@ -67,6 +67,7 @@ namespace MacFlow
             if (args.Length == 2 && args[0] == "--wallpaper-integration") return WallpaperIntegration.Run(args[1]);
             if (args.Length == 2 && args[0] == "--topbar-smoke") return TopBarVisual.Run(args[1]);
             if (args.Length == 2 && args[0] == "--controls-smoke") return ControlsVisual.Run(args[1]);
+            if (args.Length == 2 && args[0] == "--dock-observe") return DockVisual.Run(args[1],true);
             if (args.Length == 2 && args[0] == "--dock-smoke") return DockVisual.Run(args[1]);
             if (args.Length == 2 && args[0] == "--caption-test") return CaptionRegression.Run(args[1]);
             bool preview = args.Length == 2 && args[0] == "--preview";

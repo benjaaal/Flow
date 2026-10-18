@@ -83,7 +83,7 @@ namespace MacFlow
                 compositor=new Compositor();if(Application.Current!=null)Application.Current.Exit+=delegate{Shutdown();};
             }
             if(!registered){var wc=new WindowClass{Size=(uint)Marshal.SizeOf(typeof(WindowClass)),Procedure=procedure,Instance=GetModuleHandle(null),Name="MacFlow.ClippedBackdrop"};if(RegisterClassEx(ref wc)==0)throw new InvalidOperationException("No se pudo crear la clase de cristal.");registered=true;}
-            backgroundWindow=CreateWindowEx(0x00200000|0x08000000|0x80|0x20,"MacFlow.ClippedBackdrop","",0x80000000,0,0,1,1,IntPtr.Zero,IntPtr.Zero,GetModuleHandle(null),IntPtr.Zero);
+            var priorDpi=Native.SetThreadDpiAwarenessContext(Native.GetWindowDpiAwarenessContext(new WindowInteropHelper(window).Handle));try{backgroundWindow=CreateWindowEx(0x00200000|0x08000000|0x80|0x20,"MacFlow.ClippedBackdrop","",0x80000000,0,0,1,1,IntPtr.Zero,IntPtr.Zero,GetModuleHandle(null),IntPtr.Zero);}finally{Native.SetThreadDpiAwarenessContext(priorDpi);}
             if(backgroundWindow==IntPtr.Zero)throw new InvalidOperationException("No se pudo crear el fondo de cristal.");
             int enabled=1;Native.DwmSetWindowAttribute(backgroundWindow,17,ref enabled,4);Native.DwmSetWindowAttribute(backgroundWindow,33,ref enabled,4);
             IntPtr raw;((IDesktopInterop)(object)compositor).CreateDesktopWindowTarget(backgroundWindow,true,out raw);

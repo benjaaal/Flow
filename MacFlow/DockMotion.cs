@@ -15,7 +15,7 @@ namespace MacFlow
         internal static double LayoutScale(double size){return 1.28-Math.Max(0,Math.Min(36,size-36))*.08/36;}
         internal static double Row(double size){double peak=LayoutScale(size);return Math.Ceiling(size*peak*1.035+LaunchTravel*peak*2)+6;}
         internal static double Thickness(double size){return Row(size)+Indicator+Padding*2;}
-        internal static double Reserve(double size){return Math.Ceiling(size*.32)+2;}
+        internal static double Reserve(double size){return Math.Ceiling(size*.55)+4;}
     }
     // One time-based hover controller; mouse events only replace a target point.
     // No per-event animation clocks, allocations or layout changes.
@@ -26,7 +26,7 @@ namespace MacFlow
         private readonly List<Item> items=new List<Item>();
         private FrameworkElement separator;private TranslateTransform separatorShift;private double separatorCenter,separatorVelocity;
         private readonly bool vertical;
-        private readonly double reach;
+        private readonly double reach;private readonly double baseSize;
         private readonly double magnification;
         internal static double PeakScale(double size)
         {
@@ -40,7 +40,7 @@ namespace MacFlow
         private double pointer,previous=-1,probeFraction;
         public DockMotion(StackPanel panel,bool vertical,double size,DockMotion prior=null)
         {
-            this.panel=panel;this.vertical=vertical;reach=size*2.0;magnification=PeakScale(size)-1;
+            this.panel=panel;this.vertical=vertical;baseSize=size;reach=size*2.0;magnification=PeakScale(size)-1;
             foreach(var cell in panel.Children.OfType<StackPanel>())
             {
                 var icon=cell.Tag as FrameworkElement;if(icon==null)continue;var group=icon.RenderTransform as TransformGroup;var scale=icon.RenderTransform as ScaleTransform;
@@ -48,7 +48,7 @@ namespace MacFlow
             }
             panel.SizeChanged+=SizeChanged;
             separator=panel.Children.OfType<Border>().FirstOrDefault();if(separator!=null){separatorShift=new TranslateTransform();separator.RenderTransform=separatorShift;}
-            if(prior!=null)
+            if(prior!=null&&prior.vertical==vertical&&Math.Abs(prior.baseSize-size)<.01)
             {
                 hovering=prior.hovering;probing=prior.probing;probeFraction=prior.probeFraction;
                 foreach(var item in items){var key=((FrameworkElement)item.Cell.Tag).Tag;var old=prior.items.FirstOrDefault(value=>Object.Equals(((FrameworkElement)value.Cell.Tag).Tag,key));if(old==null)continue;item.Scale.ScaleX=item.Scale.ScaleY=old.Scale.ScaleX;item.Velocity=old.Velocity;item.Shift.X=old.Shift.X;item.Shift.Y=old.Shift.Y;item.ShiftVelocity=old.ShiftVelocity;}

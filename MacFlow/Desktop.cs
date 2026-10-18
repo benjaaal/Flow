@@ -800,6 +800,7 @@ namespace MacFlow
             if (Preferences.ShowTopBar && !suspended&&!PresentationActive) { TopBar.Show(); Native.Glass(TopBar, Design.Dark); RegisterAppbar(); } else { UnregisterAppbar(); TopBar.Hide(); }
             RebuildWidget(); Position(); Refresh();
         }
+        internal bool TaskbarReplacementActive{get{return !smoke&&!disposed&&!suspended&&!PresentationActive&&shellRecovery.Acquired&&Preferences.AutoHideTaskbar&&Preferences.ProtectDockEdge&&Preferences.DockPosition=="Bottom";}}
         private void UpdateDockEdge()
         {
             bool enabled=!smoke&&!disposed&&!suspended&&!PresentationActive&&(!fullscreenNow||desktopForeground)&&shellRecovery.Acquired&&Preferences.AutoHideTaskbar&&Preferences.ProtectDockEdge&&Preferences.DockPosition=="Bottom";
