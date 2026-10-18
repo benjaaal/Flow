@@ -19,9 +19,9 @@ namespace MacFlow
         }
         protected override void OnRender(DrawingContext dc)
         {
-            var bounds=new Rect(0,0,ActualWidth,ActualHeight);double radius=22;var clip=new RectangleGeometry(bounds,radius,radius);dc.PushClip(clip);dc.DrawRectangle(Design.Brush("#20FFFFFF"),null,bounds);
+            var bounds=new Rect(0,0,ActualWidth,ActualHeight);double radius=Math.Min(ActualWidth/2,32);var clip=new RectangleGeometry(bounds,radius,radius);dc.PushClip(clip);dc.DrawRectangle(Design.Brush("#20FFFFFF"),null,bounds);
             double fraction=(Value-Minimum)/Math.Max(1,Maximum-Minimum),height=ActualHeight*fraction;dc.DrawRectangle(Design.Brush(IsEnabled?"#ECFFFFFF":"#60FFFFFF"),null,new Rect(0,ActualHeight-height,ActualWidth,height));
-            var ink=fraction>.26?Design.Brush("#303036"):Design.Ink;var pen=new Pen(ink,1.8){StartLineCap=PenLineCap.Round,EndLineCap=PenLineCap.Round};double x=ActualWidth/2,y=ActualHeight-27;
+            var ink=symbol=="sun"&&fraction>.26?Design.Brush("#F5CC32"):fraction>.26?Design.Brush("#303036"):Design.Ink;var pen=new Pen(ink,1.8){StartLineCap=PenLineCap.Round,EndLineCap=PenLineCap.Round};double x=ActualWidth/2,y=ActualHeight-27;
             if(symbol=="sun"){dc.DrawEllipse(null,pen,new Point(x,y),6,6);for(int i=0;i<8;i++){double a=i*Math.PI/4;dc.DrawLine(pen,new Point(x+9*Math.Cos(a),y+9*Math.Sin(a)),new Point(x+12*Math.Cos(a),y+12*Math.Sin(a)));}}
             else{dc.PushTransform(new TranslateTransform(x-12,y-12));dc.DrawGeometry(ink,null,Geometry.Parse("M3,9 L7,9 13,5 13,19 7,15 3,15 Z"));dc.DrawGeometry(null,pen,Geometry.Parse("M17,8 C21,10 21,14 17,16"));dc.Pop();}
             dc.Pop();if(IsKeyboardFocused)dc.DrawRoundedRectangle(null,new Pen(Design.Brush(Design.Accent),1.5),bounds,radius,radius);

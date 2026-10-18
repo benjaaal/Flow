@@ -23,16 +23,25 @@ namespace MacFlow
     {
         [DataMember] public string Theme = "Light";
         [DataMember] public string Accent = "#8DAEFF";
-        [DataMember] public int IconSize = 32;
+        [DataMember] public int IconSize = 44;
         [DataMember] public string IconAppearance="Auto";
         [DataMember] public bool ContainedDockApplied;
+        [DataMember] public bool AppleDesign27Applied;
+        public bool UpgradeAppleDesign()
+        {
+            if(AppleDesign27Applied)return false;AppleDesign27Applied=true;
+            NativeDockAnimations=false;
+            if(IconSize==32||IconSize>=64)IconSize=44;
+            if(Accent=="#8DAEFF")Accent="#007AFF";
+            return true;
+        }
         public bool UpgradeContainedDock()
         {
             if(ContainedDockApplied)return false;
             IconSize=Math.Min(72,Math.Max(32,IconSize)+4);ContainedDockApplied=true;return true;
         }
         [DataMember] public bool Animations = true;
-        [DataMember] public bool? NativeDockAnimations=true;
+        [DataMember] public bool? NativeDockAnimations=false;
         [DataMember] public bool AutoHideTaskbar = false;
         [DataMember] public bool ShowTopBar = true;
         [DataMember] public bool HideInFullscreen = true;

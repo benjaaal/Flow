@@ -1,18 +1,41 @@
-MacFlow — Windows 11 x64
+MacFlow 27.0.0 — Windows 11 x64, C# / WPF / .NET Framework 4.8
 
-ACTUALIZACIÓN EN DOS ETAPAS
-26.4.2 BASE LIVIANA: compatible con el límite de 64 MB de 26.4.1. Incluye mejoras visuales, estabilidad, Dock, isla, Centro de control, widgets y Privacidad con PIN. Conserva preferencias. No incluye todavía voz ni motor facial.
-26.5.0 COMPLETA: desde Configuración → Sistema → Actualizaciones en la base. Incluye los modelos locales de voz español/inglés y reconocimiento facial experimental. El actualizador de la base admite hasta 256 MB.
-La publicación 26.4.2 permanece como entrada del canal para versiones antiguas. La base consulta 26.5.0 y la completa vuelve al canal estable para futuras actualizaciones. Los canales personalizados se conservan.
+Renovación nativa de materiales, tipografía, proporciones, Dock, barra,
+Spotlight, configuración, centro de control, isla y asistente.
 
-USO
-Hey Siri: activalo en Sistema después de instalar 26.5.0. Dictado español local. Windows debe permitir el micrófono a aplicaciones de escritorio. Preguntas libres mediante Gemini en Chrome: requiere sesión y accesibilidad.
-Ctrl+Windows abre Privacidad; música y tareas continúan. PIN propio de 6–12 números. Cinco intentos fallidos activan una espera de 30 s.
-Ctrl+Windows+Alt recupera el escritorio. No reemplaza el bloqueo seguro de Windows.
-Rostro experimental disponible en 26.5.0: creá un PIN, registrá el rostro y luego elegí Reconocer rostro. Sin Windows Hello. YuNet/SFace comparan identidad; MiniFASNet comprueba presencia y pide un giro. Una webcam RGB no garantiza rechazar todos los engaños ni equivale a Face ID. No guarda fotos ni audio; perfil protegido con DPAPI. Cámara y micrófono físicos y ataques reales requieren validación en cada equipo.
-Pliegue: prueba manual y alternativa 3D; el movimiento físico depende de sensores/avisos de tapa. La suspensión puede interrumpirlo.
-Las animaciones de ventanas externas se limitan a aplicaciones compatibles; no sustituye el compositor ni anima diálogos protegidos.
-Salir desde la bandeja restaura la barra de Windows; MacFlow.exe --restore también permite restaurarla. Privacidad mantiene despierto el equipo mientras está abierta, respetando apagado manual, tapa, bloqueo de Windows y batería crítica.
+Centro de control inspirado en las referencias: cápsulas Wi-Fi/Bluetooth,
+controles circulares y reguladores verticales independientes. Música sólo
+con sesión multimedia; carátula real, ampliación y controles de Windows.
 
-Licencias: THIRD-PARTY-NOTICES.md y NATIVE-THIRD-PARTY.txt.
-Recursos originales, sin fuentes ni imágenes de interfaz de Apple.
+Privacidad: reloj y música; deslizá desde el borde inferior para mostrar
+el PIN de MacFlow. También Enter/Espacio para teclado.
+La cortina cubre las pantallas secundarias. Ctrl+Windows abre Privacidad;
+Ctrl+Windows+Alt recupera el escritorio. Es una cortina recuperable de
+MacFlow: el bloqueo y las credenciales de Windows siguen perteneciendo a Windows.
+
+Asistente: órdenes locales y preguntas en Gemini web dentro de Chrome,
+sin claves ni API de IA. «Resumí las pestañas» recorre el texto accesible
+de las pestañas abiertas y pide la síntesis en Gemini. Las páginas se envían
+a Gemini al pedir ese resumen. Requiere Chrome, sesión de Google y una
+interfaz accesible compatible; los errores se muestran sin inventar respuestas.
+Cerrar ventanas y escribir requieren confirmación. Una cancelación evita
+envíos tardíos. El foco y la dirección de Gemini se comprueban antes de escribir.
+
+Hey Siri usa el modelo local incluido, con indicador de micrófono.
+Se pausa al bloquear Windows y durante la búsqueda escrita. Se puede
+desactivar en Configuración. Necesita permisos y micrófono funcional.
+
+Se conserva la preferencia de Hola; trazo finito y movimiento reducido.
+Recuperación de Windows independiente ante fallos y supervisor confirmado
+antes de ocultar la barra. Dock y barra por monitor; widgets conservan
+su monitor preferido al desconectarlo, y los paneles respetan el área útil.
+
+Validación: pruebas aisladas de núcleo, instalador, modelos de voz y
+ventanas nativas. La grabación física con dos monitores de DPI diferente,
+micrófono, Gemini autenticado y arranque tras apagar/encender
+requiere prueba interactiva. En este entorno algunas capturas del compositor
+son negras; se verificaron también renders WPF de las ventanas reales.
+No se afirma 60 FPS constantes ni reemplazo de las animaciones de apps ajenas.
+
+No se instala automáticamente ni cambia autenticación, Explorer o Winlogon.
+La publicación 26.5.0 se conserva. Los perfiles se respaldan antes de migrar.

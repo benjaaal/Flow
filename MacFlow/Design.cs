@@ -28,10 +28,10 @@ namespace MacFlow
             var resources = Application.Current.Resources;
             resources["GlassInk"]=Ink;resources["GlassMuted"]=Muted;
             resources["TextBrush"] = Ink; resources["AccentBrush"] = Brush(Accent);
-            resources["FieldBrush"] = Brush(Dark?"#283D3D40":"#10000000");
-            resources["EdgeBrush"] = Brush(Dark?"#28FFFFFF":"#20000000");
-            resources["PanelBrush"] = Brush(Dark ? "#F028282A" : "#FAF7F7F8");
-            resources["SelectionBrush"] = Brush(Dark ? "#556D9DEF" : "#306D9DEF");
+            resources["FieldBrush"] = Brush(Dark?"#18FFFFFF":"#0C000000");
+            resources["EdgeBrush"] = Brush(Dark?"#26FFFFFF":"#1A000000");
+            resources["PanelBrush"] = Brush(Dark ? "#F01E1E20" : "#F8F5F5F7");
+            resources["SelectionBrush"] = Brush(Dark ? "#550A84FF" : "#29007AFF");
             resources["GlassCardSurface"]=CardSurface;resources["GlassTileSurface"]=Brush(Dark?"#16313942":"#24FFFFFF");
             if (!loaded)
             {
@@ -46,9 +46,9 @@ namespace MacFlow
         }
         public static Brush Ink { get { return Brush(Dark ? "#F5F5F7" : "#202023"); } }
         public static Brush Muted { get { return Brush(Dark ? "#C5C5CC" : "#5D5D64"); } }
-        public static Brush ContentSurface {get{return Brush(Dark?"#1812151B":"#18FFFFFF");}}
-        public static Brush SidebarSurface {get{return Brush(Dark?"#3014171D":"#28FFFFFF");}}
-        public static Brush CardSurface {get{return Brush(Dark?"#201C222B":"#30FFFFFF");}}
+        public static Brush ContentSurface {get{return Brush(Dark?"#ED1C1C1E":"#F4F5F5F7");}}
+        public static Brush SidebarSurface {get{return Brush(Dark?"#10202024":"#18FFFFFF");}}
+        public static Brush CardSurface {get{return Brush(Dark?"#EC2C2C2E":"#F8FFFFFF");}}
         public static Border Glass(UIElement child, int radius, bool dock, bool contain=false)
         {
             var background = MaterialTint(dock,Dark);
@@ -64,8 +64,7 @@ namespace MacFlow
         {
             // Clear material for navigation; a regular material behind text.
             // This is a tint above the real clipped compositor backdrop.
-            var colors=dock?dark?new[]{"#18171C24","#08171C24","#1C171C24"}:new[]{"#28FFFFFF","#10FFFFFF","#20F8FBFF"}
-                :dark?new[]{"#C0222226","#BC222226","#C0222226"}:new[]{"#DCF8F8FA","#D8F8F8FA","#DCF8F8FA"};
+            var colors=dock?dark?new[]{"#30232326","#16232326","#28232326"}:new[]{"#60FFFFFF","#30FFFFFF","#48FFFFFF"}:dark?new[]{"#B8202023","#AC202023","#B8202023"}:new[]{"#D9FAFAFC","#CCFAFAFC","#D9FAFAFC"};
             var brush=new LinearGradientBrush{StartPoint=new Point(0,0),EndPoint=new Point(.8,1)};
             for(int i=0;i<3;i++){var color=(Color)ColorConverter.ConvertFromString(colors[i]);color.A=(byte)Math.Min(220,color.A*Math.Max(dock?.5:1,GlassOpacity/.18));brush.GradientStops.Add(new GradientStop(color,i==0?0:i==1?.48:1));}brush.Freeze();return brush;
         }
@@ -75,10 +74,10 @@ namespace MacFlow
         }
         public static Button Button(string text, Action action, bool prominent)
         {
-            var b = new Button { Content = text, HorizontalContentAlignment=HorizontalAlignment.Center,VerticalContentAlignment=VerticalAlignment.Center, Foreground = prominent ? Brushes.White : Ink, Background = prominent ? Brush("#007AFF") : Brush(Dark ? "#223D4655" : "#32FFFFFF"), BorderBrush = Brushes.Transparent, BorderThickness = new Thickness(0), Padding = new Thickness(12, 6, 12, 6), Margin = new Thickness(0, 3, 6, 3), Cursor = Cursors.Hand, FontSize = 13 };
+            var b = new Button { Content = text, HorizontalContentAlignment=HorizontalAlignment.Center,VerticalContentAlignment=VerticalAlignment.Center, Foreground = prominent ? Brushes.White : Ink, Background = prominent ? Brush("#007AFF") : Brush(Dark ? "#16FFFFFF" : "#FFFFFFFF"), BorderBrush = Brushes.Transparent, BorderThickness = new Thickness(0), Padding = new Thickness(12, 5, 12, 5), Margin = new Thickness(0, 3, 6, 3), Cursor = Cursors.Hand, FontSize = 13 };
             var template = new ControlTemplate(typeof(Button));
             var disabled=new Trigger{Property=UIElement.IsEnabledProperty,Value=false};disabled.Setters.Add(new Setter(UIElement.OpacityProperty,.42));template.Triggers.Add(disabled);
-            var border = new FrameworkElementFactory(typeof(Border));border.Name="AnimatedFace";border.SetValue(UIElement.RenderTransformProperty,new ScaleTransform(1,1));border.SetValue(UIElement.RenderTransformOriginProperty,new Point(.5,.5));border.SetValue(Border.CornerRadiusProperty, new CornerRadius(8)); border.SetValue(Border.BackgroundProperty, new TemplateBindingExtension(Control.BackgroundProperty)); border.SetValue(Border.BorderBrushProperty,new TemplateBindingExtension(Control.BorderBrushProperty)); border.SetValue(Border.BorderThicknessProperty,new TemplateBindingExtension(Control.BorderThicknessProperty));
+            var border = new FrameworkElementFactory(typeof(Border));border.Name="AnimatedFace";border.SetValue(UIElement.RenderTransformProperty,new ScaleTransform(1,1));border.SetValue(UIElement.RenderTransformOriginProperty,new Point(.5,.5));border.SetValue(Border.CornerRadiusProperty, new CornerRadius(9)); border.SetValue(Border.BackgroundProperty, new TemplateBindingExtension(Control.BackgroundProperty)); border.SetValue(Border.BorderBrushProperty,new TemplateBindingExtension(Control.BorderBrushProperty)); border.SetValue(Border.BorderThicknessProperty,new TemplateBindingExtension(Control.BorderThicknessProperty));
             var cp = new FrameworkElementFactory(typeof(ContentPresenter)); cp.SetValue(FrameworkElement.MarginProperty, new TemplateBindingExtension(Control.PaddingProperty)); cp.SetValue(FrameworkElement.HorizontalAlignmentProperty, new TemplateBindingExtension(Control.HorizontalContentAlignmentProperty)); cp.SetValue(FrameworkElement.VerticalAlignmentProperty, new TemplateBindingExtension(Control.VerticalContentAlignmentProperty));
             var layers=new FrameworkElementFactory(typeof(Grid));var glint=new FrameworkElementFactory(typeof(Border));glint.Name="Glint";glint.SetValue(Border.CornerRadiusProperty,new CornerRadius(14));glint.SetValue(Border.BackgroundProperty,new LinearGradientBrush(Colors.White,Colors.Transparent,70));glint.SetValue(UIElement.OpacityProperty,0.0);glint.SetValue(UIElement.IsHitTestVisibleProperty,false);layers.AppendChild(glint);layers.AppendChild(cp);border.AppendChild(layers);var hitArea=new FrameworkElementFactory(typeof(Grid));hitArea.SetValue(System.Windows.Controls.Panel.BackgroundProperty,Brushes.Transparent);hitArea.AppendChild(border);template.VisualTree = hitArea; b.Template = template;
             if(!prominent)b.SetResourceReference(Control.ForegroundProperty,"GlassInk");
@@ -143,7 +142,7 @@ namespace MacFlow
         }
         public static Window Panel(string title, double width, double height)
         {
-            var w = new Window { Title = title, Width = width, Height = height, WindowStyle = WindowStyle.None, AllowsTransparency = false, ResizeMode = ResizeMode.NoResize, ShowInTaskbar = false, Topmost = true, Background = Brush(Dark ? "#202938" : "#ECF2FA"), FontFamily = new FontFamily("Segoe UI") };
+            var w = new Window { Title = title, Width = width, Height = height, WindowStyle = WindowStyle.None, AllowsTransparency = false, ResizeMode = ResizeMode.NoResize, ShowInTaskbar = false, Topmost = true, Background = Brush(Dark ? "#242426" : "#F5F5F7"), FontFamily = new FontFamily("Segoe UI") };
             WindowLife.Track(w);w.SourceInitialized += delegate { Native.Glass(w, Dark); };
             w.KeyDown += delegate(object sender, KeyEventArgs e) { if (e.Key == Key.Escape) {e.Handled=true;Dismiss(w);} };
             return w;
@@ -209,7 +208,7 @@ namespace MacFlow
         {return new SystemSymbol(key,size,color);}
         public static Border Card(UIElement content)
         {
-            var card=new Border{Margin=new Thickness(0,0,0,16),Padding=new Thickness(14),CornerRadius=new CornerRadius(14),BorderThickness=new Thickness(0),Child=content};card.SetResourceReference(Border.BackgroundProperty,"GlassCardSurface");return card;
+            var card=new Border{Margin=new Thickness(0,0,0,12),Padding=new Thickness(14),CornerRadius=new CornerRadius(12),BorderThickness=new Thickness(0),Child=content};card.SetResourceReference(Border.BackgroundProperty,"GlassCardSurface");return card;
         }
         public static Button Circle(string symbol, Action action, string tooltip)
         {

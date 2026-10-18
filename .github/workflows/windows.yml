@@ -2,51 +2,38 @@ name: Build Windows installer
 on:
   workflow_dispatch:
   push:
-    branches: ['**']
+    tags:
+      - 'v*'
+    branches:
+      - '**'
   pull_request:
 permissions:
   contents: read
 jobs:
-  stop_superseded:
-    runs-on: ubuntu-latest
-    permissions:
-      actions: write
-      contents: read
-    steps:
-      - name: Stop obsolete publication attempts
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-        run: |
-          gh api "repos/$GH_REPO/actions/runs?per_page=20" --jq '.workflow_runs[] | select(.path == ".github/workflows/windows.yml" and .head_branch == "main" and (.status == "queued" or .status == "in_progress")) | .id' | while read run; do
-            if [ "$run" != "$GITHUB_RUN_ID" ]; then gh api --method POST "repos/$GH_REPO/actions/runs/$run/cancel" || true; fi
-          done
   build:
-    needs: stop_superseded
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
-      - name: Build and test lightweight 26.4.2 bridge
+      - name: Compile and run isolated core tests
         shell: powershell
-        run: ./build.ps1 -CoreBridge -RunTests -OutputDirectory ./artifacts/core -UpdateFeedUrl https://github.com/benjaaal/Flow/releases/latest/download/MacFlow-update.json
-      - name: Build and test complete 26.5.0 with local models
+        env:
+          MACFLOW_REPOSITORY: ${{ github.repository }}
+        run: ./build.ps1 -RunTests -OutputDirectory ./artifacts -UpdateFeedUrl ('https://github.com/'+$env:MACFLOW_REPOSITORY+'/releases/latest/download/MacFlow-update.json')
+      - name: Validate native layout and cancellation
         shell: powershell
-        run: ./build.ps1 -RunTests -OutputDirectory ./artifacts/full -UpdateFeedUrl https://github.com/benjaaal/Flow/releases/latest/download/MacFlow-update.json
-      - uses: actions/upload-artifact@v4
+        run: |
+          $out=Join-Path $PWD 'artifacts/verification/redesign'
+          $app=Start-Process -FilePath './artifacts/portable/MacFlow.exe' -ArgumentList @('--revision-smoke',('"'+$out+'"')) -PassThru -WindowStyle Hidden
+          if(!$app.WaitForExit(60000)){Stop-Process -Id $app.Id;throw 'Native layout test timeout'}
+          if($app.ExitCode -ne 0){Get-Content "$out/revision-tests.txt";throw 'Native layout validation failed'}
+      - name: Publish build artifacts
+        uses: actions/upload-artifact@v4
         with:
-          name: MacFlow-staged-update
-          path: |
-            artifacts/core/MacFlow-Setup-26.4.2.exe*
-            artifacts/core/MacFlow-update.json
-            artifacts/core/verification/*.txt
-            artifacts/core/verification/installer/installer-tests.txt
-            artifacts/full/MacFlow-Setup-26.5.0.exe*
-            artifacts/full/MacFlow-update.json
-            artifacts/full/verification/*.txt
-            artifacts/full/verification/installer/installer-tests.txt
+          name: MacFlow-Windows-x64
+          path: artifacts/
           if-no-files-found: error
   release:
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref_name == github.event.repository.default_branch)
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/v') || github.ref_name == github.event.repository.default_branch))
     needs: build
     runs-on: windows-2022
     permissions:
@@ -54,39 +41,24 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: MacFlow-staged-update
+          name: MacFlow-Windows-x64
           path: artifacts
-      - name: Publish both stages with legacy-compatible entry point
+      - name: Publish verified version and installer
         shell: powershell
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          $ErrorActionPreference='Stop'
-          foreach($kind in @('core','full')){
-            $manifest=Join-Path ('artifacts/'+$kind) 'MacFlow-update.json'
-            $package=Get-Content -Raw -LiteralPath $manifest | ConvertFrom-Json
-            $installer=Join-Path ('artifacts/'+$kind) $package.Installer
-            if((Get-FileHash $installer -Algorithm SHA256).Hash -ne $package.Sha256){throw 'SHA256 incorrecto'}
-            if((Get-Item $installer).Length -ne $package.Size){throw 'Tamaño incorrecto'}
-            if($kind -eq 'core' -and ($package.Version -ne '26.4.2' -or $package.Size -gt 64MB)){throw 'La base no es compatible'}
-            if($kind -eq 'full' -and $package.Version -ne '26.5.0'){throw 'Versión completa incorrecta'}
-          }
-          gh release upload v26.5.0 artifacts/full/MacFlow-Setup-26.5.0.exe artifacts/full/MacFlow-Setup-26.5.0.exe.config artifacts/full/MacFlow-update.json --repo $env:GH_REPO --clobber
-          if($LASTEXITCODE -ne 0){throw 'Falló la publicación completa'}
-          gh release edit v26.5.0 --repo $env:GH_REPO --title 'MacFlow 26.5.0 — Completa' --notes 'Versión completa con voz local español/inglés, reconocimiento facial experimental propio con controles contra fotos, PIN y renovación de MacFlow. Desde 26.4.1 instalar primero 26.4.2, que repara el límite del actualizador. No equivale a Face ID de Apple.'
-          if($LASTEXITCODE -ne 0){throw 'Falló la información de la versión completa'}
+          $package=Get-Content -Raw -LiteralPath artifacts/MacFlow-update.json | ConvertFrom-Json
+          $tag='v'+$package.Version
+          if ($env:GITHUB_REF -like 'refs/tags/*' -and $env:GITHUB_REF_NAME -ne $tag) { throw 'El tag no coincide con la versión compilada.' }
+          $installer=Join-Path 'artifacts' $package.Installer
+          if ((Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash -ne $package.Sha256) { throw 'El SHA256 del instalador no coincide.' }
+          $oldPreference=$ErrorActionPreference
           $ErrorActionPreference='Continue'
-          gh release view v26.4.2 --repo $env:GH_REPO --json tagName 2>$null
-          $baseExists=$LASTEXITCODE -eq 0
-          $ErrorActionPreference='Stop'
-          if(!$baseExists){
-            gh release create v26.4.2 artifacts/core/MacFlow-Setup-26.4.2.exe artifacts/core/MacFlow-Setup-26.4.2.exe.config artifacts/core/MacFlow-update.json --repo $env:GH_REPO --target $env:GITHUB_SHA --title 'MacFlow 26.4.2 — Reparación del actualizador' --notes 'Actualización liviana compatible con 26.4.1. Corrige el límite de tamaño y mejora los mensajes de integridad. Modelos de voz y rostro disponibles después en 26.5.0.' --latest
-            if($LASTEXITCODE -ne 0){throw 'Falló la publicación base'}
-          }else{
-            gh release upload v26.4.2 artifacts/core/MacFlow-Setup-26.4.2.exe artifacts/core/MacFlow-Setup-26.4.2.exe.config artifacts/core/MacFlow-update.json --repo $env:GH_REPO --clobber
-            if($LASTEXITCODE -ne 0){throw 'Falló el paquete base corregido'}
-          }
-          $notes='Paquete base liviano, reconstruido para versiones 26.4.1 y anteriores con límite de 64 MB. Incluye mejoras visuales, estabilidad y Privacidad con PIN. Voz y reconocimiento facial se instalan después mediante la actualización 26.5.0. Conserva preferencias. Código del paquete base: https://github.com/'+$env:GH_REPO+'/commit/'+$env:GITHUB_SHA
-          gh release edit v26.4.2 --repo $env:GH_REPO --title 'MacFlow 26.4.2 — Base liviana' --notes $notes --latest
-          if($LASTEXITCODE -ne 0){throw 'Falló el canal compatible'}
+          gh release view $tag --repo $env:GH_REPO --json tagName 2>$null
+          $exists=$LASTEXITCODE -eq 0
+          $ErrorActionPreference=$oldPreference
+          if ($exists) { Write-Output 'Esta versión ya está publicada; no se reemplazará.'; exit 0 }
+          gh release create $tag $installer ($installer+'.config') 'artifacts/MacFlow-update.json' --repo $env:GH_REPO --target $env:GITHUB_SHA --generate-notes --title ('MacFlow '+$package.Version)
+          if ($LASTEXITCODE -ne 0) { throw 'No se pudo publicar la versión.' }

@@ -80,7 +80,7 @@ namespace MacFlow
         }
         public async Task<string> Ask(string question,CancellationToken cancellation,Action<string> progress)
         {
-            if(String.IsNullOrWhiteSpace(question)||question.Length>4000)throw new IOException("Escribí una pregunta de hasta 4000 caracteres.");
+            if(String.IsNullOrWhiteSpace(question)||question.Length>30000)throw new IOException("La consulta supera el tamaño disponible. Resumí las pestañas por grupos.");
             if(!await gate.WaitAsync(0,cancellation))throw new IOException("Hay otra consulta de Gemini en curso.");
             try
             {
