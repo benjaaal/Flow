@@ -41,7 +41,7 @@ namespace MacFlow
         private readonly Image wallpaper=new Image{Stretch=Stretch.UniformToFill};
         private readonly Grid cover,access;private Border musicFace;private readonly TranslateTransform slide=new TranslateTransform();
         private readonly PrivacyClock time;private readonly TextBlock date,message;private readonly PasswordBox pin,confirmation;
-        private readonly Button submit,hello;private readonly MediaCard media;
+        private readonly Button submit;private readonly MediaCard media;
         private readonly DispatcherTimer clock=new DispatcherTimer{Interval=TimeSpan.FromSeconds(1)};
         private readonly System.Collections.Generic.List<Window> curtains=new System.Collections.Generic.List<Window>();
         private bool closed,allowed,working;private Point? drag;
@@ -65,7 +65,7 @@ namespace MacFlow
             var account=Label(Environment.UserName,24,true);account.TextAlignment=TextAlignment.Center;form.Children.Add(account);
             message=Label(profile.Configured?"Ingresá tu PIN de MacFlow":"Creá un PIN de MacFlow",12,false);message.TextWrapping=TextWrapping.Wrap;message.TextAlignment=TextAlignment.Center;message.Margin=new Thickness(0,10,0,18);form.Children.Add(message);
             pin=Password("PIN de MacFlow");confirmation=Password("Repetir PIN de MacFlow");confirmation.Visibility=profile.Configured?Visibility.Collapsed:Visibility.Visible;form.Children.Add(pin);form.Children.Add(confirmation);
-            submit=Design.Button(profile.Configured?"Desbloquear":"Guardar PIN",SubmitPin,true);submit.Height=36;submit.Margin=new Thickness(0,12,0,8);form.Children.Add(submit);hello=Design.Button("Windows Hello",VerifyHello,false);hello.Height=34;hello.Foreground=Brushes.White;hello.Background=Design.Brush("#28FFFFFF");form.Children.Add(hello);
+            submit=Design.Button(profile.Configured?"Desbloquear":"Guardar PIN",SubmitPin,true);submit.Height=36;submit.Margin=new Thickness(0,12,0,8);form.Children.Add(submit);
             var back=Design.Button("Volver",HideAccess,false);back.Background=Brushes.Transparent;back.Foreground=Brushes.White;form.Children.Add(back);var help=Label("PIN local · 6 a 12 números\nRecuperar MacFlow: Ctrl + Windows + Alt",10,false);help.TextAlignment=TextAlignment.Center;help.Margin=new Thickness(0,20,0,0);form.Children.Add(help);access.Children.Add(form);root.Children.Add(access);Content=root;
             if(owner.IsTesting){ShowActivated=false;IsHitTestVisible=false;SourceInitialized+=delegate{Native.NoActivate(this);};}
             SourceInitialized+=delegate{Native.OpaquePresentation(this);};Loaded+=async delegate{Tick();clock.Start();if(!owner.IsTesting&&!demonstration){var physical=System.Windows.Forms.Screen.PrimaryScreen.Bounds;Native.SetWindowPos(new System.Windows.Interop.WindowInteropHelper(this).Handle,new IntPtr(-1),physical.Left,physical.Top,physical.Width,physical.Height,0x40);CoverOtherDisplays();}if(wallpaper.Source==null){var image=await WelcomeWallpaper.Load(owner.Preferences.WallpaperPath);if(!closed)wallpaper.Source=image;}};clock.Tick+=delegate{Tick();};
@@ -100,12 +100,6 @@ namespace MacFlow
             if(closed||working)return;string value=pin.Password,again=confirmation.Password;pin.Clear();confirmation.Clear();working=true;submit.IsEnabled=false;
             try{if(!profile.Configured){if(!PrivacyProfile.ValidPin(value)||value!=again){message.Text="Usá 6 a 12 números y repetí el mismo PIN.";return;}await Task.Run(()=>profile.SetPin(value));if(!closed)Unlock();}else{bool ok=await Task.Run(()=>profile.Verify(value));if(!closed){if(ok)Unlock();else message.Text=DateTime.UtcNow<profile.RetryUtc?"Esperá 30 segundos antes de volver a intentar.":"PIN incorrecto. Intentá de nuevo.";}}}
             catch(Exception ex){if(!closed)message.Text="No se pudo leer o guardar tu PIN.";Log.Write("Privacidad: "+ex.GetType().Name);}finally{working=false;if(!closed)submit.IsEnabled=true;}
-        }
-        private async void VerifyHello()
-        {
-            if(closed||working||desktop.IsTesting)return;working=true;hello.IsEnabled=false;submit.IsEnabled=false;
-            try{var availability=await WindowsHello.Availability();if(closed)return;if(availability!=Windows.Security.Credentials.UI.UserConsentVerifierAvailability.Available){message.Text="Windows Hello no está disponible. Usá tu PIN de MacFlow.";return;}Topmost=false;var result=await WindowsHello.Verify(new System.Windows.Interop.WindowInteropHelper(this).Handle);if(!closed){if(result==Windows.Security.Credentials.UI.UserConsentVerificationResult.Verified)Unlock();else message.Text="Verificación cancelada. Podés volver a intentar.";}}
-            catch(Exception ex){if(!closed)message.Text="No se pudo abrir Windows Hello. Usá tu PIN de MacFlow.";Log.Write("Windows Hello: "+ex.GetType().Name);}finally{working=false;if(!closed){Topmost=true;hello.IsEnabled=true;submit.IsEnabled=true;}}
         }
         private void CoverOtherDisplays()
         {

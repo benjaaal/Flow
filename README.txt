@@ -8,7 +8,7 @@ controles circulares y reguladores verticales independientes. Música sólo
 con sesión multimedia; carátula real, ampliación y controles de Windows.
 
 Privacidad: reloj y música; deslizá desde el borde inferior para mostrar
-el PIN de MacFlow o Windows Hello. También Enter/Espacio para teclado.
+el PIN de MacFlow. También Enter/Espacio para teclado.
 La cortina cubre las pantallas secundarias. Ctrl+Windows abre Privacidad;
 Ctrl+Windows+Alt recupera el escritorio. Es una cortina recuperable de
 MacFlow: el bloqueo y las credenciales de Windows siguen perteneciendo a Windows.
@@ -32,7 +32,7 @@ su monitor preferido al desconectarlo, y los paneles respetan el área útil.
 
 Validación: pruebas aisladas de núcleo, instalador, modelos de voz y
 ventanas nativas. La grabación física con dos monitores de DPI diferente,
-micrófono, Windows Hello, Gemini autenticado y arranque tras apagar/encender
+micrófono, Gemini autenticado y arranque tras apagar/encender
 requiere prueba interactiva. En este entorno algunas capturas del compositor
 son negras; se verificaron también renders WPF de las ventanas reales.
 No se afirma 60 FPS constantes ni reemplazo de las animaciones de apps ajenas.

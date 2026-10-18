@@ -90,7 +90,7 @@ namespace MacFlow
                     title.Text="Deslizá. Y tomá el control.";description.Text="Arrastrá hacia abajo desde la batería o los indicadores con clic izquierdo o derecho. Música, brillo y sonido comparten una distribución compacta; los accesos quedan debajo.";
                     example=new ControlCenter(desktop);var controlBody=(UIElement)example.Content;example.Content=null;example.Content=new Viewbox{Child=controlBody,Stretch=Stretch.Uniform};ShowExample();SlidePreview(80);CreatePointer(example.Width-34,28,160);break;
                 case 2:
-                    title.Text="Un momento para vos.";description.Text="Ctrl + Windows abre Privacidad: reloj, música y avisos, mientras tus tareas siguen. Deslizá desde abajo y usá tu PIN local o Windows Hello. Ctrl + Windows + Alt recupera el escritorio.";
+                    title.Text="Un momento para vos.";description.Text="Ctrl + Windows abre Privacidad: reloj, música y avisos, mientras tus tareas siguen. Deslizá desde abajo y usá tu PIN local. Ctrl + Windows + Alt recupera el escritorio.";
                     example=new PrivacyScreen(desktop,true){Width=560,Height=400};ShowExample();SlidePreview(18);break;                case 3:
                     title.Text="Pequeños espacios, más tuyos.";description.Text="Galería en dos columnas, datos grandes y materiales consistentes: transparente, oscuro o claro. Usá su menú para elegir tamaño y acomodalos arrastrando el fondo.";
                     example=new DesktopWidget(desktop.Widgets,new WidgetSpec{Kind="Calendar",Size="S",Surface="Dark"}){Width=164,Height=164};ShowExample();SlidePreview(18);break;
