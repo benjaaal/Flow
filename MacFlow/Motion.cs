@@ -7,7 +7,7 @@ namespace MacFlow
     // discrete navigation has finite clocks and exact, cancellable endpoints.
     internal static class Motion
     {
-        internal const int Hover=160,Press=100,Menu=220,Panel=340,WindowClose=380,Content=240;
+        internal const int Hover=160,Press=100,Menu=220,Panel=260,WindowClose=320,Content=190;
         // Isolated fixture processes can exercise both policies without changing
         // Windows. Normal application and installer sessions leave this unset.
         internal static bool? TestClientAreaAnimations;
@@ -28,9 +28,7 @@ namespace MacFlow
         internal static void Spring(ref double value,ref double velocity,double target,double seconds,double omega=25,double damping=.94)
         {
             if(seconds<=0){value=target;velocity=0;return;}
-            double rate=omega*damping,frequency=omega*Math.Sqrt(1-damping*damping),offset=value-target,b=(velocity+rate*offset)/frequency,t=seconds;
-            double decay=Math.Exp(-rate*t),cos=Math.Cos(frequency*t),sin=Math.Sin(frequency*t),wave=offset*cos+b*sin;
-            value=target+decay*wave;velocity=decay*(-rate*wave-offset*frequency*sin+b*frequency*cos);
+            double t=seconds,offset=value-target,u=velocity+omega*offset,decay=Math.Exp(-omega*t);value=target+(offset+u*t)*decay;velocity=(velocity-omega*u*t)*decay;
         }
     }
 }

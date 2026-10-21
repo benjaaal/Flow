@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -46,9 +46,9 @@ namespace MacFlow
         }
         public static Brush Ink { get { return Brush(Dark ? "#F5F5F7" : "#202023"); } }
         public static Brush Muted { get { return Brush(Dark ? "#C5C5CC" : "#5D5D64"); } }
-        public static Brush ContentSurface {get{return Brush(Dark?"#ED1C1C1E":"#F4F5F5F7");}}
+        public static Brush ContentSurface {get{return Brush(Dark?"#C9252528":"#DAF8F8FA");}}
         public static Brush SidebarSurface {get{return Brush(Dark?"#10202024":"#18FFFFFF");}}
-        public static Brush CardSurface {get{return Brush(Dark?"#EC2C2C2E":"#F8FFFFFF");}}
+        public static Brush CardSurface {get{return Brush(Dark?"#693A3A40":"#9CFFFFFF");}}
         public static Border Glass(UIElement child, int radius, bool dock, bool contain=false)
         {
             var background = MaterialTint(dock,Dark);
@@ -64,7 +64,7 @@ namespace MacFlow
         {
             // Clear material for navigation; a regular material behind text.
             // This is a tint above the real clipped compositor backdrop.
-            var colors=dock?dark?new[]{"#30232326","#16232326","#28232326"}:new[]{"#60FFFFFF","#30FFFFFF","#48FFFFFF"}:dark?new[]{"#B8202023","#AC202023","#B8202023"}:new[]{"#D9FAFAFC","#CCFAFAFC","#D9FAFAFC"};
+            var colors=dock?dark?new[]{"#30232326","#16232326","#28232326"}:new[]{"#60FFFFFF","#30FFFFFF","#48FFFFFF"}:dark?new[]{"#94232328","#80232328","#90232328"}:new[]{"#B8FAFAFC","#9CFAFAFC","#B0FAFAFC"};
             var brush=new LinearGradientBrush{StartPoint=new Point(0,0),EndPoint=new Point(.8,1)};
             for(int i=0;i<3;i++){var color=(Color)ColorConverter.ConvertFromString(colors[i]);color.A=(byte)Math.Min(220,color.A*Math.Max(dock?.5:1,GlassOpacity/.18));brush.GradientStops.Add(new GradientStop(color,i==0?0:i==1?.48:1));}brush.Freeze();return brush;
         }
@@ -74,17 +74,17 @@ namespace MacFlow
         }
         public static Button Button(string text, Action action, bool prominent)
         {
-            var b = new Button { Content = text, HorizontalContentAlignment=HorizontalAlignment.Center,VerticalContentAlignment=VerticalAlignment.Center, Foreground = prominent ? Brushes.White : Ink, Background = prominent ? Brush("#007AFF") : Brush(Dark ? "#16FFFFFF" : "#FFFFFFFF"), BorderBrush = Brushes.Transparent, BorderThickness = new Thickness(0), Padding = new Thickness(12, 5, 12, 5), Margin = new Thickness(0, 3, 6, 3), Cursor = Cursors.Hand, FontSize = 13 };
+            var b = new Button { MinHeight=30, Content = text, HorizontalContentAlignment=HorizontalAlignment.Center,VerticalContentAlignment=VerticalAlignment.Center, Foreground = prominent ? Brushes.White : Ink, Background = prominent ? Brush("#007AFF") : Brush(Dark ? "#20FFFFFF" : "#A8FFFFFF"), BorderBrush = Brushes.Transparent, BorderThickness = new Thickness(0), Padding = new Thickness(12, 5, 12, 5), Margin = new Thickness(0, 3, 6, 3), Cursor = Cursors.Hand, FontSize = 13 };
             var template = new ControlTemplate(typeof(Button));
             var disabled=new Trigger{Property=UIElement.IsEnabledProperty,Value=false};disabled.Setters.Add(new Setter(UIElement.OpacityProperty,.42));template.Triggers.Add(disabled);
-            var border = new FrameworkElementFactory(typeof(Border));border.Name="AnimatedFace";border.SetValue(UIElement.RenderTransformProperty,new ScaleTransform(1,1));border.SetValue(UIElement.RenderTransformOriginProperty,new Point(.5,.5));border.SetValue(Border.CornerRadiusProperty, new CornerRadius(9)); border.SetValue(Border.BackgroundProperty, new TemplateBindingExtension(Control.BackgroundProperty)); border.SetValue(Border.BorderBrushProperty,new TemplateBindingExtension(Control.BorderBrushProperty)); border.SetValue(Border.BorderThicknessProperty,new TemplateBindingExtension(Control.BorderThicknessProperty));
+            var border = new FrameworkElementFactory(typeof(Border));border.Name="AnimatedFace";border.SetValue(UIElement.RenderTransformProperty,new ScaleTransform(1,1));border.SetValue(UIElement.RenderTransformOriginProperty,new Point(.5,.5));border.SetValue(Border.CornerRadiusProperty, new CornerRadius(12)); border.SetValue(Border.BackgroundProperty, new TemplateBindingExtension(Control.BackgroundProperty)); border.SetValue(Border.BorderBrushProperty,new TemplateBindingExtension(Control.BorderBrushProperty)); border.SetValue(Border.BorderThicknessProperty,new TemplateBindingExtension(Control.BorderThicknessProperty));
             var cp = new FrameworkElementFactory(typeof(ContentPresenter)); cp.SetValue(FrameworkElement.MarginProperty, new TemplateBindingExtension(Control.PaddingProperty)); cp.SetValue(FrameworkElement.HorizontalAlignmentProperty, new TemplateBindingExtension(Control.HorizontalContentAlignmentProperty)); cp.SetValue(FrameworkElement.VerticalAlignmentProperty, new TemplateBindingExtension(Control.VerticalContentAlignmentProperty));
             var layers=new FrameworkElementFactory(typeof(Grid));var glint=new FrameworkElementFactory(typeof(Border));glint.Name="Glint";glint.SetValue(Border.CornerRadiusProperty,new CornerRadius(14));glint.SetValue(Border.BackgroundProperty,new LinearGradientBrush(Colors.White,Colors.Transparent,70));glint.SetValue(UIElement.OpacityProperty,0.0);glint.SetValue(UIElement.IsHitTestVisibleProperty,false);layers.AppendChild(glint);layers.AppendChild(cp);border.AppendChild(layers);var hitArea=new FrameworkElementFactory(typeof(Grid));hitArea.SetValue(System.Windows.Controls.Panel.BackgroundProperty,Brushes.Transparent);hitArea.AppendChild(border);template.VisualTree = hitArea; b.Template = template;
             if(!prominent)b.SetResourceReference(Control.ForegroundProperty,"GlassInk");
             b.RenderTransformOrigin = new Point(.5, .5); b.RenderTransform = new ScaleTransform(1, 1);
             b.MouseEnter += delegate { AnimateGlint(b,.065); }; b.MouseLeave += delegate { Scale(b, 1); AnimateGlint(b,0); };
             b.PreviewMouseLeftButtonDown+=delegate {Scale(b,.985);};b.PreviewMouseLeftButtonUp+=delegate {Scale(b,1);};
-            b.Click += delegate { if(action!=null)action(); }; return b;
+            b.IsKeyboardFocusWithinChanged+=delegate{b.BorderBrush=b.IsKeyboardFocusWithin?Brush(Accent):Brushes.Transparent;b.BorderThickness=new Thickness(b.IsKeyboardFocusWithin?1:0);};b.Click += delegate { if(action!=null)action(); }; return b;
         }
         private static void AnimateGlint(Button button,double value)
         {
@@ -101,17 +101,22 @@ namespace MacFlow
             if (!Motion.Enabled) { transform.BeginAnimation(ScaleTransform.ScaleXProperty, null); transform.BeginAnimation(ScaleTransform.ScaleYProperty, null); transform.ScaleX = transform.ScaleY = value; return; }
             Motion.To(transform,ScaleTransform.ScaleXProperty,value,value<1?Motion.Press:Motion.Hover);Motion.To(transform,ScaleTransform.ScaleYProperty,value,value<1?Motion.Press:Motion.Hover);
         }
+        internal static void CompleteGenieOpen(Window window)
+        {
+            if(!WindowLife.Alive(window)||!window.IsVisible||(bool)window.GetValue(DismissingProperty)||(bool)window.GetValue(MinimizingProperty))return;
+            PanelMotion.Reset(window);window.BeginAnimation(UIElement.OpacityProperty,null);window.Opacity=1;CompositorGlass.Resize(window,1);
+        }
         public static void Reveal(Window window)
         {
-            if(!WindowLife.Alive(window)||(bool)window.GetValue(DismissingProperty))return;
+            if(!WindowLife.Alive(window)||(bool)window.GetValue(DismissingProperty)||PanelMotion.IsTransitioning(window))return;
             if (!Motion.Enabled) return;
-            if(!PanelMotion.FromTop(window)&&GenieTransition.TryStart(window,Motion.Panel,true))
+            if((bool)window.GetValue(PanelMotion.UseDockEntrance)&&!PanelMotion.FromTop(window)&&GenieTransition.TryStart(window,Motion.Panel,true))
             {
                 window.BeginAnimation(UIElement.OpacityProperty,null);window.Opacity=0;CompositorGlass.Resize(window,1);PanelMotion.Open(window);
-                var reveal=new DoubleAnimation(0,0,TimeSpan.FromMilliseconds(Motion.Panel+10));reveal.Completed+=delegate{if(window.IsVisible&&!(bool)window.GetValue(DismissingProperty)&&!(bool)window.GetValue(MinimizingProperty)){window.BeginAnimation(UIElement.OpacityProperty,null);window.Opacity=1;CompositorGlass.Resize(window,1);}};window.BeginAnimation(UIElement.OpacityProperty,reveal);return;
+                var reveal=new DoubleAnimation(0,0,TimeSpan.FromMilliseconds(Motion.Panel+10));reveal.Completed+=delegate{if(WindowLife.Alive(window)&&window.IsVisible&&!(bool)window.GetValue(DismissingProperty)&&!(bool)window.GetValue(MinimizingProperty)){window.BeginAnimation(UIElement.OpacityProperty,null);window.Opacity=1;CompositorGlass.Resize(window,1);}};window.BeginAnimation(UIElement.OpacityProperty,reveal);return;
             }
             var entrance = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(window.Title=="MacFlow · Menú"?Motion.Menu:Motion.Content)) { EasingFunction = Motion.Ease() };
-            entrance.Completed += delegate { if(window.IsVisible&&!(bool)window.GetValue(DismissingProperty)&&!(bool)window.GetValue(MinimizingProperty))window.BeginAnimation(UIElement.OpacityProperty,null); };
+            entrance.Completed += delegate { if(WindowLife.Alive(window)&&window.IsVisible&&!(bool)window.GetValue(DismissingProperty)&&!(bool)window.GetValue(MinimizingProperty))window.BeginAnimation(UIElement.OpacityProperty,null); };
             window.BeginAnimation(UIElement.OpacityProperty, entrance);
             PanelMotion.Open(window);
         }

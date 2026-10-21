@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Windows;
@@ -7,14 +7,15 @@ using System.Windows.Threading;
 namespace MacFlow
 {
     // Only integration fixtures use this provider; production uses WindowsMediaSource.
-    internal sealed class MediaFixture : IMediaSource
+    internal sealed class MediaFixture : IMediaSource,ISeekMediaSource
     {
         public event Action Changed;
         internal MediaState State=new MediaState {Title="Canción de prueba",Artist="Artista de prueba",CanToggle=true,CanNext=true,CanPrevious=true};
-        internal int Calls;internal bool Disposed;
+        internal int Calls;internal bool Disposed;internal bool FailNextRead;
         internal TaskCompletionSource<MediaState> Delayed;
-        public Task<MediaState> Read(){if(Delayed!=null){var task=Delayed.Task;Delayed=null;return task;}return Task.FromResult(State);}
+        public Task<MediaState> Read(){if(FailNextRead){FailNextRead=false;throw new Exception("Fallo multimedia transitorio de prueba");}if(Delayed!=null){var task=Delayed.Task;Delayed=null;return task;}return Task.FromResult(State);}
         public Task<bool> Command(MediaCommand command){Calls++;if(command==MediaCommand.Toggle)State.Playing=!State.Playing;return Task.FromResult(true);}
+        public Task<bool> Seek(TimeSpan position){State.Position=position;return Task.FromResult(true);}
         internal void Publish(){var callback=Changed;if(callback!=null)callback();}
         public void Dispose(){Disposed=true;Changed=null;}
     }

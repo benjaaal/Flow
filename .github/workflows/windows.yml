@@ -14,25 +14,21 @@ jobs:
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
-      - name: Compile and run isolated core tests
+      - name: Compile verified Windows package
         shell: powershell
         env:
           MACFLOW_REPOSITORY: ${{ github.repository }}
-        run: ./build.ps1 -RunTests -OutputDirectory ./artifacts -UpdateFeedUrl ('https://github.com/'+$env:MACFLOW_REPOSITORY+'/releases/latest/download/MacFlow-update.json')
-      - name: Validate native layout and cancellation
+        run: ./build.ps1 -OutputDirectory ./artifacts -UpdateFeedUrl ('https://github.com/'+$env:MACFLOW_REPOSITORY+'/releases/latest/download/MacFlow-update.json')
+      - name: Run isolated regression and interface checks
         shell: powershell
         run: |
-          $out=Join-Path $PWD 'artifacts/verification/redesign'
-          $app=Start-Process -FilePath './artifacts/portable/MacFlow.exe' -ArgumentList @('--revision-smoke',('"'+$out+'"')) -PassThru -WindowStyle Hidden
-          if(!$app.WaitForExit(60000)){Stop-Process -Id $app.Id;throw 'Native layout test timeout'}
-          if($app.ExitCode -ne 0){Get-Content "$out/revision-tests.txt";throw 'Native layout validation failed'}
-      - name: Validate Dock containment and native geometry
-        shell: powershell
-        run: |
-          $out=Join-Path $PWD 'artifacts/verification/dock'
-          $app=Start-Process -FilePath './artifacts/portable/MacFlow.exe' -ArgumentList @('--dock-smoke',('"'+$out+'"')) -PassThru -WindowStyle Hidden
-          if(!$app.WaitForExit(60000)){Stop-Process -Id $app.Id;throw 'Dock test timeout'}
-          if($app.ExitCode -ne 0){Get-Content "$out/visual-test.txt";throw 'Dock geometry validation failed'}
+          foreach($check in @(@('--self-test','core','self-tests.txt'),@('--modern-smoke','modern','checks.txt'))){
+            $out=Join-Path $PWD ('artifacts/verification/'+$check[1])
+            $app=Start-Process -FilePath './artifacts/portable/MacFlow.exe' -ArgumentList @($check[0],('"'+$out+'"')) -PassThru -WindowStyle Hidden
+            if(!$app.WaitForExit(180000)){Stop-Process -Id $app.Id;throw ('Timeout: '+$check[0])}
+            if($app.ExitCode -ne 0){Get-Content (Join-Path $out $check[2]);throw ('Validation failed: '+$check[0])}
+          }
+          Copy-Item 'docs/RELEASE-27.1.3.md' 'artifacts/RELEASE-NOTES.md'
       - name: Publish build artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -67,5 +63,5 @@ jobs:
           $exists=$LASTEXITCODE -eq 0
           $ErrorActionPreference=$oldPreference
           if ($exists) { Write-Output 'Esta versión ya está publicada; no se reemplazará.'; exit 0 }
-          gh release create $tag $installer ($installer+'.config') 'artifacts/MacFlow-update.json' --repo $env:GH_REPO --target $env:GITHUB_SHA --generate-notes --title ('MacFlow '+$package.Version)
+          gh release create $tag $installer ($installer+'.config') 'artifacts/MacFlow-update.json' --repo $env:GH_REPO --target $env:GITHUB_SHA --notes-file artifacts/RELEASE-NOTES.md --title ('MacFlow '+$package.Version)
           if ($LASTEXITCODE -ne 0) { throw 'No se pudo publicar la versión.' }

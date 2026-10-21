@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 using System.Windows.Automation;
 namespace MacFlow
 {
-    internal enum LocalIntent {Unknown,Open,Search,Gemini,Write,Minimize,Close,Read,Control,Settings,Tasks,VolumeUp,VolumeDown,Summary}
+    internal enum LocalIntent {Unknown,Open,Search,Gemini,Write,Minimize,Close,Read,Control,Settings,Tasks,VolumeUp,VolumeDown,Summary,DockShow,DockHide}
     internal sealed class LocalRequest {internal LocalIntent Intent;internal string Argument="";}
     internal static class LocalCommands
     {
@@ -20,6 +20,7 @@ namespace MacFlow
         {
             string raw=(text??"").Trim();string n=Normalize(raw);var r=new LocalRequest();
             if(Regex.IsMatch(n,@"^(resumi|resumime|resume|resumir|resumen|haceme un resumen|haz un resumen)(\s|$)")){r.Intent=LocalIntent.Summary;return r;}
+            if(Regex.IsMatch(n,@"^(no ocultar|no ocultes|no escondas|deja visible|dejar visible|muestra|mostra|mostrar)( el)? dock[.!?@]*$")){r.Intent=LocalIntent.DockShow;return r;}if(Regex.IsMatch(n,@"^(oculta|ocultar|esconde|esconder)( el)? dock[.!?]*$")){r.Intent=LocalIntent.DockHide;return r;}
             if(n=="centro de control"){r.Intent=LocalIntent.Control;return r;}if(n=="configuracion"||n=="ajustes"){r.Intent=LocalIntent.Settings;return r;}if(n=="administrador de tareas"){r.Intent=LocalIntent.Tasks;return r;}
             if(n=="subi el volumen"||n=="sube el volumen"){r.Intent=LocalIntent.VolumeUp;return r;}if(n=="baja el volumen"||n=="baja volumen"){r.Intent=LocalIntent.VolumeDown;return r;}
             if(n=="lee"||n=="leeme"||n=="lee la pagina"||n=="lee gemini"||n=="leeme la respuesta"){r.Intent=LocalIntent.Read;return r;}

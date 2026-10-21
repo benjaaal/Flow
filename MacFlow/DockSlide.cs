@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -22,7 +22,7 @@ namespace MacFlow
         private double Travel {get{if(Axis==Window.TopProperty)return window.Height+20;var area=DisplaySpace.For(window).Dips;return window.Left<area.Left+area.Width/2?-(window.Width+20):window.Width+20;}}
         private void Prepare(){if(!moving){axis=Axis;resting=Current;}moving=true;}
         private void Reset(){window.BeginAnimation(Axis,null);window.SetValue(Axis,resting);moving=false;}
-        internal void PositionChanging(){if(!moving)return;generation++;fallback.Stop();Reset();}
+        internal void PositionChanging(){if(!moving)return;bool hide=!requested;generation++;fallback.Stop();Reset();if(hide){window.Hide();window.IsHitTestVisible=true;}}
         internal Native.RECT RestingBounds()
         {
             Native.RECT rect;Native.GetWindowRect(new WindowInteropHelper(window).Handle,out rect);if(!moving)return rect;
@@ -37,7 +37,7 @@ namespace MacFlow
             double start=window.IsVisible?Current:resting+Travel;
             if(immediately||!Motion.Enabled){Reset();if(!window.IsVisible)window.Show();return;}
             window.BeginAnimation(Axis,null);window.SetValue(Axis,resting);
-            var slide=new DoubleAnimation(start,resting,TimeSpan.FromMilliseconds(390)){EasingFunction=new SpringEase{EasingMode=EasingMode.EaseIn}};Timeline.SetDesiredFrameRate(slide,60);
+            var slide=new DoubleAnimation(start,resting,TimeSpan.FromMilliseconds(240)){EasingFunction=new CubicEase{EasingMode=EasingMode.EaseOut}};Timeline.SetDesiredFrameRate(slide,60);
             slide.Completed+=delegate{if(request==generation&&requested)Reset();};window.BeginAnimation(Axis,slide);if(!window.IsVisible)window.Show();
         }
         internal void Hide(bool immediately=false)

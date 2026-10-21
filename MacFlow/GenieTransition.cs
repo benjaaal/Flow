@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
@@ -18,8 +18,12 @@ namespace MacFlow
         [DllImport("gdi32.dll")]private static extern bool DeleteObject(IntPtr value);
         internal static int ActiveCount;
         internal static event Action<Window,GenieSurface> Started;
+        private sealed class Transition{internal Action<bool,int> Retarget;}
+        private static readonly System.Collections.Generic.Dictionary<Window,Transition> active=new System.Collections.Generic.Dictionary<Window,Transition>();
+        internal static bool DockUsesVertical(Point target,Rect monitor){return Math.Min(Math.Abs(target.Y-monitor.Top),Math.Abs(monitor.Bottom-target.Y))<=Math.Min(Math.Abs(target.X-monitor.Left),Math.Abs(monitor.Right-target.X));}
         internal static bool TryStart(Window source,int duration,bool opening=false)
         {
+            Transition existing;if(active.TryGetValue(source,out existing)){existing.Retarget(opening,duration);return true;}
             if(!Motion.Enabled||RenderCapability.Tier==0||!source.IsVisible||PanelMotion.IsTransitioning(source)||PanelMotion.DockDestination==null||ActiveCount>=2)return false;
             Window overlay=null;Action abort=null;
             try
@@ -33,26 +37,28 @@ namespace MacFlow
                 if(image!=null&&image.Source is BitmapSource)texture=(BitmapSource)image.Source;
                 else
                 {
-                    var desktop=System.Windows.Forms.SystemInformation.VirtualScreen;if(!desktop.Contains(System.Drawing.Rectangle.FromLTRB(rect.Left,rect.Top,rect.Right,rect.Bottom)))return false;
-                    using(var bitmap=new System.Drawing.Bitmap(width,height))
-                    {
-                        using(var graphics=System.Drawing.Graphics.FromImage(bitmap))graphics.CopyFromScreen(rect.Left,rect.Top,0,0,bitmap.Size);
-                        var handle=bitmap.GetHbitmap();try{texture=Imaging.CreateBitmapSourceFromHBitmap(handle,IntPtr.Zero,Int32Rect.Empty,BitmapSizeOptions.FromEmptyOptions());texture.Freeze();}finally{DeleteObject(handle);}
-                    }
+                    // CopyFromScreen also copied overlapping Docks and windows
+                    // into the funnel, producing a visible second Dock. Render
+                    // only our own client visual; native app previews already
+                    // supply their own PrintWindow texture in the Image branch.
+                    var content=source.Content as Visual;if(content==null)return false;
+                    var viewSource=PresentationSource.FromVisual(source);double dpi=viewSource==null?1:viewSource.CompositionTarget.TransformToDevice.M11;
+                    var bitmap=new RenderTargetBitmap(width,height,96*dpi,96*dpi,PixelFormats.Pbgra32);bitmap.Render(content);bitmap.Freeze();texture=bitmap;
                 }
                 var presentation=PresentationSource.FromVisual(source);double scale=presentation==null?1:presentation.CompositionTarget.TransformToDevice.M11;
                 double left=Math.Min(rect.Left,destination.Value.X)-3,top=Math.Min(rect.Top,destination.Value.Y)-3,right=Math.Max(rect.Right,destination.Value.X)+3,bottom=Math.Max(rect.Bottom,destination.Value.Y)+3;
                 var start=new Rect((rect.Left-left)/scale,(rect.Top-top)/scale,width/scale,height/scale);var target=new Point((destination.Value.X-left)/scale,(destination.Value.Y-top)/scale);
-                var surface=new GenieSurface(texture,start,target,Native.GlassRadius(source),(right-left)/scale,(bottom-top)/scale);
+                var monitor=System.Windows.Forms.Screen.FromPoint(new System.Drawing.Point((int)destination.Value.X,(int)destination.Value.Y)).Bounds;bool verticalAxis=DockUsesVertical(destination.Value,new Rect(monitor.Left,monitor.Top,monitor.Width,monitor.Height));
+                var surface=new GenieSurface(texture,start,target,Native.GlassRadius(source),(right-left)/scale,(bottom-top)/scale,verticalAxis);
                 if(opening)surface.SetValue(GenieSurface.ProgressProperty,1.0);
                 overlay=new Window{Title="MacFlow · Transición al Dock",Width=(right-left)/scale,Height=(bottom-top)/scale,Left=left/scale,Top=top/scale,WindowStyle=WindowStyle.None,ResizeMode=ResizeMode.NoResize,AllowsTransparency=true,Background=Brushes.Transparent,ShowInTaskbar=false,ShowActivated=false,Topmost=true,IsHitTestVisible=false,Content=surface};
                 var view=overlay;overlay.SourceInitialized+=delegate{Native.NoActivate(view);var handle=new WindowInteropHelper(view).Handle;Native.SetWindowLong(handle,-20,Native.GetWindowLong(handle,-20)|0x20);};
-                var timeout=new DispatcherTimer(DispatcherPriority.Background){Interval=TimeSpan.FromMilliseconds(duration+160)};bool ended=false,counted=false;EventHandler sourceClosed=null;DependencyPropertyChangedEventHandler hidden=null;
-                Action stop=delegate{if(ended)return;ended=true;timeout.Stop();surface.BeginAnimation(GenieSurface.ProgressProperty,null);source.Closed-=sourceClosed;source.IsVisibleChanged-=hidden;if(view.IsVisible)view.Close();};
+                var timeout=new DispatcherTimer(DispatcherPriority.Background){Interval=TimeSpan.FromMilliseconds(duration+160)};bool ended=false,counted=false,enteringNow=opening;int revision=0;EventHandler sourceClosed=null;DependencyPropertyChangedEventHandler hidden=null;
+                Action stop=delegate{if(ended)return;ended=true;++revision;active.Remove(source);timeout.Stop();surface.BeginAnimation(GenieSurface.ProgressProperty,null);source.Closed-=sourceClosed;source.IsVisibleChanged-=hidden;if(WindowLife.Alive(view))view.Close();};
                 abort=stop;sourceClosed=delegate{stop();};hidden=delegate{if(!source.IsVisible)stop();};source.Closed+=sourceClosed;source.IsVisibleChanged+=hidden;timeout.Tick+=delegate{stop();};overlay.Closed+=delegate{if(counted){ActiveCount--;counted=false;}if(!ended)stop();};
                 overlay.Show();ActiveCount++;counted=true;Native.SetWindowPos(new WindowInteropHelper(overlay).Handle,new IntPtr(-1),(int)left,(int)top,(int)(right-left),(int)(bottom-top),0x50);
-                var notify=Started;if(notify!=null)notify(source,surface);
-                var motion=new DoubleAnimation(opening?1:0,opening?0:1,TimeSpan.FromMilliseconds(duration)){FillBehavior=FillBehavior.HoldEnd};Timeline.SetDesiredFrameRate(motion,60);motion.Completed+=delegate{stop();};surface.BeginAnimation(GenieSurface.ProgressProperty,motion);timeout.Start();return true;
+                var notify=Started;if(notify!=null)notify(source,surface);if(ended)return false;
+                var transition=new Transition();transition.Retarget=delegate(bool entering,int milliseconds){if(ended)return;enteringNow=entering;int token=++revision;double current=surface.Progress,end=entering?0:1;surface.BeginAnimation(GenieSurface.ProgressProperty,null);surface.SetValue(GenieSurface.ProgressProperty,current);double length=Math.Max(90,milliseconds*Math.Abs(end-current));timeout.Stop();timeout.Interval=TimeSpan.FromMilliseconds(length+160);var motion=new DoubleAnimation(current,end,TimeSpan.FromMilliseconds(length)){FillBehavior=FillBehavior.HoldEnd};Timeline.SetDesiredFrameRate(motion,60);motion.Completed+=delegate{if(token!=revision||ended)return;if(enteringNow)Design.CompleteGenieOpen(source);stop();};surface.BeginAnimation(GenieSurface.ProgressProperty,motion);timeout.Start();};active[source]=transition;transition.Retarget(opening,duration);return true;
             }
             catch(Exception ex){if(abort!=null)abort();else if(overlay!=null&&overlay.IsVisible)overlay.Close();Log.Write("Transición curva no disponible: "+ex.Message);return false;}
         }
@@ -64,9 +70,9 @@ namespace MacFlow
         internal double Progress{get{return (double)GetValue(ProgressProperty);}}
         internal Point Tail{get;private set;}
         internal double TopWidth{get;private set;}internal double TailWidth{get;private set;}
-        internal GenieSurface(BitmapSource texture,Rect start,Point target,double radius,double width,double height)
+        internal GenieSurface(BitmapSource texture,Rect start,Point target,double radius,double width,double height,bool? verticalAxis=null)
         {
-            this.start=start;this.target=target;canvasHeight=height;double dx=target.X-(start.Left+start.Width/2),dy=target.Y-(start.Top+start.Height/2);vertical=Math.Abs(dy)>=Math.Abs(dx);positive=vertical?dy>=0:dx>=0;
+            this.start=start;this.target=target;canvasHeight=height;double dx=target.X-(start.Left+start.Width/2),dy=target.Y-(start.Top+start.Height/2);vertical=verticalAxis??(Math.Abs(dy)>=Math.Abs(dx));positive=vertical?dy>=0:dx>=0;
             // Shared vertices, one cached texture and ambient lighting. Eight
             // columns avoid diagonal texture kinks in curved, stretched text.
             var uv=new PointCollection(441);var indices=new Int32Collection(2304);

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -37,7 +37,8 @@ namespace MacFlow
             if(disposed||scanning)return;scanning=true;try{if(!enabled()){known.Clear();image=null;captured=IntPtr.Zero;initialized=false;return;}
             foreach(var item in known.Values.ToArray())if(!Native.Matches(item.Entry)||Native.IsIconic(item.Entry.Handle)||!Native.IsWindowVisible(item.Entry.Handle))Observed(0,item.Entry.Handle);
             var entries=await Task.Run(enumerate);if(disposed||!enabled())return;var now=DateTime.UtcNow;
-            foreach(var entry in entries.Take(100)){Native.RECT bounds;if(Native.IsIconic(entry.Handle)||!Native.GetWindowRect(entry.Handle,out bounds)||bounds.Right-bounds.Left<80||bounds.Bottom-bounds.Top<50)continue;bool fresh=!known.ContainsKey(entry.Handle);known[entry.Handle]=new Tracked{Entry=entry,Bounds=bounds,Seen=now};if(fresh&&initialized)Opening(entry,bounds);}
+            foreach(var entry in entries.Take(100)){Native.RECT bounds;if(Native.IsIconic(entry.Handle)||!Native.GetWindowRect(entry.Handle,out bounds)||bounds.Right-bounds.Left<80||bounds.Bottom-bounds.Top<50)continue;bool fresh=!known.ContainsKey(entry.Handle);known[entry.Handle]=new Tracked{Entry=entry,Bounds=bounds,Seen=now};// Visible foreign windows already have a native entrance. Do not draw a second copy over them.
+            }
             initialized=true;
             foreach(var key in known.Where(p=>now-p.Value.Seen>TimeSpan.FromMinutes(2)).Select(p=>p.Key).ToArray())known.Remove(key);
             Tracked current;if(!known.TryGetValue(foreground(),out current)){if(now-capturedAt>TimeSpan.FromSeconds(5)){image=null;captured=IntPtr.Zero;}return;}
@@ -57,13 +58,13 @@ namespace MacFlow
             await Task.Delay(90);departing.Remove(handle);if(disposed||!enabled()||WindowCloseTransition.IsPending(handle))return;
             bool gone=!Native.Matches(item.Entry),minimized=!gone&&Native.IsIconic(handle),hidden=!gone&&!Native.IsWindowVisible(handle);
             if(!gone&&!minimized&&!hidden)return;
-            if(snapshot==null)snapshot=WindowCloseTransition.FallbackCard(item.Entry);
+            if(snapshot==null)return;
             WindowCloseTransition.AnimateObserved(item.Entry,item.Bounds,snapshot,minimized);
         }
         public void Dispose(){if(disposed)return;disposed=true;timer.Stop();foreach(var hook in hooks)UnhookWinEvent(hook);hooks.Clear();known.Clear();departing.Clear();image=null;captured=IntPtr.Zero;}
         private async void Opening(WindowEntry entry,Native.RECT bounds)
         {
-            try{var capture=Task.Run(()=>WindowCloseTransition.Capture(entry,bounds));var result=await Task.WhenAny(capture,Task.Delay(180));var snapshot=result==capture?await capture:null;if(disposed||!enabled()||!Native.Matches(entry)||Native.IsIconic(entry.Handle)||!Native.IsWindowVisible(entry.Handle))return;WindowCloseTransition.AnimateObserved(entry,bounds,snapshot??WindowCloseTransition.FallbackCard(entry),false,true);}catch(Exception ex){Log.Write("Apertura hacia el Dock: "+ex.Message);}
+            try{var capture=Task.Run(()=>WindowCloseTransition.Capture(entry,bounds));var result=await Task.WhenAny(capture,Task.Delay(180));var snapshot=result==capture?await capture:null;if(disposed||!enabled()||!Native.Matches(entry)||Native.IsIconic(entry.Handle)||!Native.IsWindowVisible(entry.Handle))return;WindowCloseTransition.AnimateObserved(entry,bounds,snapshot,false,true);}catch(Exception ex){Log.Write("Apertura hacia el Dock: "+ex.Message);}
         }
     }
 }

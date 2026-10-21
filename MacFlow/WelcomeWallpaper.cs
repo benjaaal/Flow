@@ -18,7 +18,7 @@ namespace MacFlow
                     if(result<0||String.IsNullOrWhiteSpace(systemPath)){uint count;Marshal.ThrowExceptionForHR(service.GetMonitorDevicePathCount(out count));if(count>0){string monitor;Marshal.ThrowExceptionForHR(service.GetMonitorDevicePathAt(0,out monitor));Marshal.ThrowExceptionForHR(service.GetWallpaper(monitor,out systemPath));}}
                 }
                 catch(Exception ex){Log.Write("Fondo de bienvenida: "+ex.Message);}finally{if(instance!=null)Marshal.ReleaseComObject(instance);}
-                foreach(string path in new[]{systemPath,selected})try
+                foreach(string path in new[]{selected,systemPath})try
                 {
                     if(String.IsNullOrWhiteSpace(path)||!File.Exists(path)||new FileInfo(path).Length>64*1024*1024)continue;
                     using(var stream=File.OpenRead(path))

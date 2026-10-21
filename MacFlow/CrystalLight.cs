@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
@@ -44,7 +44,7 @@ namespace MacFlow
             var lower=new LinearGradientBrush{StartPoint=new Point(0,0),EndPoint=new Point(0,1)};lower.GradientStops.Add(new GradientStop(Colors.Transparent,.78));lower.GradientStops.Add(new GradientStop(Color.FromArgb(16,255,255,255),1));lower.Freeze();lowerEdge=new Pen(lower,.5);lowerEdge.Freeze();
             // The economy profile keeps the real GPU backdrop but uses vector
             // specular light, avoiding an off-screen shader surface per tile.
-            if(!LiquidMaterial.LowPower&&RenderCapability.IsPixelShaderVersionSupported(3,0)&&!SystemParameters.HighContrast){lighting=new CrystalLighting{Radius=corner,Intensity=strength};Effect=lighting;}
+            // Vector highlights retain the real compositor backdrop without an off-screen shader per surface.
             SizeChanged+=delegate{if(lighting!=null)lighting.Size=new Point(Math.Max(1,ActualWidth),Math.Max(1,ActualHeight));};
             Loaded+=delegate{host=Parent as FrameworkElement;if(host!=null){host.MouseMove+=Move;host.MouseEnter+=Enter;host.MouseLeave+=Leave;}};
             Unloaded+=delegate{if(host!=null){host.MouseMove-=Move;host.MouseEnter-=Enter;host.MouseLeave-=Leave;host=null;}if(lighting!=null){lighting.BeginAnimation(CrystalLighting.PointerProperty,null);lighting.BeginAnimation(CrystalLighting.ActivityProperty,null);lighting.Activity=0;}};

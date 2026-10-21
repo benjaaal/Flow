@@ -1,4 +1,4 @@
-# MacFlow 27.0.0
+﻿# MacFlow 27.0.0
 
 MacFlow 27.0.0 — Windows 11 x64, C# / WPF / .NET Framework 4.8
 

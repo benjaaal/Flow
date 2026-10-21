@@ -1,41 +1,28 @@
-MacFlow 27.0.0 — Windows 11 x64, C# / WPF / .NET Framework 4.8
+﻿MacFlow 27.1.3 — Windows 11 x64 / WPF / .NET Framework 4.8
 
-Renovación nativa de materiales, tipografía, proporciones, Dock, barra,
-Spotlight, configuración, centro de control, isla y asistente.
+Centro de control sin contorno exterior, controles compactos, materiales
+coherentes y animaciones reversibles. Iconos contenidos en el Dock.
+La isla muestra música, temporizadores, concentración y el asistente;
+los cambios de volumen y brillo permanecen en sus paneles.
 
-Centro de control inspirado en las referencias: cápsulas Wi-Fi/Bluetooth,
-controles circulares y reguladores verticales independientes. Música sólo
-con sesión multimedia; carátula real, ampliación y controles de Windows.
+MODO IPAD
+Manzana → Modo iPad, o Configuración → Sistema → Cambiar modo.
+Deslizá arriba desde el borde inferior para Inicio; mantené para multitarea.
+Esc vuelve al modo Mac. Las ventanas flotantes y distribuidas conservan
+su funcionamiento de Windows y recuperan su geometría al salir del modo.
 
-Privacidad: reloj y música; deslizá desde el borde inferior para mostrar
-el PIN de MacFlow. También Enter/Espacio para teclado.
-La cortina cubre las pantallas secundarias. Ctrl+Windows abre Privacidad;
-Ctrl+Windows+Alt recupera el escritorio. Es una cortina recuperable de
-MacFlow: el bloqueo y las credenciales de Windows siguen perteneciendo a Windows.
+ASISTENTE
+Acciones locales, reconocimiento español Vosk y voz local de Windows.
+Detener interrumpe la voz. El micrófono requiere autorización de Windows.
+Las preguntas libres conservan Gemini en Chrome. Se informa si faltan
+micrófono, voces instaladas o dispositivo de audio.
 
-Asistente: órdenes locales y preguntas en Gemini web dentro de Chrome,
-sin claves ni API de IA. «Resumí las pestañas» recorre el texto accesible
-de las pestañas abiertas y pide la síntesis en Gemini. Las páginas se envían
-a Gemini al pedir ese resumen. Requiere Chrome, sesión de Google y una
-interfaz accesible compatible; los errores se muestran sin inventar respuestas.
-Cerrar ventanas y escribir requieren confirmación. Una cancelación evita
-envíos tardíos. El foco y la dirección de Gemini se comprueban antes de escribir.
+PRIVACIDAD Y RECUPERACION
+Ctrl+Windows abre la cortina de MacFlow. Deslizá arriba para el PIN local.
+Ctrl+Windows+Alt recupera el escritorio. No sustituye el bloqueo de Windows.
+Usá la manzana o bandeja para salir de MacFlow y restaurar Windows.
+Hola sólo aparece manualmente o después de una versión nueva habilitada.
 
-Hey Siri usa el modelo local incluido, con indicador de micrófono.
-Se pausa al bloquear Windows y durante la búsqueda escrita. Se puede
-desactivar en Configuración. Necesita permisos y micrófono funcional.
-
-Se conserva la preferencia de Hola; trazo finito y movimiento reducido.
-Recuperación de Windows independiente ante fallos y supervisor confirmado
-antes de ocultar la barra. Dock y barra por monitor; widgets conservan
-su monitor preferido al desconectarlo, y los paneles respetan el área útil.
-
-Validación: pruebas aisladas de núcleo, instalador, modelos de voz y
-ventanas nativas. La grabación física con dos monitores de DPI diferente,
-micrófono, Gemini autenticado y arranque tras apagar/encender
-requiere prueba interactiva. En este entorno algunas capturas del compositor
-son negras; se verificaron también renders WPF de las ventanas reales.
-No se afirma 60 FPS constantes ni reemplazo de las animaciones de apps ajenas.
-
-No se instala automáticamente ni cambia autenticación, Explorer o Winlogon.
-La publicación 26.5.0 se conserva. Los perfiles se respaldan antes de migrar.
+No incluye acceso remoto ni modifica los archivos esenciales de Windows.
+No se instaló ni publicó esta entrega. Referencias, pruebas y limitaciones:
+source/docs/27.1.3.md en la carpeta de entrega.

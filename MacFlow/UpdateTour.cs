@@ -76,12 +76,12 @@ namespace MacFlow
             }
         }
         private static void Cover(Window window,System.Drawing.Rectangle rect){Native.SetWindowPos(new WindowInteropHelper(window).Handle,new IntPtr(-1),rect.Left,rect.Top,rect.Width,rect.Height,0x50);}
-        internal void Advance(){if(closed)return;ClearExample();if(++index>=6){Completed=true;Close();return;}ShowStep();}
+        internal void Advance(){if(closed)return;ClearExample();if(++index>=7){Completed=true;Close();return;}ShowStep();}
         internal void Back(){if(closed||index==0)return;ClearExample();index--;ShowStep();}
         internal void Repeat(){if(closed)return;ClearExample();ShowStep();}
         private void ShowStep()
         {
-            step.Text="MACFLOW "+Product.VersionText+"  ·  "+(index+1)+" / 6";back.IsEnabled=index>0;
+            step.Text="MACFLOW "+Product.VersionText+"  ·  "+(index+1)+" / 7";back.IsEnabled=index>0;
             switch(index)
             {
                 case 0:
@@ -90,21 +90,25 @@ namespace MacFlow
                     title.Text="Deslizá. Y tomá el control.";description.Text="Arrastrá hacia abajo desde la batería o los indicadores con clic izquierdo o derecho. Música, brillo y sonido comparten una distribución compacta; los accesos quedan debajo.";
                     example=new ControlCenter(desktop);var controlBody=(UIElement)example.Content;example.Content=null;example.Content=new Viewbox{Child=controlBody,Stretch=Stretch.Uniform};ShowExample();SlidePreview(80);CreatePointer(example.Width-34,28,160);break;
                 case 2:
-                    title.Text="Un momento para vos.";description.Text="Ctrl + Windows abre Privacidad: reloj, música y avisos, mientras tus tareas siguen. Deslizá desde abajo y usá tu PIN local. Ctrl + Windows + Alt recupera el escritorio.";
+                    title.Text="Un momento para vos.";description.Text="Ctrl + Windows abre Privacidad: reloj, fecha, fondo y música, mientras tus tareas siguen. Deslizá desde abajo y usá tu PIN local. Ctrl + Windows + Alt recupera el escritorio.";
                     example=new PrivacyScreen(desktop,true){Width=560,Height=400};ShowExample();SlidePreview(18);break;                case 3:
                     title.Text="Pequeños espacios, más tuyos.";description.Text="Galería en dos columnas, datos grandes y materiales consistentes: transparente, oscuro o claro. Usá su menú para elegir tamaño y acomodalos arrastrando el fondo.";
                     example=new DesktopWidget(desktop.Widgets,new WidgetSpec{Kind="Calendar",Size="S",Surface="Dark"}){Width=164,Height=164};ShowExample();SlidePreview(18);break;
                 case 4:
-                    title.Text="Lo que pasa, siempre a la vista.";description.Text="La cápsula negra reúne música, temporizadores y acciones recientes. En reposo no reacciona al clic. Con actividad, se despliega debajo de la barra sin cubrirla. Los avisos de MacFlow bajan desde la manzana con un rebote suave.";
-                    var provider=new MediaFixture();provider.State.Playing=true;provider.State.Title="Música · Demostración";provider.State.Artist="Controles conectados al reproductor de Windows";islandPreview=new ActivityIsland(desktop,provider,true);example=islandPreview.View;ShowExample();SlidePreview(18);break;
+                    title.Text="Lo que pasa, siempre a la vista.";description.Text="Carátula, reproducción y progreso en un mismo espacio. La música, los temporizadores y el asistente comparten la cápsula; los ajustes se quedan en sus paneles. Clic derecho para contraer u ocultar la isla.";
+                    var provider=new MediaFixture();provider.State.Playing=true;provider.State.Title="Música · Demostración";provider.State.Artist="Reproducción de ejemplo";provider.State.Duration=TimeSpan.FromSeconds(226);provider.State.Position=TimeSpan.FromSeconds(7);provider.State.Artwork=WallpaperLibrary.Load(desktop.Store.DirectoryPath)[0].Thumbnail;islandPreview=new ActivityIsland(desktop,provider,true);example=islandPreview.View;ShowExample();SlidePreview(18);break;
                 case 5:
                     title.Text="Preguntá con tus palabras.";description.Text="El asistente distingue acciones locales y preguntas libres. Las preguntas se envían a Gemini en Chrome; la luz acompaña el trabajo y se apaga al terminar. Incluye reconocimiento local en español; Hey Siri activa la escucha.";
                     // Read-only instance of the actual menu: a tour must never
                     // execute a power action or change the user's preferences.
                     example=new AssistantWindow(desktop,null);ShowExample();SlidePreview(24);break;
+                case 6:
+                    title.Text="Un escritorio que se siente táctil.";description.Text="Modo iPad desde la manzana o Configuración → Sistema. Deslizá desde el borde inferior para Inicio; deslizá y mantené para multitarea. Elegí Flotante, Izquierda o Derecha para acomodar una ventana. Esc vuelve al modo Mac.";
+                    var tablet=new TabletController(desktop,new DisplayArea("preview",new Rect(0,0,960,720),1));
+                    example=new TabletHome(tablet,desktop);var tabletBody=(UIElement)example.Content;example.Content=null;example.Content=new Viewbox{Child=tabletBody,Stretch=Stretch.Uniform};example.Width=500;example.Height=375;example.Closed+=delegate{tablet.Dispose();};ShowExample();SlidePreview(18);break;
             }
             Motion.Fade(title,0,1,300);Motion.Fade(description,0,1,380);
-            forward.Content=index==5?"Continuar":"Siguiente";
+            forward.Content=index==6?"Continuar":"Siguiente";
         }
         private void SlidePreview(double distance)
         {

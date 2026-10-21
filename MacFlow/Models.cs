@@ -60,7 +60,7 @@ namespace MacFlow
         [DataMember] public bool WindowsMenu = true;
         [DataMember] public string WindowsKeyAction="Search";
         [DataMember] public bool KeyboardSearchApplied;
-        [DataMember] public bool? VoiceWakeEnabled=true;
+        [DataMember] public bool? VoiceWakeEnabled=false;
         internal bool UpgradeKeyboardSearch(){if(KeyboardSearchApplied)return false;KeyboardSearchApplied=true;WindowsKeyAction="Search";return true;}
         [DataMember] public bool? ControlCenterGesture=true;[DataMember]public bool? ShowActivityIsland=true;
         [DataMember] public bool ProtectDockEdge = true;
@@ -68,18 +68,23 @@ namespace MacFlow
         [DataMember] public bool AppleWindowControls = false;
         [DataMember] public bool LidAnimation = true;
         [DataMember] public bool WelcomeAfterUpdate = true;
-        [DataMember] public bool? ShowSessionGreeting = true;
+        [DataMember] public bool? ShowSessionGreeting = false;
         [DataMember] public string LastWelcomedVersion = "1.0.0";
         [DataMember] public bool CheckUpdatesAutomatically = true;
         internal bool NeedsUpdateWelcome(Version current){Version previous;return WelcomeAfterUpdate&&(!Version.TryParse(LastWelcomedVersion,out previous)||current>previous);}
         [DataMember] public string WallpaperPath = "";
+        [DataMember] public string PrivacyWallpaperPath = "";
+        [DataMember] public string PrivacyClockWeight = "Semibold";
+        [DataMember] public string PrivacyClockColor = "#FFFFFF";
+        [DataMember] public string ControlCenterLayout = "Auto";
+        [DataMember] public double PrivacyClockScale = 1;
         [DataMember] public string Hotkey = "AltSpace";
         [DataMember] public bool ShowWidget = false;
         [DataMember] public string UpdateRepository = "";
         [DataMember] public string LocalUpdateFolder = "";
         [DataMember] public string UpdateFeedUrl = Product.DefaultFeedUrl;
         [DataMember] public List<AppEntry> Pins = new List<AppEntry>();
-        [OnDeserializing] private void Defaults(StreamingContext context) { HideDockInApps=true;LiveGlass=true;GlassOpacity=.18; DockPosition="Bottom"; ShowNetwork=ShowBattery=ShowVolume=true;WindowsMenu=ProtectDockEdge=HideDockInCodex=LidAnimation=WelcomeAfterUpdate=CheckUpdatesAutomatically=true;LastWelcomedVersion="1.0.0";AppleWindowControls=false;WallpaperPath=""; Hotkey="AltSpace"; UpdateRepository="";LocalUpdateFolder="";UpdateFeedUrl=""; }
+        [OnDeserializing] private void Defaults(StreamingContext context) { VoiceWakeEnabled=false;HideDockInApps=true;LiveGlass=true;GlassOpacity=.18; DockPosition="Bottom"; ShowNetwork=ShowBattery=ShowVolume=true;WindowsMenu=ProtectDockEdge=HideDockInCodex=LidAnimation=WelcomeAfterUpdate=CheckUpdatesAutomatically=true;LastWelcomedVersion="1.0.0";AppleWindowControls=false;WallpaperPath=""; Hotkey="AltSpace"; UpdateRepository="";LocalUpdateFolder="";UpdateFeedUrl=""; }
         public bool MovePin(string source,string target)
         {
             int from=Pins.FindIndex(p=>p.Key==source),to=Pins.FindIndex(p=>p.Key==target);
@@ -87,8 +92,14 @@ namespace MacFlow
         }
         public void Validate()
         {
+            if(ControlCenterLayout!="Auto"&&ControlCenterLayout!="Mac"&&ControlCenterLayout!="iPad")ControlCenterLayout="Auto";
+            if(PrivacyClockWeight!="Regular"&&PrivacyClockWeight!="Medium"&&PrivacyClockWeight!="Semibold"&&PrivacyClockWeight!="Bold")PrivacyClockWeight="Semibold";
+            if(PrivacyClockColor==null||!System.Text.RegularExpressions.Regex.IsMatch(PrivacyClockColor,"^#[0-9A-Fa-f]{6}$"))PrivacyClockColor="#FFFFFF";
+            if(Double.IsNaN(PrivacyClockScale)||Double.IsInfinity(PrivacyClockScale)||PrivacyClockScale<.75||PrivacyClockScale>1.25)PrivacyClockScale=1;
+            if(PrivacyWallpaperPath==null)PrivacyWallpaperPath="";
             if (Theme != "Dark" && Theme != "Light" && Theme != "Auto") Theme = "Dark";
             if(WindowsKeyAction!="Disabled"&&WindowsKeyAction!="MacFlow"&&WindowsKeyAction!="Windows"&&WindowsKeyAction!="Search")WindowsKeyAction="Search";
+            if(!VoiceWakeEnabled.HasValue)VoiceWakeEnabled=false;
             IconSize = Math.Max(32, Math.Min(72, IconSize));
             if(IconAppearance!="Auto"&&IconAppearance!="Light"&&IconAppearance!="Dark"&&IconAppearance!="Original")IconAppearance="Auto";
             GlassOpacity = Double.IsNaN(GlassOpacity)||Double.IsInfinity(GlassOpacity)?.09:Math.Max(.06, Math.Min(.65, GlassOpacity));

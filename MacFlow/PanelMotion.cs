@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Windows;
 using System.Windows.Media.Animation;
 using System.Windows.Media;
@@ -38,6 +38,7 @@ namespace MacFlow
         private static readonly DependencyProperty ExitTarget=DependencyProperty.RegisterAttached("ExitTarget",typeof(Point),typeof(PanelMotion),new PropertyMetadata(new Point()));
         private static readonly DependencyProperty HasTarget=DependencyProperty.RegisterAttached("HasTarget",typeof(bool),typeof(PanelMotion),new PropertyMetadata(false));
         private static readonly DependencyProperty ExitState=DependencyProperty.RegisterAttached("ExitState",typeof(WindowState),typeof(PanelMotion),new PropertyMetadata(WindowState.Normal));
+        internal static readonly DependencyProperty UseDockEntrance=DependencyProperty.RegisterAttached("UseDockEntrance",typeof(bool),typeof(PanelMotion),new PropertyMetadata(false));
         internal static event Action<Window> Frame;
         internal static Func<Window,Point?> DockDestination;
         internal static readonly DependencyProperty DockKey=DependencyProperty.RegisterAttached("DockKey",typeof(string),typeof(PanelMotion),new PropertyMetadata(null));
@@ -98,7 +99,7 @@ namespace MacFlow
         {
             if(window.WindowState!=WindowState.Normal||Double.IsNaN(window.Top))return;
             Reset(window);double top=window.Top;window.SetValue(BaseTop,top);window.SetValue(BaseLeft,window.Left);
-            var destination=FromTop(window)||DockDestination==null?(Point?)null:DockDestination(window);
+            var destination=(bool)window.GetValue(UseDockEntrance)&&!FromTop(window)&&DockDestination!=null?DockDestination(window):(Point?)null;
             if(destination.HasValue)
             {
                 var content=window.Content as FrameworkElement;if(content!=null){window.SetValue(OriginalTransform,content.RenderTransform);window.SetValue(OriginalOrigin,content.RenderTransformOrigin);content.RenderTransformOrigin=new Point(.5,.5);content.RenderTransform=new ScaleTransform(1,1);}
@@ -135,8 +136,7 @@ namespace MacFlow
             double end=DisplaySpace.UpperEdge(window)-window.Height-12;
             var slide=new DoubleAnimationUsingKeyFrames{FillBehavior=FillBehavior.HoldEnd};
             slide.KeyFrames.Add(new EasingDoubleKeyFrame(start,KeyTime.FromTimeSpan(TimeSpan.Zero)));
-            slide.KeyFrames.Add(new EasingDoubleKeyFrame(start+7,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(75)),Motion.Ease()));
-            slide.KeyFrames.Add(new EasingDoubleKeyFrame(end-5,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(325)),new CubicEase{EasingMode=EasingMode.EaseInOut}));
+            slide.KeyFrames.Add(new EasingDoubleKeyFrame(start+3,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(48)),Motion.Ease()));
             slide.KeyFrames.Add(new EasingDoubleKeyFrame(end,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(Motion.WindowClose)),Motion.Ease()));
             Timeline.SetDesiredFrameRate(slide,60);window.BeginAnimation(Window.TopProperty,slide);
         }

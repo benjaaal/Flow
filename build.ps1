@@ -1,4 +1,4 @@
-param([switch]$RunTests,[switch]$CoreBridge,[switch]$CoreOnly,[string]$OutputDirectory,[string]$UpdateFeedUrl)
+﻿param([switch]$RunTests,[switch]$CoreBridge,[switch]$CoreOnly,[string]$OutputDirectory,[string]$UpdateFeedUrl,[switch]$Offline,[string]$DependencyCacheRoot)
 $ErrorActionPreference = 'Stop'
 if($CoreBridge){throw 'La publicación 27.0.0 requiere el paquete completo.'}
 $ProgressPreference = 'SilentlyContinue'
@@ -64,8 +64,8 @@ Copy-Item -LiteralPath (Join-Path $root 'LICENSE.txt') -Destination (Join-Path $
 Copy-Item -LiteralPath (Join-Path $root 'THIRD-PARTY-NOTICES.md') -Destination (Join-Path $bin 'THIRD-PARTY-NOTICES.md') -Force
 if($CoreOnly){Get-Item -LiteralPath (Join-Path $bin 'MacFlow.exe') | Select-Object FullName,Length;return}
 if(!$CoreBridge){
-    & (Join-Path $root 'BuildTools/BuildFace.ps1') -Bin $bin -Compiler $csc
-    & (Join-Path $root 'BuildTools/BuildVoice.ps1') -Bin $bin -Compiler $csc
+    & (Join-Path $root 'BuildTools/BuildFace.ps1') -Bin $bin -Compiler $csc -Offline:$Offline -CacheRoot $DependencyCacheRoot
+    & (Join-Path $root 'BuildTools/BuildVoice.ps1') -Bin $bin -Compiler $csc -Offline:$Offline -CacheRoot $DependencyCacheRoot
 }
 Copy-Item -LiteralPath (Join-Path $root 'NATIVE-THIRD-PARTY.txt') -Destination $bin -Force
 $payload = Join-Path $build 'payload.zip'
@@ -85,7 +85,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Falló la compilación del instalador.' }
 Copy-Item -LiteralPath (Join-Path $root 'MacFlow\App.config') -Destination ($setup + '.config') -Force
 $packageInfo=Get-Item -LiteralPath $setup
 if($CoreBridge -and $packageInfo.Length -gt 64MB){throw 'La actualización base supera el límite de 26.4.1.'}
-$packageJson=@{Product='MacFlow';Architecture='x64';Version=$packageVersion;Installer=$packageInfo.Name;Sha256=(Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash;Size=$packageInfo.Length;FeedUrl=$UpdateFeedUrl;Notes='27.0.1: corrige medidas físicas del cristal del Dock, espacio para ampliación y protección del borde en monitores secundarios.'} | ConvertTo-Json
+$packageJson=@{Product='MacFlow';Architecture='x64';Version=$packageVersion;Installer=$packageInfo.Name;Sha256=(Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash;Size=$packageInfo.Length;FeedUrl=$UpdateFeedUrl;Notes='27.1.3: movimiento coordinado, sin copias de apps de Windows, reflejos vectoriales y Shelf de archivos.'} | ConvertTo-Json
 [System.IO.File]::WriteAllText((Join-Path $deliverables 'MacFlow-update.json'),$packageJson,[System.Text.UTF8Encoding]::new($false))
 if ($RunTests) {
     if(!$CoreBridge){ & (Join-Path $root 'BuildTools/TestNativeModels.ps1') -Bin $bin -Output (Join-Path $deliverables 'verification') }

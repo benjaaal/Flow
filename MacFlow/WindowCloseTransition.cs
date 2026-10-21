@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
@@ -28,7 +28,7 @@ namespace MacFlow
         }
         internal static async void AnimateObserved(WindowEntry entry,Native.RECT bounds,BitmapSource image,bool minimized,bool opening=false)
         {
-            if(!Motion.Enabled||GenieTransition.ActiveCount>=2||image==null)return;Window preview=null;
+            if(!Motion.Enabled||GenieTransition.ActiveCount>=2||image==null)return;if(opening&&Native.Matches(entry)&&Native.IsWindowVisible(entry.Handle))return;Window preview=null;
             try
             {
                 var screen=System.Windows.Forms.Screen.FromPoint(new System.Drawing.Point((bounds.Left+bounds.Right)/2,(bounds.Top+bounds.Bottom)/2));double scale=DisplaySpace.Of(screen).Scale;bool card=image.PixelWidth==360&&image.PixelHeight==180;
@@ -36,7 +36,7 @@ namespace MacFlow
                 preview=new Window{Title=opening?"MacFlow · Abrir ventana":minimized?"MacFlow · Minimizar ventana":"MacFlow · Cerrar ventana",Width=width,Height=height,WindowStyle=WindowStyle.None,ResizeMode=ResizeMode.NoResize,AllowsTransparency=true,Background=Brushes.Transparent,ShowInTaskbar=false,ShowActivated=false,Topmost=true,IsHitTestVisible=false,Content=new Image{Source=image,Stretch=Stretch.Fill}};
                 var view=preview;preview.SourceInitialized+=delegate{Native.NoActivate(view);var h=new WindowInteropHelper(view).Handle;Native.SetWindowLong(h,-20,Native.GetWindowLong(h,-20)|0x20);};
                 preview.SetValue(PanelMotion.DockKey,entry.Key);preview.Show();Native.SetWindowPos(new WindowInteropHelper(preview).Handle,new IntPtr(-1),bounds.Left,bounds.Top,(int)(width*scale),(int)(height*scale),0x50);
-                var point=PanelMotion.DockDestination==null?null:PanelMotion.DockDestination(preview);if(point.HasValue)preview.SetValue(PanelMotion.DockPoint,point.Value);
+                preview.SetValue(PanelMotion.DockKey,entry.Key);var point=PanelMotion.DockDestination==null?null:PanelMotion.DockDestination(preview);if(point.HasValue)preview.SetValue(PanelMotion.DockPoint,point.Value);
                 var started=PreviewStarted;if(started!=null)started(preview);if(opening)Design.Reveal(preview);else Design.Dismiss(preview);await Task.Delay(Motion.WindowClose+150);
             }
             catch(Exception ex){Log.Write("Animación de cierre nativo: "+ex.Message);}
@@ -44,7 +44,7 @@ namespace MacFlow
         }
         internal static bool Request(WindowEntry window,Action failure,bool minimize=false)
         {
-            if(!Native.Matches(window))return false;
+            if(!Native.Matches(window))return false;if(window.ProcessId!=(uint)System.Diagnostics.Process.GetCurrentProcess().Id)return Send(window,minimize);
             if(!Motion.Enabled||Native.IsIconic(window.Handle))return Send(window,minimize);
             if(!pending.Add(window.Handle))return true;
             Run(window,failure,minimize);return true;

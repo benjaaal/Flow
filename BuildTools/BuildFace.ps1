@@ -1,6 +1,6 @@
-param([string]$Bin,[string]$Compiler)
+﻿param([string]$Bin,[string]$Compiler,[switch]$Offline,[string]$CacheRoot)
 $ErrorActionPreference='Stop'
-$cache=Join-Path $PSScriptRoot '../build/face-deps'
+$cache=if($CacheRoot){Join-Path $CacheRoot 'face-deps'}else{Join-Path $PSScriptRoot '../build/face-deps'}
 New-Item -ItemType Directory -Force $cache | Out-Null
 $specs=@(
 @('core','opencvsharp4','4.13.0.20260627','8ACEE778364E5EEE6495D923732CACD8D895C7F683D2144F622B54418623D12C'),
@@ -10,10 +10,10 @@ $specs=@(
 @('buffers','system.buffers','4.6.1','B00451E91D016FBEC091AD1E361F3A7015E1D91D4047F7E48A74455B2A673D79'),
 @('vectors','system.numerics.vectors','4.6.1','2BC500A86DCB02F2032D6D877F9E2D6E9E4A79080E57239B4198679D4031F2C7'))
 [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12
-foreach($spec in $specs){$zip=Join-Path $cache ($spec[0]+'.zip');if(!(Test-Path $zip)){Invoke-WebRequest -UseBasicParsing ('https://api.nuget.org/v3-flatcontainer/'+$spec[1]+'/'+$spec[2]+'/'+$spec[1]+'.'+$spec[2]+'.nupkg') -OutFile $zip};if((Get-FileHash $zip -Algorithm SHA256).Hash -ne $spec[3]){throw ('Integridad incorrecta: '+$spec[0])};$dest=Join-Path $cache $spec[0];if(!(Test-Path $dest)){Expand-Archive -LiteralPath $zip -DestinationPath $dest}}
-foreach($spec in @(@('yunet','face_detection_yunet','face_detection_yunet_2023mar.onnx','8F2383E4DD3CFBB4553EA8718107FC0423210DC964F9F4280604804ED2552FA4'),@('sface','face_recognition_sface','face_recognition_sface_2021dec.onnx','0BA9FBFA01B5270C96627C4EF784DA859931E02F04419C829E83484087C34E79'))){$model=Join-Path $cache ($spec[0]+'.onnx');if(!(Test-Path $model)){Invoke-WebRequest -UseBasicParsing ('https://media.githubusercontent.com/media/opencv/opencv_zoo/main/models/'+$spec[1]+'/'+$spec[2]) -OutFile $model};if((Get-FileHash $model -Algorithm SHA256).Hash -ne $spec[3]){throw 'Integridad incorrecta del modelo facial'};Copy-Item -LiteralPath $model -Destination $Bin -Force}
+foreach($spec in $specs){$zip=Join-Path $cache ($spec[0]+'.zip');if(!(Test-Path $zip)){if($Offline){throw "Falta un paquete verificado en caché: $zip"};Invoke-WebRequest -UseBasicParsing ('https://api.nuget.org/v3-flatcontainer/'+$spec[1]+'/'+$spec[2]+'/'+$spec[1]+'.'+$spec[2]+'.nupkg') -OutFile $zip};if((Get-FileHash $zip -Algorithm SHA256).Hash -ne $spec[3]){throw ('Integridad incorrecta: '+$spec[0])};$dest=Join-Path $cache $spec[0];Expand-Archive -LiteralPath $zip -DestinationPath $dest -Force}
+foreach($spec in @(@('yunet','face_detection_yunet','face_detection_yunet_2023mar.onnx','8F2383E4DD3CFBB4553EA8718107FC0423210DC964F9F4280604804ED2552FA4'),@('sface','face_recognition_sface','face_recognition_sface_2021dec.onnx','0BA9FBFA01B5270C96627C4EF784DA859931E02F04419C829E83484087C34E79'))){$model=Join-Path $cache ($spec[0]+'.onnx');if(!(Test-Path $model)){if($Offline){throw "Falta un modelo verificado en caché: $model"};Invoke-WebRequest -UseBasicParsing ('https://media.githubusercontent.com/media/opencv/opencv_zoo/main/models/'+$spec[1]+'/'+$spec[2]) -OutFile $model};if((Get-FileHash $model -Algorithm SHA256).Hash -ne $spec[3]){throw 'Integridad incorrecta del modelo facial'};Copy-Item -LiteralPath $model -Destination $Bin -Force}
 $anti=Join-Path $cache 'antispoof.onnx'
-if(!(Test-Path $anti)){Invoke-WebRequest -UseBasicParsing 'https://huggingface.co/garciafido/minifasnet-v2-anti-spoofing-onnx/resolve/d29c87568ca9b5662da803b10f217c4db20b142b/minifasnet_v2.onnx' -OutFile $anti}
+if(!(Test-Path $anti)){if($Offline){throw "Falta el modelo de presencia verificado en caché"};Invoke-WebRequest -UseBasicParsing 'https://huggingface.co/garciafido/minifasnet-v2-anti-spoofing-onnx/resolve/d29c87568ca9b5662da803b10f217c4db20b142b/minifasnet_v2.onnx' -OutFile $anti}
 if((Get-FileHash $anti -Algorithm SHA256).Hash -ne 'D7B3CD9BA8A7CEB13BAA8C4720902E27CA3112EFF52F926C08804AF6B6EECC7B'){throw 'Integridad incorrecta del modelo de presencia'}
 Copy-Item -LiteralPath $anti -Destination $Bin -Force
 $files=@('core/lib/netstandard2.0/OpenCvSharp.dll','runtime/runtimes/win-x64/native/OpenCvSharpExtern.dll','memory/lib/net462/System.Memory.dll','unsafe/lib/net462/System.Runtime.CompilerServices.Unsafe.dll','buffers/lib/net462/System.Buffers.dll','vectors/lib/net462/System.Numerics.Vectors.dll')

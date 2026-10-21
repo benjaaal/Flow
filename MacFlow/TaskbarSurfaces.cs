@@ -67,17 +67,27 @@ namespace MacFlow
             {writer.WriteLine("MacFlow taskbar visibility v1");foreach(var entry in entries.Values)writer.WriteLine(entry.Handle.ToInt64().ToString(CultureInfo.InvariantCulture)+"|"+entry.Process+"|"+(entry.Visible?1:0));writer.Flush();stream.Flush(true);}
             if(File.Exists(file))File.Replace(temporary,file,null);else File.Move(temporary,file);
         }
-        public void Restore()
-        {active=false;if(hook!=IntPtr.Zero){UnhookWinEvent(hook);hook=IntPtr.Zero;}if(locationHook!=IntPtr.Zero){UnhookWinEvent(locationHook);locationHook=IntPtr.Zero;}RestoreRecorded(file,valid,discover);entries.Clear();}
+        public bool LastRestoreSucceeded{get;private set;} public void Restore()
+        {active=false;if(hook!=IntPtr.Zero){UnhookWinEvent(hook);hook=IntPtr.Zero;}if(locationHook!=IntPtr.Zero){UnhookWinEvent(locationHook);locationHook=IntPtr.Zero;}LastRestoreSucceeded=RestoreRecorded(file,valid,discover);if(LastRestoreSucceeded)entries.Clear();}
         public static void RestoreFile(string path){RestoreRecorded(path,IsShell,Discover);}
         public static void RecoverVisible()
         {foreach(var h in Discover())if(IsShell(h)&&!Native.IsWindowVisible(h))Native.ShowWindowAsync(h,4);}
-        private static void RestoreRecorded(string path,Func<IntPtr,bool> validation,Func<IEnumerable<IntPtr>> discovery)
+        [DllImport("kernel32.dll")]private static extern uint GetCurrentThreadId();
+        [DllImport("user32.dll")]private static extern bool ShowWindow(IntPtr h,int command);
+        private static bool ShowVerified(IntPtr h)
+        {
+            if(Native.IsWindowVisible(h))return true;uint pid;uint thread=Native.GetWindowThreadProcessId(h,out pid);
+            // An owned STA fixture cannot process an asynchronous show while its
+            // own dispatcher is waiting here. Explorer always uses the async path.
+            if(thread==GetCurrentThreadId()){ShowWindow(h,4);return Native.IsWindowVisible(h);}
+            if(!Native.ShowWindowAsync(h,4))return false;for(int n=0;n<15;n++){if(!Native.IsWindow(h)||Native.IsWindowVisible(h))return true;System.Threading.Thread.Sleep(10);}return false;
+        }
+        private static bool RestoreRecorded(string path,Func<IntPtr,bool> validation,Func<IEnumerable<IntPtr>> discovery)
         {
             try
             {
-                if(!File.Exists(path))return;var lines=File.ReadAllLines(path);if(lines.Length==0||lines[0]!="MacFlow taskbar visibility v1")throw new IOException("Registro de visibilidad inválido");
-                bool showAfterRestart=false;var knownHidden=new HashSet<IntPtr>();
+                if(!File.Exists(path))return true;var lines=File.ReadAllLines(path);if(lines.Length==0||lines[0]!="MacFlow taskbar visibility v1")throw new IOException("Registro de visibilidad inválido");
+                bool showAfterRestart=false,restored=true;var knownHidden=new HashSet<IntPtr>();
                 foreach(var line in lines.Skip(1))
                 {
                     var parts=line.Split('|');long handle;uint pid;int visible;
@@ -85,12 +95,13 @@ namespace MacFlow
                     var h=new IntPtr(handle);uint current;Native.GetWindowThreadProcessId(h,out current);
                     if(!Native.IsWindow(h)||current!=pid){if(visible==1)showAfterRestart=true;continue;}
                     if(!validation(h))continue;if(visible==0)knownHidden.Add(h);
-                    if(visible==1&&!Native.IsWindowVisible(h)&&!Native.ShowWindowAsync(h,4))throw new IOException("Windows no aceptó restaurar la barra");
+                    if(visible==1&&!ShowVerified(h))restored=false;
                 }
-                if(showAfterRestart)foreach(var h in discovery())if(validation(h)&&!knownHidden.Contains(h)&&!Native.IsWindowVisible(h)&&!Native.ShowWindowAsync(h,4))throw new IOException("Windows no aceptó restaurar la barra nueva");
-                File.Delete(path);
+                if(showAfterRestart)foreach(var h in discovery())if(validation(h)&&!knownHidden.Contains(h)&&!ShowVerified(h))restored=false;
+                if(!restored)throw new IOException("Restauración pendiente; se conserva el registro para volver a intentar.");
+                File.Delete(path);return true;
             }
-            catch(Exception ex){Log.Write("Restauración de visibilidad: "+ex.Message);}
+            catch(Exception ex){Log.Write("Restauración de visibilidad: "+ex.Message);return false;}
         }
     }
 }

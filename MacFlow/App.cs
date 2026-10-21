@@ -46,6 +46,7 @@ namespace MacFlow
             }
             if (args.Length > 0 && args[0] == "--restore") { new TaskbarLease(data).Restore();TaskbarSurfaces.RecoverVisible(); return 0; }
             if (args.Length == 2 && args[0] == "--self-test") return SelfTests.Run(args[1]);
+            if(args.Length==2&&args[0]=="--modern-smoke")return ModernVisual.Run(args[1]);
             if (args.Length == 2 && args[0] == "--stability-smoke") return StabilityVisual.Run(args[1]);
             if (args.Length == 2 && args[0] == "--icons-smoke") return IconsVisual.Run(args[1]);
             if (args.Length == 2 && args[0] == "--media-smoke") return MediaRegression.Probe(args[1]);
@@ -156,7 +157,7 @@ namespace MacFlow
                         }
                         else if (args.Length>0&&args[0]=="--welcome") desktop.OpenWelcome();
                         else if(desktop.WelcomeForNewVersion()) { }
-                        else if(args.Length>0&&args[0]=="--background")desktop.OpenSessionGreeting();
+                        /* Background startup never starts a presentation. */
                         else if (args.Length == 0 || !File.Exists(desktop.Store.PathName)) desktop.OpenSettings();
                     };
                     app.Exit += delegate { wait.Unregister(null);settingsWait.Unregister(null);greetingWait.Unregister(null); if (desktop != null) desktop.Dispose(); };
