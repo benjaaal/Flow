@@ -1,8 +1,8 @@
-﻿using System.Reflection;
+using System.Reflection;
 [assembly: AssemblyTitle("MacFlow")]
 [assembly: AssemblyDescription("Desktop glass experience for Windows 11")]
 [assembly: AssemblyCompany("MacFlow")]
 [assembly: AssemblyProduct("MacFlow")]
-[assembly: AssemblyVersion("27.1.3.0")]
-[assembly: AssemblyFileVersion("27.1.3.0")]
+[assembly: AssemblyVersion("27.1.5.0")]
+[assembly: AssemblyFileVersion("27.1.5.0")]
 

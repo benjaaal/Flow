@@ -28,7 +28,7 @@ jobs:
             if(!$app.WaitForExit(180000)){Stop-Process -Id $app.Id;throw ('Timeout: '+$check[0])}
             if($app.ExitCode -ne 0){Get-Content (Join-Path $out $check[2]);throw ('Validation failed: '+$check[0])}
           }
-          Copy-Item 'docs/RELEASE-27.1.3.md' 'artifacts/RELEASE-NOTES.md'
+          Copy-Item 'docs/RELEASE-27.1.5.md' 'artifacts/RELEASE-NOTES.md'
       - name: Publish build artifacts
         uses: actions/upload-artifact@v4
         with:

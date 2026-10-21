@@ -124,6 +124,7 @@ namespace MacFlow
         private DockEdge dockEdge;
         private CaptionButtons captionButtons;
         private DockVisibility dockVisibility;
+        private ShellLayout shellLayout;private readonly AppbarReservation appbarReservation=new AppbarReservation();
         private bool codexForeground;
         private bool desktopForeground;
         private uint contextProcess;
@@ -161,6 +162,7 @@ namespace MacFlow
         }
         public Desktop(string directory, bool smokeMode,bool nonInteractive=false,bool backgroundStart=false)
         {
+            shellLayout=new ShellLayout(action=>Application.Current.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background,action),delegate{if(disposed)return;DisplaySpace.Invalidate();Position();if(extraDisplays!=null)extraDisplays.DisplayChanged();if(Widgets!=null)Widgets.Sync();},delegate{if(!disposed&&!suspended&&appbarRegistered)AppbarPosition();});
             smoke = smokeMode;nonInteractiveTest=nonInteractive;Store = new SettingsStore(directory); Preferences = Store.Load(); lease = new TaskbarLease(directory);lease.ReplacementReady=ReplacementOn;
             Activity=new ActivityLog(directory);
             Focus = new FocusController(directory); Focus.Changed += UpdateFocusIndicator;
@@ -273,7 +275,8 @@ namespace MacFlow
             if (message == 0x312 && w.ToInt32() == 1) { OpenSearch(); handled = true; }
             if (message == 0x312 && w.ToInt32() == 2) { OpenWindowsMenu(); handled = true; }
             if (message == 0x312 && w.ToInt32() == 3) { OpenDesktopMenu(); handled = true; }
-            if (message == 0x7E || message == 0x2E0 || (message == 0x8001 && w.ToInt32() == 1)) Application.Current.Dispatcher.BeginInvoke(new Action(delegate{if(disposed)return;DisplaySpace.Invalidate();shellRecovery.Reset(lease.Restore);Position();if(extraDisplays!=null)extraDisplays.DisplayChanged();if(Widgets!=null)Widgets.Sync();}));
+            if(message==0x7E||message==0x2E0)shellLayout.Request(true);
+            else if(message==0x8001&&w.ToInt32()==1)shellLayout.Request(false);
             return IntPtr.Zero;
         }
         private void CreateTopBar()
@@ -490,11 +493,11 @@ namespace MacFlow
         {
             if(disposed)return;
             if (disposed || Dock == null || TopBar == null) return;
-            if(dockVisibility!=null)dockVisibility.PositionChanging();
             var bounds = Forms.Screen.PrimaryScreen.Bounds; var src = PresentationSource.FromVisual(Dock); if (src == null) return;
             var m = src.CompositionTarget.TransformFromDevice; var origin = m.Transform(new Point(bounds.Left, bounds.Top)); var size = ScreenSize();
-            Dock.Left = Preferences.DockPosition=="Left"?origin.X+10:Preferences.DockPosition=="Right"?origin.X+size.Width-Dock.Width-10:origin.X+(size.Width-Dock.Width)/2;
-            Dock.Top = Preferences.DockPosition!="Bottom"?origin.Y+(size.Height-Dock.Height)/2:origin.Y+size.Height-Dock.Height-(!smoke&&Preferences.AutoHideTaskbar&&!shellRecovery.Acquired?58:Preferences.AutoHideTaskbar?5:58);
+            double left=Preferences.DockPosition=="Left"?origin.X+10:Preferences.DockPosition=="Right"?origin.X+size.Width-Dock.Width-10:origin.X+(size.Width-Dock.Width)/2;
+            double top=Preferences.DockPosition!="Bottom"?origin.Y+(size.Height-Dock.Height)/2:origin.Y+size.Height-Dock.Height-(!smoke&&Preferences.AutoHideTaskbar&&!shellRecovery.Acquired?58:Preferences.AutoHideTaskbar?5:58);
+            var pixel=src.CompositionTarget.TransformToDevice.Transform(new Point(left,top));dockVisibility.PositionAt(left,top,(int)Math.Round(pixel.X),(int)Math.Round(pixel.Y));
             TopBar.Width=size.Width-12;TopBar.Left=origin.X+6;TopBar.Top=origin.Y+3;
             if(dockEdge!=null)dockEdge.Position(Dock);
             if (appbarRegistered) AppbarPosition();
@@ -504,21 +507,21 @@ namespace MacFlow
             if (smoke || suspended || !Preferences.ShowTopBar || appbarRegistered) return;
             var h = new WindowInteropHelper(TopBar).Handle; if (h == IntPtr.Zero) return;
             var data = new Native.APPBARDATA { cbSize = Marshal.SizeOf(typeof(Native.APPBARDATA)), hWnd = h, uCallbackMessage = 0x8001 };
-            appbarRegistered = Native.SHAppBarMessage(0, ref data).ToUInt64() != 0; if (appbarRegistered) AppbarPosition();
+            appbarReservation.Invalidate();appbarRegistered = Native.SHAppBarMessage(0, ref data).ToUInt64() != 0; if (appbarRegistered) AppbarPosition();
         }
         private void AppbarPosition()
         {
             var bounds = Forms.Screen.PrimaryScreen.Bounds; var source = PresentationSource.FromVisual(TopBar); if (source == null) return;
             int height = (int)Math.Ceiling(source.CompositionTarget.TransformToDevice.Transform(new Point(0, TopBarReserve)).Y);
             var data = new Native.APPBARDATA { cbSize = Marshal.SizeOf(typeof(Native.APPBARDATA)), hWnd = new WindowInteropHelper(TopBar).Handle, uEdge = 1, rc = new Native.RECT { Left = bounds.Left, Right = bounds.Right, Top = bounds.Top, Bottom = bounds.Top + height } };
-            Native.SHAppBarMessage(2, ref data); data.rc.Bottom = data.rc.Top + height; Native.SHAppBarMessage(3, ref data);
+            Native.SHAppBarMessage(2, ref data);data.rc.Bottom=data.rc.Top+height;appbarReservation.Update(data.rc,delegate{Native.SHAppBarMessage(3,ref data);});
             // Apply the negotiated rectangle in physical pixels (handles pre-existing appbars).
             var scale=source.CompositionTarget.TransformToDevice;int width=(int)Math.Round(scale.Transform(new Point(TopBar.Width,0)).X),visibleHeight=(int)Math.Round(scale.Transform(new Point(0,TopBarHeight)).Y),offset=(int)Math.Round(scale.Transform(new Point(0,3)).Y);
-            Native.SetWindowPos(data.hWnd,IntPtr.Zero,data.rc.Left+(data.rc.Right-data.rc.Left-width)/2,data.rc.Top+offset,width,visibleHeight,0x14);
+            int x=data.rc.Left+(data.rc.Right-data.rc.Left-width)/2,y=data.rc.Top+offset;Native.RECT current;if(!Native.GetWindowRect(data.hWnd,out current)||current.Left!=x||current.Top!=y||current.Right-current.Left!=width||current.Bottom-current.Top!=visibleHeight)Native.SetWindowPos(data.hWnd,IntPtr.Zero,x,y,width,visibleHeight,0x14);
         }
         private void UnregisterAppbar()
         {
-            if (!appbarRegistered) return; var data = new Native.APPBARDATA { cbSize = Marshal.SizeOf(typeof(Native.APPBARDATA)), hWnd = new WindowInteropHelper(TopBar).Handle }; Native.SHAppBarMessage(1, ref data); appbarRegistered = false;
+            if (!appbarRegistered) return; var data = new Native.APPBARDATA { cbSize = Marshal.SizeOf(typeof(Native.APPBARDATA)), hWnd = new WindowInteropHelper(TopBar).Handle }; Native.SHAppBarMessage(1, ref data); appbarRegistered = false;appbarReservation.Invalidate();
         }
         private void Refresh()
         {
@@ -888,6 +891,7 @@ namespace MacFlow
         public void Dispose()
         {
             if(disposed)return;disposed=true;
+            if(shellLayout!=null)shellLayout.Dispose();
             try
             {
                 foreach(var clock in new[]{timer,edgeTimer,dockRedraw,appearanceDelay,updatesTimer,updateDebounce})

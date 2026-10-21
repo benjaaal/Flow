@@ -12,6 +12,13 @@ namespace MacFlow
         private readonly Window window;
         private readonly DockSlide native;
         internal void PositionChanging(){if(native!=null)native.PositionChanging();}
+        internal bool PositionAt(double left,double top,int pixelLeft,int pixelTop)
+        {
+            var handle=new System.Windows.Interop.WindowInteropHelper(window).Handle;
+            if(handle!=IntPtr.Zero){var resting=RestingBounds();if(Math.Abs(resting.Left-pixelLeft)<=1&&Math.Abs(resting.Top-pixelTop)<=1)return false;}
+            PositionChanging();window.Left=left;window.Top=top;
+            if(handle!=IntPtr.Zero)Native.SetWindowPos(handle,IntPtr.Zero,pixelLeft,pixelTop,0,0,0x15);return true;
+        }
         internal Native.RECT RestingBounds(){if(native!=null)return native.RestingBounds();Native.RECT rect;Native.GetWindowRect(new System.Windows.Interop.WindowInteropHelper(window).Handle,out rect);return rect;}
         private bool requested=true;
         private int generation;

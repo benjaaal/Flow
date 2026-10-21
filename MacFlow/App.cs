@@ -220,7 +220,7 @@ namespace MacFlow
                 ModuleRegression.Run(Path.Combine(directory,"modules"),results);
                 StartupRegression.Run(Path.Combine(directory,"startup"),results);
                 ModernizationRegression.Run(Path.Combine(directory,"modernization"),results);
-                RedesignRegression.Run(results);
+                RedesignRegression.Run(results);ShellLayoutRegression.Run(results);
                 Assert(LiquidMaterial.LightInkForLuminance(.2,false,false)&&!LiquidMaterial.LightInkForLuminance(.8,false,true),"Cristal: tinta legible sobre material oscuro y claro",results);
                 Assert(LiquidMaterial.LightInkForLuminance(.55,true,true)&&!LiquidMaterial.LightInkForLuminance(.48,true,false),"Cristal: histéresis evita parpadeos de texto cerca del umbral",results);
                 double maxSpring=0;bool finiteSpring=true;for(int sample=0;sample<=200;sample++){double position=SpringEase.Progress(sample/200.0);finiteSpring&=!Double.IsNaN(position)&&!Double.IsInfinity(position);maxSpring=Math.Max(maxSpring,position);}

@@ -1,4 +1,4 @@
-﻿MacFlow 27.1.3 — Windows 11 x64 / WPF / .NET Framework 4.8
+MacFlow 27.1.5 — Windows 11 x64 / WPF / .NET Framework 4.8
 
 Centro de control sin contorno exterior, controles compactos, materiales
 coherentes y animaciones reversibles. Iconos contenidos en el Dock.
@@ -25,4 +25,4 @@ Hola sólo aparece manualmente o después de una versión nueva habilitada.
 
 No incluye acceso remoto ni modifica los archivos esenciales de Windows.
 No se instaló ni publicó esta entrega. Referencias, pruebas y limitaciones:
-source/docs/27.1.3.md en la carpeta de entrega.
+source/docs/27.1.5.md en la carpeta de entrega.

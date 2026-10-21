@@ -1,4 +1,4 @@
-﻿param([switch]$RunTests,[switch]$CoreBridge,[switch]$CoreOnly,[string]$OutputDirectory,[string]$UpdateFeedUrl,[switch]$Offline,[string]$DependencyCacheRoot)
+param([switch]$RunTests,[switch]$CoreBridge,[switch]$CoreOnly,[string]$OutputDirectory,[string]$UpdateFeedUrl,[switch]$Offline,[string]$DependencyCacheRoot)
 $ErrorActionPreference = 'Stop'
 if($CoreBridge){throw 'La publicación 27.0.0 requiere el paquete completo.'}
 $ProgressPreference = 'SilentlyContinue'
@@ -85,7 +85,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Falló la compilación del instalador.' }
 Copy-Item -LiteralPath (Join-Path $root 'MacFlow\App.config') -Destination ($setup + '.config') -Force
 $packageInfo=Get-Item -LiteralPath $setup
 if($CoreBridge -and $packageInfo.Length -gt 64MB){throw 'La actualización base supera el límite de 26.4.1.'}
-$packageJson=@{Product='MacFlow';Architecture='x64';Version=$packageVersion;Installer=$packageInfo.Name;Sha256=(Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash;Size=$packageInfo.Length;FeedUrl=$UpdateFeedUrl;Notes='27.1.3: movimiento coordinado, sin copias de apps de Windows, reflejos vectoriales y Shelf de archivos.'} | ConvertTo-Json
+$packageJson=@{Product='MacFlow';Architecture='x64';Version=$packageVersion;Installer=$packageInfo.Name;Sha256=(Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash;Size=$packageInfo.Length;FeedUrl=$UpdateFeedUrl;Notes='27.1.5: corrige el ciclo de notificaciones que restauraba Windows y reiniciaba el Dock.'} | ConvertTo-Json
 [System.IO.File]::WriteAllText((Join-Path $deliverables 'MacFlow-update.json'),$packageJson,[System.Text.UTF8Encoding]::new($false))
 if ($RunTests) {
     if(!$CoreBridge){ & (Join-Path $root 'BuildTools/TestNativeModels.ps1') -Bin $bin -Output (Join-Path $deliverables 'verification') }

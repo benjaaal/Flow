@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Globalization;
@@ -32,7 +32,7 @@ namespace MacFlow
         public void Dispose(){if(disposed)return;disposed=true;foreach(var surface in surfaces.Values)surface.Dispose();surfaces.Clear();}
         private sealed class Surface : IDisposable
         {
-            private readonly Desktop desktop;internal DisplayArea Area;internal readonly Window Bar,Dock;internal readonly DockVisibility Visibility;internal string Signature;
+            private readonly AppbarReservation reservation=new AppbarReservation();private readonly Desktop desktop;internal DisplayArea Area;internal readonly Window Bar,Dock;internal readonly DockVisibility Visibility;internal string Signature;
             private DockEdge revealEdge;private DockMotion motion;private ControlPullGesture gesture;private AppleClickAction apple;private TextBlock clock,active,batteryText;private BatteryGlyph battery;private Button assistantButton;private bool registered,disposed;private DateTime leftAt;private ActivityIsland capsule;
             internal Surface(Desktop owner,DisplayArea area)
             {
@@ -56,7 +56,7 @@ namespace MacFlow
             }
             internal void Layout()
             {
-                if(disposed)return;Visibility.PositionChanging();Bar.Width=Area.Width-12;DisplaySpace.Place(Bar,Area,6,3);bool left=desktop.Preferences.DockPosition=="Left",right=desktop.Preferences.DockPosition=="Right";DisplaySpace.Place(Dock,Area,left?10:right?Area.Width-Dock.Width-10:(Area.Width-Dock.Width)/2,left||right?(Area.Height-Dock.Height)/2:Area.Height-Dock.Height-(desktop.Preferences.AutoHideTaskbar?5:54));if(registered)Appbar();
+                if(disposed)return;Bar.Width=Area.Width-12;DisplaySpace.Place(Bar,Area,6,3);bool left=desktop.Preferences.DockPosition=="Left",right=desktop.Preferences.DockPosition=="Right";double x=left?10:right?Area.Width-Dock.Width-10:(Area.Width-Dock.Width)/2,y=left||right?(Area.Height-Dock.Height)/2:Area.Height-Dock.Height-(desktop.Preferences.AutoHideTaskbar?5:54);Visibility.PositionAt(Area.Dips.Left+x,Area.Dips.Top+y,(int)Math.Round(Area.Pixels.Left+x*Area.Scale),(int)Math.Round(Area.Pixels.Top+y*Area.Scale));if(registered)Appbar();
             }
             internal void Refresh()
             {
@@ -72,9 +72,9 @@ namespace MacFlow
             private bool Intersects(IntPtr h){Native.RECT r;if(!Native.GetWindowRect(h,out r))return false;return Area.Pixels.IntersectsWith(new Rect(r.Left,r.Top,Math.Max(0,r.Right-r.Left),Math.Max(0,r.Bottom-r.Top)));}
             private static uint Pid(IntPtr h){uint pid;Native.GetWindowThreadProcessId(h,out pid);return pid;}
             internal void Hide(){if(disposed)return;if(WindowLife.Alive(revealEdge))revealEdge.Hide();if(WindowLife.Alive(Dock))Visibility.HideImmediately();if(WindowLife.Alive(Bar))Bar.Hide();if(capsule!=null)capsule.Hide();Unregister();}
-            private void Register(){if(registered||!desktop.Preferences.ShowTopBar||desktop.IsTesting)return;var data=new Native.APPBARDATA{cbSize=Marshal.SizeOf(typeof(Native.APPBARDATA)),hWnd=new WindowInteropHelper(Bar).Handle};registered=Native.SHAppBarMessage(0,ref data).ToUInt64()!=0;if(registered)Appbar();}
-            private void Appbar(){var rect=Area.Pixels;int height=(int)Math.Ceiling(Desktop.TopBarReserve*Area.Scale);var data=new Native.APPBARDATA{cbSize=Marshal.SizeOf(typeof(Native.APPBARDATA)),hWnd=new WindowInteropHelper(Bar).Handle,uEdge=1,rc=new Native.RECT{Left=(int)rect.Left,Right=(int)rect.Right,Top=(int)rect.Top,Bottom=(int)rect.Top+height}};Native.SHAppBarMessage(2,ref data);data.rc.Bottom=data.rc.Top+height;Native.SHAppBarMessage(3,ref data);Native.SetWindowPos(data.hWnd,IntPtr.Zero,data.rc.Left+(int)Math.Round(6*Area.Scale),data.rc.Top+(int)Math.Round(3*Area.Scale),(int)Math.Round(Bar.Width*Area.Scale),(int)Math.Round(Desktop.TopBarHeight*Area.Scale),0x14);}
-            private void Unregister(){if(!registered)return;var data=new Native.APPBARDATA{cbSize=Marshal.SizeOf(typeof(Native.APPBARDATA)),hWnd=new WindowInteropHelper(Bar).Handle};Native.SHAppBarMessage(1,ref data);registered=false;}
+            private void Register(){if(registered||!desktop.Preferences.ShowTopBar||desktop.IsTesting)return;var data=new Native.APPBARDATA{cbSize=Marshal.SizeOf(typeof(Native.APPBARDATA)),hWnd=new WindowInteropHelper(Bar).Handle};reservation.Invalidate();registered=Native.SHAppBarMessage(0,ref data).ToUInt64()!=0;if(registered)Appbar();}
+            private void Appbar(){var rect=Area.Pixels;int height=(int)Math.Ceiling(Desktop.TopBarReserve*Area.Scale);var data=new Native.APPBARDATA{cbSize=Marshal.SizeOf(typeof(Native.APPBARDATA)),hWnd=new WindowInteropHelper(Bar).Handle,uEdge=1,rc=new Native.RECT{Left=(int)rect.Left,Right=(int)rect.Right,Top=(int)rect.Top,Bottom=(int)rect.Top+height}};Native.SHAppBarMessage(2,ref data);data.rc.Bottom=data.rc.Top+height;reservation.Update(data.rc,delegate{Native.SHAppBarMessage(3,ref data);});int x=data.rc.Left+(int)Math.Round(6*Area.Scale),y=data.rc.Top+(int)Math.Round(3*Area.Scale),width=(int)Math.Round(Bar.Width*Area.Scale),heightPixels=(int)Math.Round(Desktop.TopBarHeight*Area.Scale);Native.RECT current;if(!Native.GetWindowRect(data.hWnd,out current)||current.Left!=x||current.Top!=y||current.Right-current.Left!=width||current.Bottom-current.Top!=heightPixels)Native.SetWindowPos(data.hWnd,IntPtr.Zero,x,y,width,heightPixels,0x14);}
+            private void Unregister(){if(!registered)return;var data=new Native.APPBARDATA{cbSize=Marshal.SizeOf(typeof(Native.APPBARDATA)),hWnd=new WindowInteropHelper(Bar).Handle};Native.SHAppBarMessage(1,ref data);registered=false;reservation.Invalidate();}
             public void Dispose(){if(disposed)return;disposed=true;Desktop.CleanupStep("reserva secundaria",Unregister);foreach(var resource in new IDisposable[]{capsule,motion,gesture,apple})if(resource!=null)Desktop.CleanupStep("superficie secundaria",resource.Dispose);Desktop.CleanupStep("borde secundario",delegate{WindowLife.Close(revealEdge);});Desktop.CleanupStep("Dock secundario",delegate{WindowLife.Close(Dock);});Desktop.CleanupStep("barra secundaria",delegate{WindowLife.Close(Bar);});}
         }
     }
