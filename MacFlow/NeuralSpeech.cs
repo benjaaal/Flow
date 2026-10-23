@@ -27,7 +27,8 @@ namespace MacFlow
             await install.WaitAsync(stop);
             try
             {
-                if(!File.Exists(exe)||!Valid(model,ModelHash)||!Valid(model+".json",ConfigHash))
+                bool ready=await Task.Run(()=>File.Exists(exe)&&Valid(model,ModelHash)&&Valid(model+".json",ConfigHash),stop);
+                if(!ready)
                 {
                     if(progress!=null)progress("Descargando voz natural gratuita · 85 MB, sólo la primera vez…");
                     string stage=home+".stage-"+Guid.NewGuid().ToString("N");Directory.CreateDirectory(stage);
