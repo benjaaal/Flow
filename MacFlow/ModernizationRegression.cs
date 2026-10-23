@@ -11,6 +11,9 @@ namespace MacFlow
         private static void Check(bool ok,string text,List<string> results){if(!ok)throw new Exception(text);results.Add("PASS 26.2: "+text);}
         internal static void Run(string directory,List<string> results)
         {
+            Check(GeminiBrowser.AnswerPart("Gemini dijo\nAnterior\n"+new String('x',91000)+"\nGemini dijo\nRespuesta reciente\nGemini puede cometer errores")=="Respuesta reciente","Gemini selecciona la última respuesta en una conversación larga",results);
+            Check(GeminiBrowser.GeminiAddress("gemini.google.com/app/abc")&&!GeminiBrowser.GeminiAddress("https://gemini.google.com/app-malicioso"),"Gemini admite la dirección abreviada de Chrome y limita la ruta",results);
+            Check(NeuralSpeech.Clean("**Hola** https://ejemplo.org\nFuentes\nEnlace").Trim()=="Hola"&&NeuralSpeech.Clean(new String('a',3000)).Length==2400,"voz elimina marcado y enlaces y limita el trabajo de síntesis",results);
             var store=new SettingsStore(directory);var preferences=new Preferences{Theme="Auto",GlassOpacity=Double.NaN};store.Save(preferences);var restored=store.Load();Check(restored.Theme=="Auto"&&restored.GlassOpacity==.09,"tema automático persiste y una intensidad NaN no llega al renderizador",results);
             preferences.GlassOpacity=Double.PositiveInfinity;preferences.Validate();Check(preferences.GlassOpacity==.09,"valida intensidad infinita",results);
             store.Save(preferences);File.WriteAllText(store.PathName,"{damaged");store.Save(store.Load());File.WriteAllText(store.PathName,"{damaged again");Check(store.Load().Theme=="Auto","reparar el archivo principal no sobrescribe una copia válida con JSON dañado",results);

@@ -18,7 +18,7 @@ namespace MacFlow
         private CancellationTokenSource cancel;private readonly DispatcherTimer timeout=new DispatcherTimer{Interval=TimeSpan.FromSeconds(1)};
         private DateTime deadline;private int generation;private bool disposed,speaking;
         internal bool Busy{get;private set;}
-        internal event Action<bool> SpeakingChanged;internal event Action<string> Failed;
+        internal event Action<string> Progress;internal event Action<bool> SpeakingChanged;internal event Action<string> Failed;
         internal LocalSpeech(string profile){directory=Path.Combine(profile,"speech-cache");timeout.Tick+=delegate{if(DateTime.UtcNow>deadline){Stop();Error("La salida de voz no respondió.");}};}
         private static async Task<T> Read<T>(IAsyncOperation<T> action,CancellationToken stop)
         {
@@ -43,7 +43,7 @@ namespace MacFlow
             if(disposed||String.IsNullOrWhiteSpace(text))return;Stop();Busy=true;int token=++generation;var request=new CancellationTokenSource();cancel=request;
             try
             {
-                var wave=await Synthesize(text.Substring(0,Math.Min(6000,text.Length)),request.Token);if(disposed||token!=generation)return;Directory.CreateDirectory(directory);file=Path.Combine(directory,"speech-"+Guid.NewGuid().ToString("N")+".wav");File.WriteAllBytes(file,wave.Bytes);var audio=new MediaPlayer();player=audio;
+                SpeechWave wave=null;try{wave=await NeuralSpeech.Synthesize(Path.GetDirectoryName(directory),text,request.Token,Progress);}catch(OperationCanceledException){throw;}catch(Exception ex){Log.Write("Voz natural: "+ex.Message);var update=Progress;if(update!=null)update("Voz natural no disponible · usando voz de Windows");}if(wave==null)wave=await Synthesize(NeuralSpeech.Clean(text),request.Token);if(disposed||token!=generation)return;Directory.CreateDirectory(directory);file=Path.Combine(directory,"speech-"+Guid.NewGuid().ToString("N")+".wav");File.WriteAllBytes(file,wave.Bytes);var audio=new MediaPlayer();player=audio;
                 audio.MediaOpened+=delegate{if(disposed||token!=generation)return;if(!audio.HasAudio){Stop();Error("Windows no encontró audio en la respuesta.");return;}audio.Play();speaking=true;var changed=SpeakingChanged;if(changed!=null)changed(true);};
                 audio.MediaEnded+=delegate{if(token==generation)Stop();};audio.MediaFailed+=delegate(object s,System.Windows.Media.ExceptionEventArgs e){if(token==generation){Stop();Error("No se pudo reproducir la voz. Revisá el dispositivo de sonido.");}};
                 deadline=DateTime.UtcNow.AddMinutes(8);timeout.Start();audio.Open(new Uri(file));

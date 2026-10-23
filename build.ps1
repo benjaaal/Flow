@@ -46,6 +46,8 @@ if ($LASTEXITCODE -ne 0) { throw 'Falló el shader de cristal.' }
 if ($LASTEXITCODE -ne 0) { throw 'Falló el shader de tapa.' }
 & $shaderCompiler (Join-Path $root 'MacFlow/CrystalLight.hlsl') (Join-Path $build 'CrystalLight.ps')
 if ($LASTEXITCODE -ne 0) { throw 'Falló el shader de iluminación.' }
+& $shaderCompiler (Join-Path $root 'MacFlow/AssistantLight.hlsl') (Join-Path $build 'AssistantLight.ps')
+if ($LASTEXITCODE -ne 0) { throw 'Falló la luz del asistente.' }
 & $shaderCompiler (Join-Path $root 'MacFlow/LockGlass.hlsl') (Join-Path $build 'LockGlass.ps')
 if ($LASTEXITCODE -ne 0) { throw 'Falló el shader del reloj.' }
 & $shaderCompiler (Join-Path $root 'MacFlow/WelcomeApple.hlsl') (Join-Path $build 'WelcomeApple.ps')
@@ -58,7 +60,7 @@ if($CoreBridge){
 }
 $appSources = @(Get-ChildItem -LiteralPath (Join-Path $root 'MacFlow') -Filter '*.cs' | Where-Object Name -ne 'AssemblyInfo.cs' | ForEach-Object FullName)+@($assemblySource)
 $wallpaperResources=Get-ChildItem -LiteralPath (Join-Path $root 'MacFlow/Assets/Wallpapers') -File | Where-Object Extension -In '.png','.jpg' | ForEach-Object { '/resource:'+$_.FullName+',MacFlow.Wallpaper.'+$_.Name }
-& $csc @common @wallpaperResources ('/resource:' + (Join-Path $build 'LockGlass.ps') + ',MacFlow.LockGlass.ps') ('/resource:' + (Join-Path $build 'WelcomeApple.ps') + ',MacFlow.WelcomeApple.ps') ('/resource:' + (Join-Path $build 'LiquidGlass.ps') + ',MacFlow.LiquidGlass.ps') ('/resource:' + (Join-Path $build 'LidFold.ps') + ',MacFlow.LidFold.ps') ('/resource:' + (Join-Path $build 'CrystalLight.ps') + ',MacFlow.CrystalLight.ps') ('/out:' + (Join-Path $bin 'MacFlow.exe')) '/main:MacFlow.Program' @appSources
+& $csc @common @wallpaperResources ('/resource:' + (Join-Path $build 'AssistantLight.ps') + ',MacFlow.AssistantLight.ps') ('/resource:' + (Join-Path $build 'LockGlass.ps') + ',MacFlow.LockGlass.ps') ('/resource:' + (Join-Path $build 'WelcomeApple.ps') + ',MacFlow.WelcomeApple.ps') ('/resource:' + (Join-Path $build 'LiquidGlass.ps') + ',MacFlow.LiquidGlass.ps') ('/resource:' + (Join-Path $build 'LidFold.ps') + ',MacFlow.LidFold.ps') ('/resource:' + (Join-Path $build 'CrystalLight.ps') + ',MacFlow.CrystalLight.ps') ('/out:' + (Join-Path $bin 'MacFlow.exe')) '/main:MacFlow.Program' @appSources
 if ($LASTEXITCODE -ne 0) { throw 'Falló la compilación de MacFlow.' }
 Copy-Item -LiteralPath (Join-Path $root 'MacFlow\App.config') -Destination (Join-Path $bin 'MacFlow.exe.config') -Force
 Copy-Item -LiteralPath (Join-Path $root 'README.txt') -Destination (Join-Path $bin 'README.txt') -Force

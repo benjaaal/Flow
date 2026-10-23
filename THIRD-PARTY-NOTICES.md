@@ -110,3 +110,13 @@ Source: https://science.nasa.gov/earth/earth-observatory/blue-marble-next-genera
 Asset: https://assets.science.nasa.gov/content/dam/science/esd/eo/images/bmng/bmng-base/january/world.200401.3x5400x2700.jpg
 Media guidelines: https://www.nasa.gov/nasa-brand-center/images-and-media/
 The photograph is used as a texture on an original WPF sphere. Tierra.png is an original rendering of this credited texture, not generated geography. Lighting is art-directed by local time, not live weather, geolocation or an astronomical ephemeris. NASA does not endorse this product. No NASA logo or identifier is used as product branding.
+# Voz neural opcional de MacFlow 27.2.2
+
+El instalador no redistribuye estos archivos. La primera respuesta hablada descarga el runtime Piper 2023.11.14-2 y el modelo es_MX-claude-high directamente de sus fuentes oficiales. La descarga verifica SHA256; las siguientes síntesis son locales. Se conservan los archivos de licencia del runtime extraído y un SOURCES.txt con los orígenes.
+
+- Runtime y licencias MIT y de sus dependencias (incluido eSpeak NG, GPL): https://github.com/rhasspy/piper/releases/tag/2023.11.14-2
+- Código fuente correspondiente y dependencias: https://github.com/rhasspy/piper/tree/2023.11.14-2
+- Modelo, configuración y ficha de licencia del conjunto de datos Apache-2.0: https://huggingface.co/rhasspy/piper-voices/tree/main/es/es_MX/claude/high
+
+No existe relación con Apple ni se distribuye su voz. Los archivos opcionales quedan en neural-voice-v1 dentro del perfil de MacFlow. No se requiere una cuenta de pago para descargarlos.
+

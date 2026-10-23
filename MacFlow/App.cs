@@ -46,6 +46,8 @@ namespace MacFlow
             }
             if (args.Length > 0 && args[0] == "--restore") { new TaskbarLease(data).Restore();TaskbarSurfaces.RecoverVisible(); return 0; }
             if (args.Length == 2 && args[0] == "--self-test") return SelfTests.Run(args[1]);
+            if(args.Length==3&&args[0]=="--voice-natural-test"){try{var sample=NeuralSpeech.Synthesize(Path.GetFullPath(args[1]),"Hola, soy el asistente de MacFlow. Voy a comparar las fuentes para darte una respuesta clara.",CancellationToken.None,null).GetAwaiter().GetResult();File.WriteAllBytes(args[2],sample.Bytes);return 0;}catch(Exception ex){File.WriteAllText(args[2]+".error.txt",ex.ToString());return 1;}}
+            if(args.Length==2&&args[0]=="--assistant-live")return AssistantLive.Run(args[1]);
             if(args.Length==2&&args[0]=="--curtain-27-test")return CurtainValidation27.Run(args[1]);if(args.Length==2&&args[0]=="--modern-smoke")return ModernVisual.Run(args[1]);if(args.Length==2&&args[0]=="--renewal-27-test")return RenewalValidation27.Run(args[1]);
             if (args.Length == 2 && args[0] == "--stability-smoke") return StabilityVisual.Run(args[1]);
             if (args.Length == 2 && args[0] == "--icons-smoke") return IconsVisual.Run(args[1]);

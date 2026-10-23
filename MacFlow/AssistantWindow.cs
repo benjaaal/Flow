@@ -76,10 +76,10 @@ namespace MacFlow
                     }
                     finally{if(query==currentQuery)query=null;currentQuery.Dispose();}
                 }
-            }catch(OperationCanceledException){if(!closed&&token==operation)Say("Consulta detenida. Si ya se había enviado, permanece en Gemini.");}catch(Exception ex){if(!closed&&token==operation){Say(ex.Message);ShowInput();}}finally{if(token==operation){busy=false;voiceReply=false;if(!closed&&desktop.AssistantMode==AssistantStage.Working)Say("Listo.");UpdateState();}}
+            }catch(OperationCanceledException){if(!closed&&token==operation)Say("Consulta detenida. Si ya se había enviado, permanece en Gemini.");}catch(Exception ex){Log.Write("Asistente · "+ex.GetType().Name+": "+ex.Message);if(!closed&&token==operation){Say(ex.Message);ShowInput();}}finally{if(token==operation){busy=false;voiceReply=false;if(!closed&&desktop.AssistantMode==AssistantStage.Working)Say("Listo.");UpdateState();}}
         }
         private void Confirm(Action action){pending=action;confirm.Visibility=Visibility.Visible;desktop.SetAssistantVisual(AssistantStage.Answer,"Revisá y confirmá la acción.");ShowInput();}
-        private void Speak(string text){if(String.IsNullOrWhiteSpace(text)||desktop.IsTesting||closed)return;if(speaker==null){speaker=new LocalSpeech(desktop.Store.DirectoryPath);speaker.SpeakingChanged+=delegate(bool value){if(!closed){desktop.SetAssistantSpeaking(value);UpdateState();}};speaker.Failed+=delegate(string error){if(!closed){desktop.SetAssistantSpeaking(false);visual.Set(AssistantStage.Ready);status.Text=error;}};}speaker.Speak(text);}
+        private void Speak(string text){if(String.IsNullOrWhiteSpace(text)||desktop.IsTesting||closed)return;if(speaker==null){speaker=new LocalSpeech(desktop.Store.DirectoryPath);speaker.Progress+=delegate(string progress){if(!closed){status.Text=progress;visual.Set(AssistantStage.Working);}};speaker.SpeakingChanged+=delegate(bool value){if(!closed){desktop.SetAssistantSpeaking(value);UpdateState();}};speaker.Failed+=delegate(string error){if(!closed){desktop.SetAssistantSpeaking(false);visual.Set(AssistantStage.Ready);status.Text=error;}};}speaker.Speak(text);}
         private void Listen()
         {
             if(closed||desktop.IsTesting)return;if(listening.IsEnabled){StopListening();desktop.SetAssistantVisual(AssistantStage.Hidden,null);return;}StopVoice();completion.Stop();microphone.Content="Escuchando · detener";listening.Start();desktop.SetAssistantListening(true);UpdateState();

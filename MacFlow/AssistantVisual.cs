@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Media;
+using System.Windows.Media.Effects;
 namespace MacFlow
 {
     internal enum AssistantStage { Hidden, Ready, Appearance, Listening, Working, Answer, Speaking }
@@ -11,6 +12,7 @@ namespace MacFlow
     // No video playback, bitmap sequence, screen capture or Apple resources.
     internal sealed class AssistantVisual : FrameworkElement, IDisposable
     {
+        private AssistantLight optical;
         private readonly Stopwatch elapsed=new Stopwatch(),phaseClock=Stopwatch.StartNew();
         private readonly Brush spectrum=Freeze(new LinearGradientBrush(new GradientStopCollection{new GradientStop(Color.FromArgb(155,98,135,255),0),new GradientStop(Color.FromArgb(210,124,110,246),.26),new GradientStop(Color.FromArgb(245,190,235,255),.48),new GradientStop(Color.FromArgb(210,248,196,133),.72),new GradientStop(Color.FromArgb(145,235,120,171),1)},new Point(0,0),new Point(1,0)));
         private static readonly DependencyProperty EnergyProperty=DependencyProperty.Register("Energy",typeof(double),typeof(AssistantVisual),new FrameworkPropertyMetadata(.08,FrameworkPropertyMetadataOptions.AffectsRender));
@@ -22,7 +24,7 @@ namespace MacFlow
         internal bool Rendering{get{return attached;}}
         internal AssistantVisual()
         {
-            IsHitTestVisible=false;
+            IsHitTestVisible=false;if(!SystemParameters.HighContrast&&RenderCapability.IsPixelShaderVersionSupported(3,0)){optical=new AssistantLight();Effect=optical;}
             lensFill=Freeze(new RadialGradientBrush(new GradientStopCollection{new GradientStop(Color.FromRgb(32,34,39),0),new GradientStop(Color.FromRgb(4,5,7),.72),new GradientStop(Color.FromRgb(58,62,68),1)}){GradientOrigin=new Point(.35,.2),Center=new Point(.5,.5),RadiusX=.58,RadiusY=.58});
             bandFill=Freeze(new LinearGradientBrush(new GradientStopCollection{new GradientStop(Color.FromRgb(17,18,21),0),new GradientStop(Colors.Black,.45),new GradientStop(Color.FromRgb(8,9,11),1)},new Point(0,0),new Point(0,1)));
             lowerGlow=Freeze(new RadialGradientBrush(new GradientStopCollection{new GradientStop(Colors.White,0),new GradientStop(Color.FromArgb(80,215,224,234),.35),new GradientStop(Colors.Transparent,1)}));upperGlow=Freeze(new RadialGradientBrush(Color.FromArgb(64,255,255,255),Colors.Transparent));rim=new Pen(Design.Brush("#507A818B"),.65);rim.Freeze();
@@ -46,6 +48,7 @@ namespace MacFlow
         protected override void OnRender(DrawingContext dc)
         {
             if(Stage==AssistantStage.Hidden||ActualWidth<1||ActualHeight<1)return;
+            if(optical!=null){optical.Size=new Point(ActualWidth,ActualHeight);optical.Time=Motion.Enabled?phaseClock.Elapsed.TotalSeconds:0;optical.Energy=(double)GetValue(EnergyProperty);dc.DrawRectangle(Brushes.White,null,new Rect(0,0,ActualWidth,ActualHeight));return;}
             if(Ribbon)
             {
                 double h=Math.Max(1,ActualHeight-12),w=Math.Max(1,ActualWidth-12),radius=h/2,phase=Motion.Enabled?phaseClock.Elapsed.TotalSeconds:0;var rect=new Rect(6,6,w,h);double sphere=1-Math.Max(0,Math.Min(1,(w/h-1)/2));
@@ -67,6 +70,17 @@ namespace MacFlow
             var shine=new StreamGeometry();using(var p=shine.Open()){p.BeginFigure(new Point(center.X-r*.85,center.Y+r*.3),false,false);p.BezierTo(new Point(center.X-r*.3,center.Y+r*.88),new Point(center.X+r*.4,center.Y+r*.88),new Point(center.X+r*.88,center.Y+r*.25),true,false);}shine.Freeze();dc.DrawGeometry(null,new Pen(Design.Brush("#BDF5F8FF"),size*.013),shine);
             dc.DrawEllipse(upperGlow,null,new Point(center.X-r*.2,center.Y-r*.7),r*.54,r*.12);dc.Pop();
         }
-        public void Dispose(){if(disposed)return;disposed=true;Detach();elapsed.Stop();phaseClock.Stop();BeginAnimation(EnergyProperty,null);}
+        public void Dispose(){if(disposed)return;disposed=true;Detach();elapsed.Stop();phaseClock.Stop();Effect=null;optical=null;BeginAnimation(EnergyProperty,null);}
     }
+    internal sealed class AssistantLight : ShaderEffect
+    {
+        private static readonly PixelShader shader=Load();
+        private static PixelShader Load(){var shader=new PixelShader();using(var stream=typeof(AssistantLight).Assembly.GetManifestResourceStream("MacFlow.AssistantLight.ps"))shader.SetStreamSource(stream);shader.Freeze();return shader;}
+        private static readonly DependencyProperty SizeProperty=DependencyProperty.Register("Size",typeof(Point),typeof(AssistantLight),new UIPropertyMetadata(new Point(92,92),PixelShaderConstantCallback(0)));
+        private static readonly DependencyProperty TimeProperty=DependencyProperty.Register("Time",typeof(double),typeof(AssistantLight),new UIPropertyMetadata(0.0,PixelShaderConstantCallback(1)));
+        private static readonly DependencyProperty EnergyProperty=DependencyProperty.Register("Energy",typeof(double),typeof(AssistantLight),new UIPropertyMetadata(.1,PixelShaderConstantCallback(2)));
+        internal Point Size{set{SetValue(SizeProperty,value);}}internal double Time{set{SetValue(TimeProperty,value);}}internal double Energy{set{SetValue(EnergyProperty,value);}}
+        internal AssistantLight(){PixelShader=shader;UpdateShaderValue(SizeProperty);UpdateShaderValue(TimeProperty);UpdateShaderValue(EnergyProperty);}
+    }
+
 }

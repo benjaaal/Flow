@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Automation;
+using System.Windows.Automation.Text;
 namespace MacFlow
 {
     internal interface IGeminiBrowser
@@ -24,7 +25,7 @@ namespace MacFlow
         private static string Value(AutomationElement element)
         {
             object pattern;if(element.TryGetCurrentPattern(ValuePattern.Pattern,out pattern))return ((ValuePattern)pattern).Current.Value??"";
-            if(element.TryGetCurrentPattern(TextPattern.Pattern,out pattern))return ((TextPattern)pattern).DocumentRange.GetText(24000)??"";return "";
+            if(element.TryGetCurrentPattern(TextPattern.Pattern,out pattern)){var range=((TextPattern)pattern).DocumentRange.Clone();range.MoveEndpointByRange(TextPatternRangeEndpoint.Start,range,TextPatternRangeEndpoint.End);range.MoveEndpointByUnit(TextPatternRangeEndpoint.Start,TextUnit.Character,-90000);return range.GetText(90000)??"";}return "";
         }
         private static AutomationElement Root(WindowEntry entry)
         {
@@ -34,12 +35,12 @@ namespace MacFlow
         // and content cannot establish the destination of simulated input.
         private static bool Verified(AutomationElement root)
         {
-            foreach(AutomationElement edit in root.FindAll(TreeScope.Descendants,new PropertyCondition(AutomationElement.ControlTypeProperty,ControlType.Edit)))
+            var pending=new System.Collections.Generic.Queue<Tuple<AutomationElement,int>>();pending.Enqueue(Tuple.Create(root,0));int visited=0;
+            while(pending.Count>0&&visited++<600)
             {
-                if(edit.Current.IsOffscreen)continue;string name=LocalCommands.Normalize(edit.Current.Name);
-                if(!(name.Contains("direccion")||name.Contains("address")))continue;
-                bool page=false;var parent=TreeWalker.ControlViewWalker.GetParent(edit);for(int i=0;parent!=null&&i<20;i++,parent=TreeWalker.ControlViewWalker.GetParent(parent)){if(parent.Current.ControlType==ControlType.Document){page=true;break;}if(Automation.Compare(parent,root))break;}
-                if(!page&&GeminiAddress(Value(edit)))return true;
+                var entry=pending.Dequeue();var node=entry.Item1;if(node.Current.ControlType==ControlType.Document)continue;
+                if(node.Current.ControlType==ControlType.Edit&&!node.Current.IsOffscreen){string name=LocalCommands.Normalize(node.Current.Name);if((name.Contains("direccion")||name.Contains("address"))&&GeminiAddress(Value(node)))return true;}
+                if(entry.Item2>=7)continue;for(var child=TreeWalker.ControlViewWalker.GetFirstChild(node);child!=null;child=TreeWalker.ControlViewWalker.GetNextSibling(child))pending.Enqueue(Tuple.Create(child,entry.Item2+1));
             }
             return false;
         }
@@ -53,7 +54,7 @@ namespace MacFlow
         {
             foreach(AutomationElement edit in doc.FindAll(TreeScope.Descendants,new PropertyCondition(AutomationElement.ControlTypeProperty,ControlType.Edit)))
             {
-                string name=LocalCommands.Normalize(edit.Current.Name);if(!edit.Current.IsOffscreen&&edit.Current.IsEnabled&&edit.Current.IsKeyboardFocusable&&!edit.Current.IsPassword&&(name.Contains("peticion")||name.Contains("prompt")||name.Contains("gemini")||name.Contains("pregunta")||name.Contains("consulta")||name.Contains("mensaje")||name.Contains("message")))return edit;
+                string name=LocalCommands.Normalize(edit.Current.Name);if(!edit.Current.IsOffscreen&&edit.Current.IsEnabled&&edit.Current.IsKeyboardFocusable&&!edit.Current.IsPassword&&(name.Contains("peticion")||name.Contains("prompt")||name.Contains("gemini")||name.Contains("pregunta")||name.Contains("consulta")||name.Contains("mensaje")||name.Contains("message")||name.Contains("escribe")||name.Contains("introduce")||name.Contains("ask")||name.Contains("habla")))return edit;
             }
             throw new IOException("Gemini no muestra el campo de consulta. Completá vos el inicio de sesión o los avisos que aparezcan en Chrome y volvé a intentar.");
         }
@@ -62,14 +63,14 @@ namespace MacFlow
             foreach(AutomationElement item in doc.FindAll(TreeScope.Descendants,new PropertyCondition(AutomationElement.ControlTypeProperty,ControlType.Button)))
             {
                 if(item.Current.IsOffscreen||!item.Current.IsEnabled)continue;string n=LocalCommands.Normalize(item.Current.Name);
-                if(stop?(n.Contains("detener respuesta")||n.Contains("stop response")):n=="enviar"||n=="send"||n.StartsWith("enviar mensaje")||n.StartsWith("send message"))return item;
+                if(stop?(n=="detener"||n=="stop"||n.Contains("detener respuesta")||n.Contains("detener generacion")||n.Contains("stop response")||n.Contains("stop generating")):n=="enviar"||n=="send"||n.StartsWith("enviar mensaje")||n.StartsWith("send message")||n.StartsWith("enviar peticion")||n.StartsWith("enviar consulta")||n=="submit")return item;
             }
             return null;
         }
         internal static string AnswerPart(string page)
         {
             if(String.IsNullOrWhiteSpace(page))return "";int last=-1,length=0;
-            foreach(string marker in new[]{"Gemini ha dicho","Gemini said","Respuesta de Gemini","Gemini's response"}){int at=page.LastIndexOf(marker,StringComparison.OrdinalIgnoreCase);if(at>last){last=at;length=marker.Length;}}
+            foreach(string marker in new[]{"Gemini ha dicho","Gemini dijo","Gemini said","Respuesta de Gemini","Gemini's response"}){int at=page.LastIndexOf(marker,StringComparison.OrdinalIgnoreCase);if(at>last){last=at;length=marker.Length;}}
             if(last<0)return "";string text=page.Substring(last+length).Trim();
             foreach(string footer in new[]{"Mostrar borradores","Show drafts","Gemini puede cometer errores","Gemini can make mistakes"}){int at=text.IndexOf(footer,StringComparison.OrdinalIgnoreCase);if(at>=0)text=text.Substring(0,at).Trim();}
             return text.Length>6000?text.Substring(0,6000):text;
@@ -99,11 +100,11 @@ namespace MacFlow
                 bool written=await LocalTextInput.WriteFocused(entry,question,cancellation,delegate{try{return Automation.Compare(AutomationElement.FocusedElement,field)&&Verified(Root(entry));}catch{return false;}});
                 if(!written)throw new IOException("Cambió el foco de Chrome. Revisá el borrador en Gemini; no se envió automáticamente.");
                 await Task.Run(delegate{cancellation.ThrowIfCancellationRequested();var doc=Document(Root(entry));if(LocalCommands.Normalize(Value(field))!=LocalCommands.Normalize(question))throw new IOException("Gemini no confirmó el texto de la consulta. Revisá el borrador en Chrome.");var send=Button(doc,false);object invoke;if(send==null||!send.TryGetCurrentPattern(InvokePattern.Pattern,out invoke))throw new IOException("No está disponible Enviar en Gemini. El texto queda como borrador.");cancellation.ThrowIfCancellationRequested();((InvokePattern)invoke).Invoke();});
-                progress("Gemini está respondiendo…");string last="";int stable=0;
+                progress("Gemini está respondiendo…");string last="";int stable=0;bool generating=false;
                 for(int i=0;i<90;i++)
                 {
                     await Task.Delay(700,cancellation);var state=await Bounded(delegate{var doc=Document(Root(entry));return new Tuple<string,bool>(AnswerPart(Value(doc)),Button(doc,true)!=null);},cancellation);
-                    string current=state.Item1;if(current.Length==0||current==previous){stable=0;continue;}stable=current==last?stable+1:0;last=current;if(!state.Item2&&stable>=3)return current;
+                    generating|=state.Item2;string current=state.Item1;if(current.Length==0||current==previous&&!generating){stable=0;continue;}stable=current==last?stable+1:0;last=current;if(!state.Item2&&stable>=4)return current;
                 }
                 throw new IOException("La pregunta se envió, pero no pude confirmar una respuesta completa. Podés verla en Gemini; no voy a repetir el envío.");
             }
