@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Windows;
@@ -174,7 +174,7 @@ namespace MacFlow
         {
             string widgetMode=window.TryFindResource("GlassWidgetSurface") as string;if(Object.Equals(window.TryFindResource("GlassFixedLightInk"),true))whiteText=true;if(widgetMode=="Dark")whiteText=true;else if(widgetMode=="Light")whiteText=false;
             lightText=whiteText;nativeReadability=window.Title.Contains("Conexiones")?(whiteText?-.24:.56):(whiteText?-.32:.66);if(lens!=null)lens.Readability=nativeReadability;
-            if(materialFace!=null&&!SystemParameters.HighContrast)materialFace.Background=widgetMode=="Dark"?(Brush)Design.Brush("#CE15161A"):widgetMode=="Light"?(Brush)Design.Brush("#CFFFFFFF"):Design.MaterialTint(widgetMode=="Clear"||window.Title.Contains("Dock")||window.Title.Contains("barra superior")||window.Title.Contains("Centro de control"),whiteText);
+            if(materialFace!=null&&!SystemParameters.HighContrast)materialFace.Background=Object.Equals(window.TryFindResource("GlassControlMaterial"),true)?Design.ControlTint():widgetMode=="Dark"?(Brush)Design.Brush("#CE15161A"):widgetMode=="Light"?(Brush)Design.Brush("#CFFFFFFF"):Design.MaterialTint(widgetMode=="Clear"||window.Title.Contains("Dock")||window.Title.Contains("barra superior"),whiteText);
             window.Resources["GlassInk"]=SystemParameters.HighContrast?SystemColors.WindowTextBrush:Design.Brush(whiteText?"#F8FAFF":"#19212D");
             window.Resources["GlassMuted"]=SystemParameters.HighContrast?SystemColors.WindowTextBrush:Design.Brush(whiteText?"#DCE4EF":"#303B4B");
             window.Resources["GlassCardSurface"]=Design.Brush(whiteText?"#161C222B":"#22FFFFFF");window.Resources["GlassTileSurface"]=Design.Brush(whiteText?"#16141A23":"#22FFFFFF");
@@ -237,7 +237,7 @@ namespace MacFlow
             var h=new WindowInteropHelper(window).Handle;LiquidMaterial material;bool restore=instances.TryGetValue(window,out material)&&material.enabled;
             // Test capture only. Raise our fixture/window without taking keyboard
             // focus, then wait for the compositor instead of capturing an occluder.
-            Window fixture=null;foreach(Window candidate in Application.Current.Windows)if(candidate.Title=="MacFlow · Fondo de prueba"){fixture=candidate;break;}
+            Window fixture=null;foreach(Window candidate in Application.Current.Windows)if(candidate.Title=="MacOS · Fondo de prueba"){fixture=candidate;break;}
             try
             {
                 if(fixture!=null){Native.SetWindowPos(h,new IntPtr(-1),0,0,0,0,0x13);Native.SetWindowPos(new WindowInteropHelper(fixture).Handle,h,0,0,0,0,0x13);if(material!=null)material.Refresh();await System.Threading.Tasks.Task.Delay(600);}

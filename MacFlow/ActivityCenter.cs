@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -11,11 +11,12 @@ namespace MacFlow
     [DataContract] internal sealed class ActivityItem
     {
         [DataMember] public string Title,Detail;
+        internal bool External;internal string ExternalKey;
         [DataMember] public DateTime CreatedUtc;
     }
     internal sealed class ActivityLog
     {
-        private readonly string path;private List<ActivityItem> items;
+        private readonly string path;private List<ActivityItem> items;private List<ActivityItem> external=new List<ActivityItem>();private readonly HashSet<string> dismissedExternal=new HashSet<string>();
         internal event Action Changed;
         internal ActivityLog(string directory){path=Path.Combine(directory,"activity.json");}
         internal IList<ActivityItem> Items
@@ -23,9 +24,10 @@ namespace MacFlow
             get
             {
                 if(items==null){try{using(var file=File.OpenRead(path))items=(List<ActivityItem>)new DataContractJsonSerializer(typeof(List<ActivityItem>)).ReadObject(file);}catch{items=new List<ActivityItem>();}items=(items??new List<ActivityItem>()).Where(i=>i!=null&&!String.IsNullOrWhiteSpace(i.Title)).Take(60).ToList();}
-                return items.AsReadOnly();
+                return items.Concat(external.Where(e=>!dismissedExternal.Contains(e.ExternalKey??""))).OrderByDescending(e=>e.CreatedUtc).Take(80).ToList().AsReadOnly();
             }
         }
+        internal void SetExternal(List<ActivityItem> values){external=(values??new List<ActivityItem>()).Take(40).ToList();if(Changed!=null)Changed();}
         internal void Add(string title,string detail)
         {
             var ignored=Items;if(String.IsNullOrWhiteSpace(title))return;title=Trim(title,100);detail=Trim(detail??"",1000);
@@ -33,7 +35,7 @@ namespace MacFlow
             items.Insert(0,new ActivityItem{Title=title,Detail=detail,CreatedUtc=DateTime.UtcNow});if(items.Count>60)items.RemoveRange(60,items.Count-60);Save();if(Changed!=null)Changed();
         }
         private static string Trim(string value,int count){return value.Length>count?value.Substring(0,count):value;}
-        internal void Clear(){var ignored=Items;items.Clear();Save();if(Changed!=null)Changed();}
+        internal void Clear(){var ignored=Items;foreach(var e in external)dismissedExternal.Add(e.ExternalKey??"");items.Clear();Save();if(Changed!=null)Changed();}
         private void Save(){try{Directory.CreateDirectory(Path.GetDirectoryName(path));string temp=path+".tmp";using(var file=File.Create(temp))new DataContractJsonSerializer(typeof(List<ActivityItem>)).WriteObject(file,items);if(File.Exists(path))File.Replace(temp,path,null);else File.Move(temp,path);}catch(Exception ex){Log.Write("No se pudo guardar la actividad: "+ex.Message);}}
     }
     internal sealed class ActivityCenter : FeaturePanel

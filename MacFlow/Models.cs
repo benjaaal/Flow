@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.Serialization;
@@ -11,6 +11,7 @@ namespace MacFlow
     {
         internal static Version Version {get{var v=typeof(Product).Assembly.GetName().Version;return new Version(v.Major,v.Minor,v.Build);}}
         internal static string VersionText {get{return Version.ToString();}}
+        internal static string DisplayVersion {get{return Version.Build==0?Version.Major+"."+Version.Minor:VersionText;}}
         internal static readonly string DefaultFeedUrl=ReadChannel();
         private static string ReadChannel()
         {
@@ -21,6 +22,10 @@ namespace MacFlow
     [DataContract]
     public sealed class Preferences
     {
+        [DataMember] public double NotchScale=1;
+        [DataMember] public bool NotchHover=true,NotchMedia=true,NotchTimers=true,NotchShelf=true,NotchNotifications=true;
+        [DataMember] public bool ShowNotifications=true;
+        [DataMember] public bool ShowPrivacyAfterResume=true,ShowSystemNotifications=false,LockNotificationPreviews=false;
         [DataMember] public string Theme = "Light";
         [DataMember] public string Accent = "#8DAEFF";
         [DataMember] public int IconSize = 44;
@@ -74,7 +79,10 @@ namespace MacFlow
         internal bool NeedsUpdateWelcome(Version current){Version previous;return WelcomeAfterUpdate&&(!Version.TryParse(LastWelcomedVersion,out previous)||current>previous);}
         [DataMember] public string WallpaperPath = "";
         [DataMember] public string PrivacyWallpaperPath = "";
-        [DataMember] public string PrivacyClockWeight = "Semibold";
+        [DataMember] public bool PrivacyAstronomy = false;
+        [DataMember] public bool DesktopLock2722Applied;
+        internal bool UpgradeDesktopLock(){if(DesktopLock2722Applied)return false;DesktopLock2722Applied=true;PrivacyAstronomy=false;PrivacyClockWeight="Regular";PrivacyClockScale=1;return true;}
+        [DataMember] public string PrivacyClockWeight = "Regular";
         [DataMember] public string PrivacyClockColor = "#FFFFFF";
         [DataMember] public string ControlCenterLayout = "Auto";
         [DataMember] public double PrivacyClockScale = 1;
@@ -84,7 +92,7 @@ namespace MacFlow
         [DataMember] public string LocalUpdateFolder = "";
         [DataMember] public string UpdateFeedUrl = Product.DefaultFeedUrl;
         [DataMember] public List<AppEntry> Pins = new List<AppEntry>();
-        [OnDeserializing] private void Defaults(StreamingContext context) { VoiceWakeEnabled=false;HideDockInApps=true;LiveGlass=true;GlassOpacity=.18; DockPosition="Bottom"; ShowNetwork=ShowBattery=ShowVolume=true;WindowsMenu=ProtectDockEdge=HideDockInCodex=LidAnimation=WelcomeAfterUpdate=CheckUpdatesAutomatically=true;LastWelcomedVersion="1.0.0";AppleWindowControls=false;WallpaperPath=""; Hotkey="AltSpace"; UpdateRepository="";LocalUpdateFolder="";UpdateFeedUrl=""; }
+        [OnDeserializing] private void Defaults(StreamingContext context) { ShowPrivacyAfterResume=true;PrivacyAstronomy=false;NotchScale=1;NotchHover=NotchMedia=NotchTimers=NotchShelf=NotchNotifications=ShowNotifications=true;VoiceWakeEnabled=false;HideDockInApps=true;LiveGlass=true;GlassOpacity=.18; DockPosition="Bottom"; ShowNetwork=ShowBattery=ShowVolume=true;WindowsMenu=ProtectDockEdge=HideDockInCodex=LidAnimation=WelcomeAfterUpdate=CheckUpdatesAutomatically=true;LastWelcomedVersion="1.0.0";AppleWindowControls=false;WallpaperPath=""; Hotkey="AltSpace"; UpdateRepository="";LocalUpdateFolder="";UpdateFeedUrl=""; }
         public bool MovePin(string source,string target)
         {
             int from=Pins.FindIndex(p=>p.Key==source),to=Pins.FindIndex(p=>p.Key==target);
@@ -92,8 +100,8 @@ namespace MacFlow
         }
         public void Validate()
         {
-            if(ControlCenterLayout!="Auto"&&ControlCenterLayout!="Mac"&&ControlCenterLayout!="iPad")ControlCenterLayout="Auto";
-            if(PrivacyClockWeight!="Regular"&&PrivacyClockWeight!="Medium"&&PrivacyClockWeight!="Semibold"&&PrivacyClockWeight!="Bold")PrivacyClockWeight="Semibold";
+            ControlCenterLayout="Mac";if(Double.IsNaN(NotchScale)||Double.IsInfinity(NotchScale))NotchScale=1;NotchScale=Math.Max(.85,Math.Min(1.2,NotchScale));
+            if(PrivacyClockWeight!="Regular"&&PrivacyClockWeight!="Medium"&&PrivacyClockWeight!="Semibold"&&PrivacyClockWeight!="Bold")PrivacyClockWeight="Regular";
             if(PrivacyClockColor==null||!System.Text.RegularExpressions.Regex.IsMatch(PrivacyClockColor,"^#[0-9A-Fa-f]{6}$"))PrivacyClockColor="#FFFFFF";
             if(Double.IsNaN(PrivacyClockScale)||Double.IsInfinity(PrivacyClockScale)||PrivacyClockScale<.75||PrivacyClockScale>1.25)PrivacyClockScale=1;
             if(PrivacyWallpaperPath==null)PrivacyWallpaperPath="";

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
@@ -21,8 +21,8 @@ namespace MacFlow
         private bool busy,closed;
         internal UpdateWindow(string channel,string folder="",string feedUrl="")
         {
-            repository=channel;localFolder=folder;feed=feedUrl;Title="MacFlow · Actualizaciones";Width=560;Height=470;WindowStyle=WindowStyle.None;AllowsTransparency=false;ResizeMode=ResizeMode.NoResize;Background=Brushes.Transparent;ShowInTaskbar=false;Topmost=true;
-            var layout=new DockPanel();var header=new StackPanel();header.Children.Add(new WindowControls(this,delegate{Design.Dismiss(this);}){Margin=new Thickness(0,0,0,13)});header.Children.Add(Design.Text("Actualizaciones",25,true));header.Children.Add(Design.Text("MacFlow "+Product.VersionText,12,false));DockPanel.SetDock(header,Dock.Top);layout.Children.Add(header);
+            repository=channel;localFolder=folder;feed=feedUrl;Title="MacOS · Actualizaciones";Width=560;Height=470;WindowStyle=WindowStyle.None;AllowsTransparency=false;ResizeMode=ResizeMode.NoResize;Background=Brushes.Transparent;ShowInTaskbar=false;Topmost=true;
+            var layout=new DockPanel();var header=new StackPanel();header.Children.Add(new WindowControls(this,delegate{Design.Dismiss(this);}){Margin=new Thickness(0,0,0,13)});header.Children.Add(Design.Text("Actualizaciones",25,true));header.Children.Add(Design.Text("MacOS "+Product.VersionText,12,false));DockPanel.SetDock(header,Dock.Top);layout.Children.Add(header);
             var actions=new StackPanel{Margin=new Thickness(0,15,0,0)};var row=new StackPanel{Orientation=Orientation.Horizontal};check=Design.Button("Buscar",Check,false);local=Design.Button("Elegir paquete…",PickLocal,false);row.Children.Add(check);row.Children.Add(local);actions.Children.Add(row);
             var next=new StackPanel{Orientation=Orientation.Horizontal};download=Design.Button("Descargar",Download,true);install=Design.Button("Actualizar ahora",Install,true);next.Children.Add(download);next.Children.Add(install);actions.Children.Add(next);DockPanel.SetDock(actions,Dock.Bottom);layout.Children.Add(actions);
             var body=new StackPanel{Margin=new Thickness(0,20,0,0)};status=Design.Text((UpdateService.ValidRepository(repository)||UpdateService.ValidFeed(feed))?"Buscá si hay una versión nueva disponible.":"El canal en línea todavía no está publicado. Podés actualizar con un paquete local.",14,true);status.TextWrapping=TextWrapping.Wrap;body.Children.Add(status);progress=new ProgressBar{Minimum=0,Maximum=100,Height=4,Margin=new Thickness(0,17,0,15),Visibility=Visibility.Collapsed};body.Children.Add(progress);
@@ -43,7 +43,7 @@ namespace MacFlow
         }
         private async void PickLocal()
         {
-            if(busy||closed)return;var dialog=new Microsoft.Win32.OpenFileDialog{Title="Elegir paquete de actualización de MacFlow",Filter="Instalador o paquete de MacFlow|*.exe;MacFlow-update.json|Instalador de MacFlow|*.exe|Manifiesto de MacFlow|MacFlow-update.json"};if(dialog.ShowDialog(this)!=true)return;SetBusy(true);
+            if(busy||closed)return;var dialog=new Microsoft.Win32.OpenFileDialog{Title="Elegir paquete de actualización de MacOS",Filter="Instalador o paquete de MacFlow|*.exe;MacFlow-update.json|Instalador de MacFlow|*.exe|Manifiesto de MacFlow|MacFlow-update.json"};if(dialog.ShowDialog(this)!=true)return;SetBusy(true);
             try{var selected=await Task.Run(()=>String.Equals(Path.GetExtension(dialog.FileName),".exe",StringComparison.OrdinalIgnoreCase)?UpdateService.ReadInstaller(dialog.FileName,null,true,lifetime.Token):UpdateService.ReadLocal(dialog.FileName),lifetime.Token);if(!closed)Selected(selected);}
             catch(Exception ex){Report(ex);}finally{SetBusy(false);if(closed)lifetime.Dispose();}
         }
@@ -52,7 +52,7 @@ namespace MacFlow
             if(busy||closed||package==null)return;SetBusy(true);status.Text=package.LocalFile==null?"Descargando la nueva versión…":"Preparando el paquete…";progress.Visibility=Visibility.Visible;progress.Value=0;
             try
             {
-                var cache=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"MacFlow","Updates");var reporter=new Progress<int>(value=>{if(!closed)progress.Value=value;});var file=await UpdateService.Prepare(package,cache,reporter,lifetime.Token);if(closed)return;prepared=file;status.Text="Actualización lista. Integridad y versión comprobadas.";notes.Text="Actualizar ahora abre el asistente. MacFlow se cerrará cuando confirmes la instalación y conservará tus ajustes.";
+                var cache=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"MacFlow","Updates");var reporter=new Progress<int>(value=>{if(!closed)progress.Value=value;});var file=await UpdateService.Prepare(package,cache,reporter,lifetime.Token);if(closed)return;prepared=file;status.Text="Actualización lista. Integridad y versión comprobadas.";notes.Text="Actualizar ahora abre el asistente. MacOS se cerrará cuando confirmes la instalación y conservará tus ajustes.";
             }
             catch(Exception ex){prepared=null;Report(ex);}finally{SetBusy(false);if(closed)lifetime.Dispose();}
         }

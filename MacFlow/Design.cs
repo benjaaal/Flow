@@ -46,9 +46,9 @@ namespace MacFlow
         }
         public static Brush Ink { get { return Brush(Dark ? "#F5F5F7" : "#202023"); } }
         public static Brush Muted { get { return Brush(Dark ? "#C5C5CC" : "#5D5D64"); } }
-        public static Brush ContentSurface {get{return Brush(Dark?"#C9252528":"#DAF8F8FA");}}
-        public static Brush SidebarSurface {get{return Brush(Dark?"#10202024":"#18FFFFFF");}}
-        public static Brush CardSurface {get{return Brush(Dark?"#693A3A40":"#9CFFFFFF");}}
+        public static Brush ContentSurface {get{return Brush(Dark?"#DA202024":"#E8F7F7F9");}}
+        public static Brush SidebarSurface {get{return Brush(Dark?"#30202024":"#25FFFFFF");}}
+        public static Brush CardSurface {get{return Brush(Dark?"#583B3B40":"#D4FFFFFF");}}
         public static Border Glass(UIElement child, int radius, bool dock, bool contain=false)
         {
             var background = MaterialTint(dock,Dark);
@@ -56,7 +56,7 @@ namespace MacFlow
             // created the unwanted double rim even when its outline was removed.
             var layer = new Grid();background.Freeze();
             layer.Children.Add(child);
-            var outer = new Border { CornerRadius = new CornerRadius(radius), BorderThickness = new Thickness(0), BorderBrush = Brushes.Transparent, Background = background, Padding = new Thickness(dock ? 5 : 22), Child = layer };
+            var outer = new Border { CornerRadius = new CornerRadius(radius), BorderThickness = new Thickness(.65), BorderBrush = Brush(Dark?"#28FFFFFF":"#72FFFFFF"), Background = background, Padding = new Thickness(dock ? 5 : 22), Child = layer };
             if(!dock||contain){Action clip=delegate{double r=Math.Max(0,radius-outer.Padding.Left-outer.BorderThickness.Left);layer.Clip=new RectangleGeometry(new Rect(0,0,Math.Max(0,layer.ActualWidth),Math.Max(0,layer.ActualHeight)),r,r);};layer.SizeChanged+=delegate{clip();};outer.Loaded+=delegate{clip();};}
             return outer;
         }
@@ -66,18 +66,19 @@ namespace MacFlow
             // This is a tint above the real clipped compositor backdrop.
             var colors=dock?dark?new[]{"#30232326","#16232326","#28232326"}:new[]{"#60FFFFFF","#30FFFFFF","#48FFFFFF"}:dark?new[]{"#94232328","#80232328","#90232328"}:new[]{"#B8FAFAFC","#9CFAFAFC","#B0FAFAFC"};
             var brush=new LinearGradientBrush{StartPoint=new Point(0,0),EndPoint=new Point(.8,1)};
-            for(int i=0;i<3;i++){var color=(Color)ColorConverter.ConvertFromString(colors[i]);color.A=(byte)Math.Min(220,color.A*Math.Max(dock?.5:1,GlassOpacity/.18));brush.GradientStops.Add(new GradientStop(color,i==0?0:i==1?.48:1));}brush.Freeze();return brush;
+            for(int i=0;i<3;i++){var color=(Color)ColorConverter.ConvertFromString(colors[i]);color.A=(byte)Math.Min(220,color.A*(.72+.40*Math.Max(0,Math.Min(1,(GlassOpacity-.06)/.59))));brush.GradientStops.Add(new GradientStop(color,i==0?0:i==1?.48:1));}brush.Freeze();return brush;
         }
+        internal static Brush ControlTint(){var tint=new LinearGradientBrush(new GradientStopCollection{new GradientStop(Color.FromArgb(102,18,22,30),0),new GradientStop(Color.FromArgb(70,18,22,30),.5),new GradientStop(Color.FromArgb(92,18,22,30),1)},new Point(0,0),new Point(0,1));tint.Freeze();return tint;}
         public static TextBlock Text(string text, double size, bool bold)
         {
-            var label=new TextBlock { Text = text, FontFamily = new FontFamily("Segoe UI Variable Text, Segoe UI"), FontSize = size, FontWeight = bold ? FontWeights.SemiBold : FontWeights.Normal, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis,SnapsToDevicePixels=true };TextOptions.SetTextFormattingMode(label,TextFormattingMode.Display);label.SetResourceReference(TextBlock.ForegroundProperty,"GlassInk");return label;
+            var label=new TextBlock { Text = (text??"").Replace("MacFlow","MacOS"), FontFamily = new FontFamily("Segoe UI Variable Text, Segoe UI"), FontSize = size, FontWeight = bold ? FontWeights.SemiBold : FontWeights.Normal, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis,SnapsToDevicePixels=true };TextOptions.SetTextFormattingMode(label,TextFormattingMode.Display);label.SetResourceReference(TextBlock.ForegroundProperty,"GlassInk");return label;
         }
         public static Button Button(string text, Action action, bool prominent)
         {
-            var b = new Button { MinHeight=30, Content = text, HorizontalContentAlignment=HorizontalAlignment.Center,VerticalContentAlignment=VerticalAlignment.Center, Foreground = prominent ? Brushes.White : Ink, Background = prominent ? Brush("#007AFF") : Brush(Dark ? "#20FFFFFF" : "#A8FFFFFF"), BorderBrush = Brushes.Transparent, BorderThickness = new Thickness(0), Padding = new Thickness(12, 5, 12, 5), Margin = new Thickness(0, 3, 6, 3), Cursor = Cursors.Hand, FontSize = 13 };
+            var b = new Button { MinHeight=30, Content = (text??"").Replace("MacFlow","MacOS"), HorizontalContentAlignment=HorizontalAlignment.Center,VerticalContentAlignment=VerticalAlignment.Center, Foreground = prominent ? Brushes.White : Ink, Background = prominent ? Brush("#007AFF") : Brush(Dark ? "#20FFFFFF" : "#A8FFFFFF"), BorderBrush = Brushes.Transparent, BorderThickness = new Thickness(0), Padding = new Thickness(12, 5, 12, 5), Margin = new Thickness(0, 3, 6, 3), Cursor = Cursors.Hand, FontSize = 13 };
             var template = new ControlTemplate(typeof(Button));
             var disabled=new Trigger{Property=UIElement.IsEnabledProperty,Value=false};disabled.Setters.Add(new Setter(UIElement.OpacityProperty,.42));template.Triggers.Add(disabled);
-            var border = new FrameworkElementFactory(typeof(Border));border.Name="AnimatedFace";border.SetValue(UIElement.RenderTransformProperty,new ScaleTransform(1,1));border.SetValue(UIElement.RenderTransformOriginProperty,new Point(.5,.5));border.SetValue(Border.CornerRadiusProperty, new CornerRadius(12)); border.SetValue(Border.BackgroundProperty, new TemplateBindingExtension(Control.BackgroundProperty)); border.SetValue(Border.BorderBrushProperty,new TemplateBindingExtension(Control.BorderBrushProperty)); border.SetValue(Border.BorderThicknessProperty,new TemplateBindingExtension(Control.BorderThicknessProperty));
+            var border = new FrameworkElementFactory(typeof(Border));border.Name="AnimatedFace";border.SetValue(UIElement.RenderTransformProperty,new ScaleTransform(1,1));border.SetValue(UIElement.RenderTransformOriginProperty,new Point(.5,.5));border.SetValue(Border.CornerRadiusProperty, new CornerRadius(9)); border.SetValue(Border.BackgroundProperty, new TemplateBindingExtension(Control.BackgroundProperty)); border.SetValue(Border.BorderBrushProperty,new TemplateBindingExtension(Control.BorderBrushProperty)); border.SetValue(Border.BorderThicknessProperty,new TemplateBindingExtension(Control.BorderThicknessProperty));
             var cp = new FrameworkElementFactory(typeof(ContentPresenter)); cp.SetValue(FrameworkElement.MarginProperty, new TemplateBindingExtension(Control.PaddingProperty)); cp.SetValue(FrameworkElement.HorizontalAlignmentProperty, new TemplateBindingExtension(Control.HorizontalContentAlignmentProperty)); cp.SetValue(FrameworkElement.VerticalAlignmentProperty, new TemplateBindingExtension(Control.VerticalContentAlignmentProperty));
             var layers=new FrameworkElementFactory(typeof(Grid));var glint=new FrameworkElementFactory(typeof(Border));glint.Name="Glint";glint.SetValue(Border.CornerRadiusProperty,new CornerRadius(14));glint.SetValue(Border.BackgroundProperty,new LinearGradientBrush(Colors.White,Colors.Transparent,70));glint.SetValue(UIElement.OpacityProperty,0.0);glint.SetValue(UIElement.IsHitTestVisibleProperty,false);layers.AppendChild(glint);layers.AppendChild(cp);border.AppendChild(layers);var hitArea=new FrameworkElementFactory(typeof(Grid));hitArea.SetValue(System.Windows.Controls.Panel.BackgroundProperty,Brushes.Transparent);hitArea.AppendChild(border);template.VisualTree = hitArea; b.Template = template;
             if(!prominent)b.SetResourceReference(Control.ForegroundProperty,"GlassInk");
@@ -88,7 +89,7 @@ namespace MacFlow
         }
         private static void AnimateGlint(Button button,double value)
         {
-            var solid=button.Background as SolidColorBrush;if(solid!=null&&solid.Color.A==0&&!(button.Content is GlassPiece))return;
+            
             var layer=button.Template.FindName("Glint",button) as Border;if(layer==null)return;
             Motion.Fade(layer,layer.Opacity,value,Motion.Hover);
         }
@@ -104,18 +105,18 @@ namespace MacFlow
         internal static void CompleteGenieOpen(Window window)
         {
             if(!WindowLife.Alive(window)||!window.IsVisible||(bool)window.GetValue(DismissingProperty)||(bool)window.GetValue(MinimizingProperty))return;
-            PanelMotion.Reset(window);window.BeginAnimation(UIElement.OpacityProperty,null);window.Opacity=1;CompositorGlass.Resize(window,1);
+            PanelMotion.Reset(window);window.SetValue(PanelMotion.DockFlight,false);window.BeginAnimation(UIElement.OpacityProperty,null);window.Opacity=1;CompositorGlass.Resize(window,1);
         }
         public static void Reveal(Window window)
         {
             if(!WindowLife.Alive(window)||(bool)window.GetValue(DismissingProperty)||PanelMotion.IsTransitioning(window))return;
             if (!Motion.Enabled) return;
-            if((bool)window.GetValue(PanelMotion.UseDockEntrance)&&!PanelMotion.FromTop(window)&&GenieTransition.TryStart(window,Motion.Panel,true))
+            if((bool)window.GetValue(PanelMotion.DockFlight)&&!PanelMotion.FromTop(window)&&GenieTransition.TryStart(window,Motion.Panel,true))
             {
                 window.BeginAnimation(UIElement.OpacityProperty,null);window.Opacity=0;CompositorGlass.Resize(window,1);PanelMotion.Open(window);
                 var reveal=new DoubleAnimation(0,0,TimeSpan.FromMilliseconds(Motion.Panel+10));reveal.Completed+=delegate{if(WindowLife.Alive(window)&&window.IsVisible&&!(bool)window.GetValue(DismissingProperty)&&!(bool)window.GetValue(MinimizingProperty)){window.BeginAnimation(UIElement.OpacityProperty,null);window.Opacity=1;CompositorGlass.Resize(window,1);}};window.BeginAnimation(UIElement.OpacityProperty,reveal);return;
             }
-            var entrance = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(window.Title=="MacFlow · Menú"?Motion.Menu:Motion.Content)) { EasingFunction = Motion.Ease() };
+            var entrance = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(window.Title=="MacOS · Menú"?Motion.Menu:Motion.Content)) { EasingFunction = Motion.Ease() };
             entrance.Completed += delegate { if(WindowLife.Alive(window)&&window.IsVisible&&!(bool)window.GetValue(DismissingProperty)&&!(bool)window.GetValue(MinimizingProperty))window.BeginAnimation(UIElement.OpacityProperty,null); };
             window.BeginAnimation(UIElement.OpacityProperty, entrance);
             PanelMotion.Open(window);
@@ -127,15 +128,13 @@ namespace MacFlow
             int duration=Motion.WindowClose+10;bool finished=false;var fallback=new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Background){Interval=TimeSpan.FromMilliseconds(duration+80)};
             Action finish=delegate{if(finished)return;finished=true;fallback.Stop();PanelMotion.CompleteClose(window);window.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle,new Action(delegate{if(!WindowLife.Alive(window))return;window.Close();if(after!=null)after();}));};
             fallback.Tick+=delegate{finish();};window.Closed+=delegate{finished=true;fallback.Stop();};fallback.Start();
-            bool genie=!PanelMotion.FromTop(window)&&GenieTransition.TryStart(window,Motion.WindowClose);
-            if(genie){window.BeginAnimation(UIElement.OpacityProperty,null);window.Opacity=0;CompositorGlass.Resize(window,1);}
             PanelMotion.Close(window);
-            var animation=new DoubleAnimation(0,TimeSpan.FromMilliseconds(duration)){EasingFunction=Motion.Ease(true)};Timeline.SetDesiredFrameRate(animation,60);animation.Completed+=delegate{finish();};if(genie){var clock=new DoubleAnimation(0,0,TimeSpan.FromMilliseconds(duration));clock.Completed+=delegate{finish();};window.BeginAnimation(UIElement.OpacityProperty,clock);}else window.BeginAnimation(UIElement.OpacityProperty,animation);
+            var animation=new DoubleAnimation(0,TimeSpan.FromMilliseconds(duration)){EasingFunction=Motion.Ease(true)};Timeline.SetDesiredFrameRate(animation,60);animation.Completed+=delegate{finish();};window.BeginAnimation(UIElement.OpacityProperty,animation);
         }
         public static void Minimize(Window window)
         {
             if(!WindowLife.Alive(window)||window.WindowState==WindowState.Minimized||(bool)window.GetValue(MinimizingProperty)||(bool)window.GetValue(DismissingProperty))return;
-            if(!(bool)window.GetValue(RestoreHookProperty)){window.SetValue(RestoreHookProperty,true);bool minimized=false;window.StateChanged+=delegate{if(!WindowLife.Alive(window)||window.WindowState==WindowState.Minimized)minimized=true;else if(minimized){minimized=false;Reveal(window);}};}
+            if(!(bool)window.GetValue(RestoreHookProperty)){window.SetValue(RestoreHookProperty,true);bool minimized=false;window.StateChanged+=delegate{if(!WindowLife.Alive(window)||window.WindowState==WindowState.Minimized)minimized=true;else if(minimized){minimized=false;window.SetValue(PanelMotion.DockFlight,true);Reveal(window);}};}
             if(!Motion.Enabled){window.WindowState=WindowState.Minimized;return;}window.SetValue(MinimizingProperty,true);window.IsHitTestVisible=false;
             bool genie=!PanelMotion.FromTop(window)&&GenieTransition.TryStart(window,Motion.WindowClose);if(genie){window.BeginAnimation(UIElement.OpacityProperty,null);window.Opacity=0;CompositorGlass.Resize(window,1);}
             PanelMotion.Close(window);
@@ -198,7 +197,7 @@ namespace MacFlow
         public static CheckBox Check(string text, bool value, Action<bool> change)
         {
             var c = new CheckBox { Content = text, IsChecked = value, Foreground = Ink, FontSize = 14, Margin = new Thickness(0, 10, 0, 10) };
-            Action move=delegate {var t=c.Template.FindName("KnobMotion",c) as TranslateTransform;if(t==null)return;double x=c.IsChecked==true?17:0;if(!Animations){t.BeginAnimation(TranslateTransform.XProperty,null);t.X=x;}else t.BeginAnimation(TranslateTransform.XProperty,new DoubleAnimation(x,TimeSpan.FromMilliseconds(190)){EasingFunction=new CubicEase{EasingMode=EasingMode.EaseInOut}});};c.Loaded+=delegate {move();};c.Checked+=delegate {move();};c.Unchecked+=delegate {move();};
+            Action move=delegate {var t=c.Template.FindName("KnobMotion",c) as TranslateTransform;if(t==null)return;double x=c.IsChecked==true?17:0;Motion.To(t,TranslateTransform.XProperty,x,Motion.Hover);};c.Loaded+=delegate {move();};c.Checked+=delegate {move();};c.Unchecked+=delegate {move();};
             c.SetResourceReference(Control.ForegroundProperty,"GlassInk");c.Checked += delegate { change(true); }; c.Unchecked += delegate { change(false); }; return c;
         }
         public static UIElement AppleMark(double size)
@@ -213,7 +212,7 @@ namespace MacFlow
         {return new SystemSymbol(key,size,color);}
         public static Border Card(UIElement content)
         {
-            var card=new Border{Margin=new Thickness(0,0,0,12),Padding=new Thickness(14),CornerRadius=new CornerRadius(12),BorderThickness=new Thickness(0),Child=content};card.SetResourceReference(Border.BackgroundProperty,"GlassCardSurface");return card;
+            var card=new Border{Margin=new Thickness(0,0,0,12),Padding=new Thickness(14),CornerRadius=new CornerRadius(13),BorderThickness=new Thickness(.5),BorderBrush=Brush(Dark?"#18FFFFFF":"#10000000"),Child=content};card.SetResourceReference(Border.BackgroundProperty,"GlassCardSurface");return card;
         }
         public static Button Circle(string symbol, Action action, string tooltip)
         {

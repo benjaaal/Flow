@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -46,7 +46,7 @@ namespace MacFlow
             }
             if (args.Length > 0 && args[0] == "--restore") { new TaskbarLease(data).Restore();TaskbarSurfaces.RecoverVisible(); return 0; }
             if (args.Length == 2 && args[0] == "--self-test") return SelfTests.Run(args[1]);
-            if(args.Length==2&&args[0]=="--modern-smoke")return ModernVisual.Run(args[1]);
+            if(args.Length==2&&args[0]=="--curtain-27-test")return CurtainValidation27.Run(args[1]);if(args.Length==2&&args[0]=="--modern-smoke")return ModernVisual.Run(args[1]);if(args.Length==2&&args[0]=="--renewal-27-test")return RenewalValidation27.Run(args[1]);
             if (args.Length == 2 && args[0] == "--stability-smoke") return StabilityVisual.Run(args[1]);
             if (args.Length == 2 && args[0] == "--icons-smoke") return IconsVisual.Run(args[1]);
             if (args.Length == 2 && args[0] == "--media-smoke") return MediaRegression.Probe(args[1]);
@@ -65,6 +65,7 @@ namespace MacFlow
             if (args.Length == 2 && args[0] == "--glass-smoke") return GlassVisual.Run(args[1]);
             if (args.Length == 2 && args[0] == "--welcome-smoke") return WelcomeVisual.Run(args[1]);
             if (args.Length == 2 && args[0] == "--fold-smoke") return FoldVisual.Run(args[1]);
+            if(args.Length==2&&args[0]=="--render-earth"){AstronomyWallpaper.Render(Path.GetFullPath(args[1]),new DateTime(2026,10,22,21,36,0),1920,1080);return 0;}
             if (args.Length == 2 && args[0] == "--wallpaper-integration") return WallpaperIntegration.Run(args[1]);
             if (args.Length == 2 && args[0] == "--topbar-smoke") return TopBarVisual.Run(args[1]);
             if (args.Length == 2 && args[0] == "--controls-smoke") return ControlsVisual.Run(args[1]);
@@ -144,7 +145,7 @@ namespace MacFlow
                                     if(stage==9){await CaptureOwnWindow(testMenu,Path.Combine(args[1],"menu-desktop.png"));testMenu.Close();desktop.Preferences.LiveGlass=false;desktop.ApplyPreferences(desktop.Preferences,null);}
                                     if(stage==10){await CaptureOwnWindow(desktop.Dock,Path.Combine(args[1],"dock-clear-fallback.png"));if(!String.Equals(desktop.Dock.Tag,"Clear glass fallback"))throw new Exception("Fallback unavailable");File.AppendAllText(Path.Combine(args[1],"smoke.txt")," Menú de cristal y alternativa compatible con capturas: PASS.");desktop.Preferences.LiveGlass=true;desktop.ApplyPreferences(desktop.Preferences,null);desktop.OpenSettings();((SettingsWindow)desktop.Settings).SelectPage(1);}
                                     if(stage==11){if(!((SettingsWindow)desktop.Settings).WallpaperPreviewReady)throw new Exception("Wallpaper preview not ready");Render(desktop.Settings,Path.Combine(args[1],"wallpapers.png"));await CaptureOwnWindow(desktop.Settings,Path.Combine(args[1],"wallpapers-desktop.png"));File.AppendAllText(Path.Combine(args[1],"smoke.txt")," Galería y vista previa de fondos: PASS.");desktop.Settings.Close();desktop.OpenWindowsMenu();}
-                                    if(stage==12){if(GlassMenu.Current==null||GlassMenu.Current.Title!="MacFlow · Inicio")throw new Exception("Windows menu missing");await CaptureOwnWindow(GlassMenu.Current,Path.Combine(args[1],"windows-menu-desktop.png"));GlassMenu.Current.Close();desktop.ConfirmPower(PowerAction.Shutdown);}
+                                    if(stage==12){if(GlassMenu.Current==null||GlassMenu.Current.Title!="MacOS · Inicio")throw new Exception("Windows menu missing");await CaptureOwnWindow(GlassMenu.Current,Path.Combine(args[1],"windows-menu-desktop.png"));GlassMenu.Current.Close();desktop.ConfirmPower(PowerAction.Shutdown);}
                                     if(stage==13){var prompt=(PowerPrompt)desktop.PowerConfirmation;if(prompt==null||prompt.Confirmed)throw new Exception("Power prompt missing or bypassed");await CaptureOwnWindow(prompt,Path.Combine(args[1],"power-prompt-desktop.png"));prompt.Close();File.AppendAllText(Path.Combine(args[1],"smoke.txt")," Menú Windows y confirmación de energía cancelada: PASS. No power actions executed.");connectionFixture=ConnectionFixture(true);}
                                     if(stage==14){if(!connectionFixture.Ready||connectionFixture.ItemCount!=3)throw new Exception("Wi-Fi fixture not ready");Render(connectionFixture,Path.Combine(args[1],"wifi.png"));await CaptureOwnWindow(connectionFixture,Path.Combine(args[1],"wifi-desktop.png"));connectionFixture.SwitchMode(false);}
                                     if(stage==15){if(!connectionFixture.Ready||connectionFixture.ItemCount!=3||connectionFixture.WifiMode)throw new Exception("Bluetooth fixture not ready");Render(connectionFixture,Path.Combine(args[1],"bluetooth.png"));await CaptureOwnWindow(connectionFixture,Path.Combine(args[1],"bluetooth-desktop.png"));connectionFixture.Close();desktop.Preferences.Theme="Dark";desktop.ApplyPreferences(desktop.Preferences,null);connectionFixture=ConnectionFixture(true);}
@@ -181,6 +182,7 @@ namespace MacFlow
             // including the Windows compositor backdrop, never an entire desktop.
             try
             {
+                Render(window,path+".wpf.png");
                 await LiquidMaterial.CaptureOwnWindow(window,path);
                 if(!File.Exists(path))throw new IOException("No native capture was produced: "+path);
             }
@@ -220,11 +222,11 @@ namespace MacFlow
                 ModuleRegression.Run(Path.Combine(directory,"modules"),results);
                 StartupRegression.Run(Path.Combine(directory,"startup"),results);
                 ModernizationRegression.Run(Path.Combine(directory,"modernization"),results);
-                RedesignRegression.Run(results);ShellLayoutRegression.Run(results);
+                RedesignRegression.Run(results);ShellLayoutRegression.Run(results);NotchRegression.Run(Path.Combine(directory,"notch-tests"),results);MotionRenewalRegression.Run(results);
                 Assert(LiquidMaterial.LightInkForLuminance(.2,false,false)&&!LiquidMaterial.LightInkForLuminance(.8,false,true),"Cristal: tinta legible sobre material oscuro y claro",results);
                 Assert(LiquidMaterial.LightInkForLuminance(.55,true,true)&&!LiquidMaterial.LightInkForLuminance(.48,true,false),"Cristal: histéresis evita parpadeos de texto cerca del umbral",results);
                 double maxSpring=0;bool finiteSpring=true;for(int sample=0;sample<=200;sample++){double position=SpringEase.Progress(sample/200.0);finiteSpring&=!Double.IsNaN(position)&&!Double.IsInfinity(position);maxSpring=Math.Max(maxSpring,position);}
-                Assert(finiteSpring&&SpringEase.Progress(0)==0&&SpringEase.Progress(1)==1&&maxSpring<=1.02,"Movimiento: resorte continuo con extremos exactos y rebote menor al 2%",results);
+                Assert(finiteSpring&&SpringEase.Progress(0)==0&&SpringEase.Progress(1)==1&&maxSpring>1.01&&maxSpring<=1.03,"Movimiento: resorte continuo con extremos exactos y rebote entre 1% y 3%",results);
                 var recovery=new ShellRecovery();int acquireAttempts=0,restores=0;DateTime logon=DateTime.UtcNow;Action acquisition=delegate{acquireAttempts++;if(acquireAttempts==1)throw new IOException("Explorer iniciando");};Action restoration=delegate{restores++;};
                 Assert(!recovery.Attempt(true,false,true,logon,acquisition,restoration)&&!recovery.Attempt(true,true,false,logon,acquisition,restoration)&&acquireAttempts==0,"Inicio: no oculta Windows hasta tener Dock y Explorer disponibles",results);
                 Assert(!recovery.Attempt(true,true,true,logon,acquisition,restoration)&&restores==1&&!recovery.Acquired,"Inicio: un fallo devuelve Windows y conserva la solicitud de reemplazo",results);
@@ -241,7 +243,7 @@ namespace MacFlow
                 string answer;Assert(Calculator.TryEvaluate("2*(3+4)",out answer)&&answer=="14" && Calculator.TryEvaluate("2^3^2",out answer)&&answer=="512" && !Calculator.TryEvaluate("1/0",out answer) && !Calculator.TryEvaluate("System.Exit()",out answer),"Calculadora: precedencia, potencias y rechazo de expresiones inválidas",results);
                 var order=new Preferences();order.Pins.Add(new AppEntry{Name="A",Target="a.exe"});order.Pins.Add(new AppEntry{Name="B",Target="b.exe"});order.Pins.Add(new AppEntry{Name="C",Target="c.exe"});Assert(order.MovePin("a.exe","c.exe")&&order.Pins[2].Name=="A"&&!order.MovePin("unknown","b.exe"),"Reordenación de pins y rechazo de destinos ajenos",results);
                 File.WriteAllText(store.PathName,"{\"Theme\":\"Light\",\"IconSize\":48}");var upgraded=store.Load();Assert(upgraded.ShowBattery&&upgraded.ShowNetwork&&upgraded.GlassOpacity==.18&&upgraded.DockPosition=="Bottom","Migración de preferencias anteriores",results);
-                var backgrounds=WallpaperLibrary.Load(Path.Combine(directory,"wallpaper-tests"));Assert(backgrounds.Count==7&&backgrounds.TrueForAll(w=>File.Exists(w.File)&&w.Thumbnail.IsFrozen&&w.Thumbnail.PixelWidth<=380),"Fondos: tres diseños nuevos integrados, galería anterior conservada y miniaturas limitadas",results);
+                var backgrounds=WallpaperLibrary.Load(Path.Combine(directory,"wallpaper-tests"));Assert(backgrounds.Count==4&&backgrounds[0].Name=="Seda"&&backgrounds.TrueForAll(w=>File.Exists(w.File)&&w.Thumbnail.IsFrozen&&w.Thumbnail.PixelWidth<=380),"Fondos: cuatro diseños para escritorio, Tierra exclusiva de bloqueo y miniaturas limitadas",results);
                 upgraded.WallpaperPath=backgrounds[1].File;upgraded.LidAnimation=false;store.Save(upgraded);Assert(store.Load().WallpaperPath==backgrounds[1].File&&!store.Load().LidAnimation,"Fondos y tapa: selección persiste al reiniciar",results);
                 var wallpaperState=new Dictionary<string,string>{{"A","original-a"},{"B","original-b"}};string wallpaperDirectory=Path.Combine(directory,"wallpaper-transaction-tests");Action<string,string> wallpaperSet=delegate(string monitor,string path){if(monitor==null){wallpaperState["A"]=wallpaperState["B"]=path;}else wallpaperState[monitor]=path;};
                 Wallpapers.Apply(wallpaperDirectory,backgrounds[0].File,()=>new List<string>{"A","B"},m=>wallpaperState[m],wallpaperSet);Assert(wallpaperState["A"]==backgrounds[0].File&&wallpaperState["B"]==backgrounds[0].File,"Fondos: aplica y verifica todas las pantallas del proveedor aislado",results);
@@ -300,7 +302,7 @@ namespace MacFlow
                     Func<IntPtr,bool> own=delegate(IntPtr h){uint pid;Native.GetWindowThreadProcessId(h,out pid);return Native.IsWindow(h)&&pid==ownPid;};
                     var surfaceFile=Path.Combine(directory,"fixture-visibility.txt");var surfaces=new TaskbarSurfaces(surfaceFile,delegate{return handles;},own,false);surfaces.Acquire();Pump(150);
                     Assert(!primary.Visible&&!secondary.Visible&&File.Exists(surfaceFile),"Barra: oculta superficies de prueba y guarda recuperación antes",results);
-                    primary.Show();surfaces.Maintain();Pump(150);Assert(!primary.Visible,"Barra: oculta una superficie que reaparece",results);
+                    primary.Show();surfaces.Maintain();Pump(150);Assert(!primary.Visible,"Barra: oculta una superficie que reaparece",results);surfaces.ReplacementReady=delegate{return false;};surfaces.Maintain();Pump(150);Assert(primary.Visible&&secondary.Visible,"Barra: si desaparece el reemplazo recupera ambas superficies originales",results);surfaces.ReplacementReady=delegate{return true;};surfaces.Maintain();Pump(150);Assert(!primary.Visible&&!secondary.Visible,"Barra: sólo retoma la sustitución cuando vuelve a estar disponible",results);
                     surfaces.Restore();Pump(150);Assert(primary.Visible&&secondary.Visible&&!File.Exists(surfaceFile),"Barra: restaura ambas superficies sin activar otras ventanas",results);
                     secondary.Hide();surfaces.Acquire();Pump(150);surfaces.Restore();Pump(150);Assert(primary.Visible&&!secondary.Visible,"Barra: respeta una superficie que ya estaba oculta",results);
                     secondary.Show();surfaces.Remember();secondary.Hide();surfaces.Acquire();Pump(150);surfaces.Restore();Pump(150);Assert(primary.Visible&&secondary.Visible,"Barra: guarda visibilidad antes de liberar el espacio de Windows",results);
@@ -327,7 +329,7 @@ namespace MacFlow
                 Assert(descended,"Dock: el descenso mueve también el cristal nativo; oclusión usa la posición de reposo",results);Pump(400);Assert(!wholeDock.IsVisible,"Dock: descenso nativo termina sin dejar una burbuja inmóvil",results);
                 wholeVisibility.Show();Pump(90);Native.GetWindowRect(new System.Windows.Interop.WindowInteropHelper(wholeDock).Handle,out middle);Assert(wholeDock.IsVisible&&middle.Top>initial.Top,"Dock: reaparece desde abajo con toda la superficie",results);Pump(360);Native.GetWindowRect(new System.Windows.Interop.WindowInteropHelper(wholeDock).Handle,out middle);Assert(middle.Top==initial.Top&&!wholeDock.HasAnimatedProperties,"Dock: rebote termina exactamente en su posición, sin reloj activo",results);
                 wholeVisibility.Hide();Pump(100);wholeVisibility.ShowImmediately();Pump(450);Native.GetWindowRect(new System.Windows.Interop.WindowInteropHelper(wholeDock).Handle,out middle);Assert(wholeDock.IsVisible&&middle.Top==initial.Top,"Dock: volver al escritorio cancela el descenso nativo inmediatamente",results);wholeDock.Close();
-                var closePanel=Design.Panel("MacFlow · Prueba de cierre",100,80);closePanel.Left=closePanel.Top=-2000;closePanel.ShowActivated=false;closePanel.Content=Design.Glass(new System.Windows.Controls.Border(),22,false);closePanel.Show();int nativeClosed=0;closePanel.Closed+=delegate{nativeClosed++;};Design.Reveal(closePanel);Pump(60);Design.Dismiss(closePanel);
+                var closePanel=Design.Panel("MacOS · Prueba de cierre",100,80);closePanel.Left=closePanel.Top=-2000;closePanel.ShowActivated=false;closePanel.Content=Design.Glass(new System.Windows.Controls.Border(),22,false);closePanel.Show();int nativeClosed=0;closePanel.Closed+=delegate{nativeClosed++;};Design.Reveal(closePanel);Pump(60);Design.Dismiss(closePanel);
                 // Assert at the action boundary. A background timer can run
                 // late on offscreen windows, past the entire close duration.
                 Assert(closePanel.IsVisible&&!closePanel.IsHitTestVisible&&PanelMotion.IsClosing(closePanel),"Paneles: cerrar durante apertura conserva la transición y bloquea acciones duplicadas [visible="+closePanel.IsVisible+", entrada="+closePanel.IsHitTestVisible+", animado="+DependencyPropertyHelper.GetValueSource(closePanel,UIElement.OpacityProperty).IsAnimated+"]",results);Pump(Motion.WindowClose+240);Assert(!closePanel.IsVisible&&nativeClosed==1,"Paneles: cierre de cristal nativo finaliza una vez",results);

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -58,7 +58,7 @@ namespace MacFlow
         }
         private static async Task CheckExit(VisualTestBackground background,string directory,List<string> results)
         {
-            var panel=Design.Panel("MacFlow · Cierre de prueba",360,220);panel.Left=140;panel.Top=130;panel.ShowActivated=false;panel.IsHitTestVisible=false;panel.Content=Design.Glass(Design.Text("Cerrar suavemente",22,true),22,false);
+            var panel=Design.Panel("MacOS · Cierre de prueba",360,220);panel.Left=140;panel.Top=130;panel.ShowActivated=false;panel.IsHitTestVisible=false;panel.Content=Design.Glass(Design.Text("Cerrar suavemente",22,true),22,false);
             background.Left=100;background.Top=90;background.Width=440;background.Height=310;
             panel.SourceInitialized+=delegate{Native.NoActivate(panel);};panel.Show();await Program.CaptureOwnWindow(panel,Path.Combine(directory,"cierre-inicio.png"));
             Native.RECT capture,back;Native.GetWindowRect(new WindowInteropHelper(panel).Handle,out capture);Native.GetWindowRect(new WindowInteropHelper(background).Handle,out back);

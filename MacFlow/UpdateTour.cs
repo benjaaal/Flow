@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -43,7 +43,7 @@ namespace MacFlow
         {
             this.desktop=desktop;desktop.BeginPresentation();wallpaper.Source=desktop.PresentationWallpaper;
             bounds=desktop.IsTesting?new System.Drawing.Rectangle(100,50,1000,850):System.Windows.Forms.Screen.PrimaryScreen.Bounds;
-            Title="MacFlow · Descubrí las novedades";Width=bounds.Width;Height=bounds.Height;Left=bounds.Left;Top=bounds.Top;
+            Title="MacOS · Descubrí las novedades";Width=bounds.Width;Height=bounds.Height;Left=bounds.Left;Top=bounds.Top;
             WindowStyle=WindowStyle.None;ResizeMode=ResizeMode.NoResize;ShowInTaskbar=false;Topmost=true;Background=Brushes.Black;
             var root=new Grid{Background=Brushes.Black};root.Children.Add(wallpaper);root.Children.Add(new Border{Background=Design.Brush("#46000000"),IsHitTestVisible=false});
             var scene=new Grid{Width=900,Height=660};scene.RowDefinitions.Add(new RowDefinition{Height=new GridLength(150)});scene.RowDefinitions.Add(new RowDefinition{Height=new GridLength(400)});scene.RowDefinitions.Add(new RowDefinition{Height=new GridLength(110)});
@@ -71,7 +71,7 @@ namespace MacFlow
             foreach(var screen in System.Windows.Forms.Screen.AllScreens)
             {
                 if(screen.Primary)continue;var rect=screen.Bounds;var image=new Image{Source=wallpaper.Source,Stretch=Stretch.UniformToFill};
-                var companion=new Window{Title="MacFlow · Presentación",Background=Brushes.Black,Content=image,WindowStyle=WindowStyle.None,ResizeMode=ResizeMode.NoResize,ShowInTaskbar=false,Topmost=true,ShowActivated=false};
+                var companion=new Window{Title="MacOS · Presentación",Background=Brushes.Black,Content=image,WindowStyle=WindowStyle.None,ResizeMode=ResizeMode.NoResize,ShowInTaskbar=false,Topmost=true,ShowActivated=false};
                 companion.SourceInitialized+=delegate{Native.OpaquePresentation(companion);Native.NoActivate(companion);};companion.Loaded+=delegate{Cover(companion,rect);};companions.Add(companion);companion.Show();
             }
         }
@@ -95,7 +95,7 @@ namespace MacFlow
                     title.Text="Pequeños espacios, más tuyos.";description.Text="Galería en dos columnas, datos grandes y materiales consistentes: transparente, oscuro o claro. Usá su menú para elegir tamaño y acomodalos arrastrando el fondo.";
                     example=new DesktopWidget(desktop.Widgets,new WidgetSpec{Kind="Calendar",Size="S",Surface="Dark"}){Width=164,Height=164};ShowExample();SlidePreview(18);break;
                 case 4:
-                    title.Text="Lo que pasa, siempre a la vista.";description.Text="Carátula, reproducción y progreso en un mismo espacio. La música, los temporizadores y el asistente comparten la cápsula; los ajustes se quedan en sus paneles. Clic derecho para contraer u ocultar la isla.";
+                    title.Text="Lo que pasa, siempre a la vista.";description.Text="Carátula, reproducción y progreso en un mismo espacio. La música, los temporizadores y el asistente comparten el notch; los ajustes se quedan en sus paneles. Clic derecho para contraer u ocultar el notch.";
                     var provider=new MediaFixture();provider.State.Playing=true;provider.State.Title="Música · Demostración";provider.State.Artist="Reproducción de ejemplo";provider.State.Duration=TimeSpan.FromSeconds(226);provider.State.Position=TimeSpan.FromSeconds(7);provider.State.Artwork=WallpaperLibrary.Load(desktop.Store.DirectoryPath)[0].Thumbnail;islandPreview=new ActivityIsland(desktop,provider,true);example=islandPreview.View;ShowExample();SlidePreview(18);break;
                 case 5:
                     title.Text="Preguntá con tus palabras.";description.Text="El asistente distingue acciones locales y preguntas libres. Las preguntas se envían a Gemini en Chrome; la luz acompaña el trabajo y se apaga al terminar. Incluye reconocimiento local en español; Hey Siri activa la escucha.";
@@ -103,9 +103,8 @@ namespace MacFlow
                     // execute a power action or change the user's preferences.
                     example=new AssistantWindow(desktop,null);ShowExample();SlidePreview(24);break;
                 case 6:
-                    title.Text="Un escritorio que se siente táctil.";description.Text="Modo iPad desde la manzana o Configuración → Sistema. Deslizá desde el borde inferior para Inicio; deslizá y mantené para multitarea. Elegí Flotante, Izquierda o Derecha para acomodar una ventana. Esc vuelve al modo Mac.";
-                    var tablet=new TabletController(desktop,new DisplayArea("preview",new Rect(0,0,960,720),1));
-                    example=new TabletHome(tablet,desktop);var tabletBody=(UIElement)example.Content;example.Content=null;example.Content=new Viewbox{Child=tabletBody,Stretch=Stretch.Uniform};example.Width=500;example.Height=375;example.Closed+=delegate{tablet.Dispose();};ShowExample();SlidePreview(18);break;
+                    title.Text="Un escritorio, a tu medida.";description.Text="Ajustes organizados, búsqueda, importación y exportación. La isla dinámica flota bajo la barra y reúne música, actividades y Shelf con movimiento continuo.";
+                    example=new SettingsWindow(desktop,true);ShowExample();SlidePreview(12);break;
             }
             Motion.Fade(title,0,1,300);Motion.Fade(description,0,1,380);
             forward.Content=index==6?"Continuar":"Siguiente";

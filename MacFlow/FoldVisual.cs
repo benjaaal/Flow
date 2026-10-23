@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -18,7 +18,7 @@ namespace MacFlow
                 // desktop and never runs a full-screen test overlay.
                 var source=WallpaperLibrary.Load(directory)[0].Thumbnail;
                 var picture=new Image{Source=source,Stretch=Stretch.Fill};var fold=new LidFold();fold.SetValue(LidFold.PixelProperty,new Point(1.0/source.PixelWidth,1.0/source.PixelHeight));picture.Effect=fold;
-                window=new Window{Title="MacFlow · Prueba de pliegue",WindowStyle=WindowStyle.None,Width=480,Height=270,Left=80,Top=90,ShowActivated=false,ShowInTaskbar=false,Topmost=true,Content=picture};window.SourceInitialized+=delegate{Native.NoActivate(window);};window.Show();
+                window=new Window{Title="MacOS · Prueba de pliegue",WindowStyle=WindowStyle.None,Width=480,Height=270,Left=80,Top=90,ShowActivated=false,ShowInTaskbar=false,Topmost=true,Content=picture};window.SourceInitialized+=delegate{Native.NoActivate(window);};window.Show();
                 var timer=new DispatcherTimer{Interval=TimeSpan.FromMilliseconds(900)};
                 timer.Tick+=async delegate
                 {

@@ -12,7 +12,7 @@ namespace MacFlow
     // THIRD-PARTY-NOTICES.md includes the full license. No Apple assets.
     internal sealed class HelloLettering : FrameworkElement
     {
-        private sealed class Stroke {internal Point[] Points;internal double[] Distances;internal double Length;}
+        private sealed class Stroke {internal Point[] Points;internal double[] Distances;internal double Length;internal Geometry Complete;}
         private readonly List<Stroke> strokes=new List<Stroke>();
         private double total;
         private double wordWidth=49;
@@ -58,13 +58,13 @@ namespace MacFlow
                 var points=new List<Point>{new Point(figure.StartPoint.X+x,figure.StartPoint.Y)};
                 foreach(var segment in figure.Segments){var poly=segment as PolyLineSegment;var line=segment as LineSegment;if(poly!=null)foreach(var p in poly.Points)points.Add(new Point(p.X+x,p.Y));else if(line!=null)points.Add(new Point(line.Point.X+x,line.Point.Y));}
                 var stroke=new Stroke{Points=points.ToArray(),Distances=new double[points.Count]};for(int i=1;i<points.Count;i++)stroke.Distances[i]=stroke.Distances[i-1]+(points[i]-points[i-1]).Length;
-                stroke.Length=stroke.Distances[points.Count-1];total+=stroke.Length;strokes.Add(stroke);
+                stroke.Length=stroke.Distances[points.Count-1];var complete=new StreamGeometry();using(var dc=complete.Open()){dc.BeginFigure(stroke.Points[0],false,false);for(int i=1;i<stroke.Points.Length;i++)dc.LineTo(stroke.Points[i],true,false);}complete.Freeze();stroke.Complete=complete;total+=stroke.Length;strokes.Add(stroke);
             }
         }
         internal void Play(double delay=200)
         {
             BeginAnimation(ProgressProperty,null);Progress=Motion.Enabled?0:1;if(!Motion.Enabled)return;
-            var animation=new DoubleAnimationUsingKeyFrames{BeginTime=TimeSpan.FromMilliseconds(delay)};animation.KeyFrames.Add(new LinearDoubleKeyFrame(0,KeyTime.FromTimeSpan(TimeSpan.Zero)));double written=0;foreach(var stroke in strokes){written+=stroke.Length;animation.KeyFrames.Add(new EasingDoubleKeyFrame(written/Math.Max(1,total),KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(1550*written/Math.Max(1,total))),new SineEase{EasingMode=EasingMode.EaseInOut}));}
+            var animation=new DoubleAnimation(0,1,TimeSpan.FromMilliseconds(1480)){BeginTime=TimeSpan.FromMilliseconds(delay),EasingFunction=new SineEase{EasingMode=EasingMode.EaseInOut}};
             Timeline.SetDesiredFrameRate(animation,60);animation.Completed+=delegate{Progress=1;BeginAnimation(ProgressProperty,null);};BeginAnimation(ProgressProperty,animation);
         }
         protected override void OnRender(DrawingContext dc)
@@ -75,7 +75,7 @@ namespace MacFlow
             var edge=new Pen(SystemParameters.HighContrast?(Brush)SystemColors.WindowTextBrush:WelcomeGlass.Brush("#FFFFFFFF","#25FFFFFF","#80FFFFFF"),.12){StartLineCap=PenLineCap.Round,EndLineCap=PenLineCap.Round,LineJoin=PenLineJoin.Round};edge.Freeze();
             foreach(var stroke in strokes)
             {
-                if(budget<=0)break;double visible=Math.Min(stroke.Length,budget);var path=new StreamGeometry();using(var context=path.Open()){context.BeginFigure(stroke.Points[0],false,false);for(int i=1;i<stroke.Points.Length;i++){if(stroke.Distances[i]<=visible)context.LineTo(stroke.Points[i],true,false);else{double span=stroke.Distances[i]-stroke.Distances[i-1];double t=span==0?0:(visible-stroke.Distances[i-1])/span;context.LineTo(stroke.Points[i-1]+(stroke.Points[i]-stroke.Points[i-1])*t,true,false);break;}}}path.Freeze();dc.DrawGeometry(null,pen,path);if(!imageGlass){dc.PushTransform(new TranslateTransform(0,-.63));dc.DrawGeometry(null,edge,path);dc.Pop();}budget-=stroke.Length;
+                if(budget<=0)break;double visible=Math.Min(stroke.Length,budget);if(visible>=stroke.Length&&stroke.Complete!=null){dc.DrawGeometry(null,pen,stroke.Complete);if(!imageGlass){dc.PushTransform(new TranslateTransform(0,-.63));dc.DrawGeometry(null,edge,stroke.Complete);dc.Pop();}budget-=stroke.Length;continue;}var path=new StreamGeometry();using(var context=path.Open()){context.BeginFigure(stroke.Points[0],false,false);for(int i=1;i<stroke.Points.Length;i++){if(stroke.Distances[i]<=visible)context.LineTo(stroke.Points[i],true,false);else{double span=stroke.Distances[i]-stroke.Distances[i-1];double t=span==0?0:(visible-stroke.Distances[i-1])/span;context.LineTo(stroke.Points[i-1]+(stroke.Points[i]-stroke.Points[i-1])*t,true,false);break;}}}path.Freeze();dc.DrawGeometry(null,pen,path);if(!imageGlass){dc.PushTransform(new TranslateTransform(0,-.63));dc.DrawGeometry(null,edge,path);dc.Pop();}budget-=stroke.Length;
             }dc.Pop();
         }
     }
@@ -145,10 +145,10 @@ namespace MacFlow
         private readonly Action afterHello;
         internal WelcomeWindow(System.Drawing.Rectangle? testBounds=null,bool showNews=false,BitmapSource wallpaper=null,Action afterHello=null,bool finalGreeting=false)
         {
-            this.showNews=showNews;this.finalGreeting=finalGreeting;this.afterHello=afterHello;
+            WindowLife.Track(this);this.showNews=showNews;this.finalGreeting=finalGreeting;this.afterHello=afterHello;
             bounds=testBounds??System.Windows.Forms.Screen.PrimaryScreen.Bounds;
             animated=Motion.Enabled;
-            Title="MacFlow · Hola";Width=bounds.Width;Height=bounds.Height;Left=bounds.Left;Top=bounds.Top;WindowStyle=WindowStyle.None;ResizeMode=ResizeMode.NoResize;
+            Title="MacOS · Hola";Width=bounds.Width;Height=bounds.Height;Left=bounds.Left;Top=bounds.Top;WindowStyle=WindowStyle.None;ResizeMode=ResizeMode.NoResize;
             AllowsTransparency=false;Background=Brushes.Black;ShowInTaskbar=false;Topmost=true;
             surface=new Grid{Opacity=animated?0:1};surface.Children.Add(wallpaperImage);surface.Children.Add(new Border{Background=SceneBackdrop(),IsHitTestVisible=false});
             if(wallpaper!=null)SetWallpaper(wallpaper);
@@ -180,7 +180,7 @@ namespace MacFlow
                 if(!testBounds.HasValue)foreach(var screen in System.Windows.Forms.Screen.AllScreens)
                 {
                     if(screen.Primary)continue;var rect=screen.Bounds;
-                    var companion=new Window{Title="MacFlow · Hola",Width=rect.Width,Height=rect.Height,Left=rect.Left,Top=rect.Top,Background=Brushes.Transparent,Content=new Grid{Background=SceneBackdrop()},WindowStyle=WindowStyle.None,ResizeMode=ResizeMode.NoResize,ShowInTaskbar=false,Topmost=true,ShowActivated=false};
+                    var companion=new Window{Title="MacOS · Hola",Width=rect.Width,Height=rect.Height,Left=rect.Left,Top=rect.Top,Background=Brushes.Transparent,Content=new Grid{Background=SceneBackdrop()},WindowStyle=WindowStyle.None,ResizeMode=ResizeMode.NoResize,ShowInTaskbar=false,Topmost=true,ShowActivated=false};
                     companion.SourceInitialized+=delegate{Native.OpaquePresentation(companion);RemoveFrame(companion);Native.NoActivate(companion);};companion.Loaded+=delegate{Cover(companion,rect);};if(WallpaperVisible)((Grid)companion.Content).Children.Insert(0,new Image{Source=wallpaperImage.Source,Stretch=Stretch.UniformToFill,IsHitTestVisible=false});companions.Add(companion);companion.Show();
                 }
                 Cover(this,bounds);Play();if(finalGreeting)languageTimer.Stop();RefreshInk();if(WallpaperVisible){UpdateWallpaperMapping();if(animated)StartWallpaperMapping();}else if(!testBounds.HasValue)LoadWallpaper();
@@ -239,13 +239,13 @@ namespace MacFlow
         {
             if(!animated){appleScale.ScaleX=appleScale.ScaleY=.42;applePosition.Y=-150;Lettering.Progress=1;actionsPosition.Y=0;StartButton.IsEnabled=true;return;}
             Animate(surface,OpacityProperty,0,1,450,0);
-            Animate(apple,OpacityProperty,0,1,700,0);
+            Animate(apple,OpacityProperty,0,1,520,0);
             // A finite timeline, with no perpetual render handler or polling timer.
             ScaleSequence(ScaleTransform.ScaleXProperty);ScaleSequence(ScaleTransform.ScaleYProperty);
-            Animate(applePosition,TranslateTransform.YProperty,0,-150,850,950);
-            Animate(Lettering,OpacityProperty,0,1,500,950);Lettering.Play(1050);
-            Animate(actions,OpacityProperty,0,1,600,2400,delegate{StartButton.IsEnabled=true;});
-            Animate(actionsPosition,TranslateTransform.YProperty,14,0,650,2350);
+            Animate(applePosition,TranslateTransform.YProperty,0,-150,850,400);
+            Animate(Lettering,OpacityProperty,0,1,420,640);Lettering.Play(700);
+            Animate(actions,OpacityProperty,0,1,460,2050,delegate{StartButton.IsEnabled=true;});
+            Animate(actionsPosition,TranslateTransform.YProperty,10,0,500,2000);
             languageTimer.Start();
         }
         internal int GreetingIndex{get{return greetingIndex;}}
@@ -256,36 +256,36 @@ namespace MacFlow
             if(dismissing||!animated||index<0||index>=Greetings.Length)return;
             languageTimer.Stop();languageTimer.Start();int generation=++greetingGeneration;
             // Local text and font fallback, no translation service or network.
-            var fade=new DoubleAnimation(greetings.Opacity,0,TimeSpan.FromMilliseconds(340)){EasingFunction=new CubicEase{EasingMode=EasingMode.EaseInOut}};
+            var fade=new DoubleAnimation(greetings.Opacity,0,TimeSpan.FromMilliseconds(340)){EasingFunction=Motion.Ease(true)};
             fade.Completed+=delegate
             {
                 if(dismissing||generation!=greetingGeneration)return;greetingIndex=index;translatedGreeting.Text=Greetings[index];translatedGreeting.FlowDirection=index==10||index==11?FlowDirection.RightToLeft:FlowDirection.LeftToRight;
                 bool script=Lettering.SetWord(Greetings[index]);Lettering.Visibility=script?Visibility.Visible:Visibility.Collapsed;translatedGreeting.Visibility=script?Visibility.Collapsed:Visibility.Visible;if(script)Lettering.Play(60);
-                greetings.Opacity=1;greetings.BeginAnimation(OpacityProperty,new DoubleAnimation(0,1,TimeSpan.FromMilliseconds(560)){EasingFunction=new CubicEase{EasingMode=EasingMode.EaseOut},FillBehavior=FillBehavior.Stop});if(WallpaperVisible){wallpaperDeadline=DateTime.UtcNow.AddMilliseconds(650);StartWallpaperMapping();}
-                greetingPosition.BeginAnimation(TranslateTransform.YProperty,new DoubleAnimation(8,0,TimeSpan.FromMilliseconds(560)){EasingFunction=new CubicEase{EasingMode=EasingMode.EaseOut},FillBehavior=FillBehavior.Stop});
+                greetings.Opacity=1;greetings.BeginAnimation(OpacityProperty,new DoubleAnimation(0,1,TimeSpan.FromMilliseconds(560)){EasingFunction=Motion.Ease(),FillBehavior=FillBehavior.Stop});if(WallpaperVisible){wallpaperDeadline=DateTime.UtcNow.AddMilliseconds(650);StartWallpaperMapping();}
+                greetingPosition.BeginAnimation(TranslateTransform.YProperty,new DoubleAnimation(8,0,TimeSpan.FromMilliseconds(560)){EasingFunction=Motion.Ease(),FillBehavior=FillBehavior.Stop});
             };greetings.BeginAnimation(OpacityProperty,fade);
         }
         private void ScaleSequence(DependencyProperty property)
         {
-            var animation=new DoubleAnimationUsingKeyFrames();var ease=new CubicEase{EasingMode=EasingMode.EaseInOut};
-            animation.KeyFrames.Add(new DiscreteDoubleKeyFrame(.86,KeyTime.FromTimeSpan(TimeSpan.Zero)));
-            animation.KeyFrames.Add(new EasingDoubleKeyFrame(1,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(950)),ease));
-            animation.KeyFrames.Add(new EasingDoubleKeyFrame(1,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(1100)),ease));
-            animation.KeyFrames.Add(new EasingDoubleKeyFrame(.42,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(1800)),ease));
+            var animation=new DoubleAnimationUsingKeyFrames();var ease=Motion.Ease();
+            animation.KeyFrames.Add(new DiscreteDoubleKeyFrame(.72,KeyTime.FromTimeSpan(TimeSpan.Zero)));
+            animation.KeyFrames.Add(new EasingDoubleKeyFrame(1,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(520)),ease));
+            animation.KeyFrames.Add(new EasingDoubleKeyFrame(1,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(620)),ease));
+            animation.KeyFrames.Add(new EasingDoubleKeyFrame(.42,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(1250)),ease));
             Timeline.SetDesiredFrameRate(animation,60);activeAnimations++;
             animation.Completed+=delegate{if(dismissing)return;appleScale.SetValue(property,.42);appleScale.BeginAnimation(property,null);activeAnimations--;};
             clearAnimations.Add(delegate{var current=appleScale.GetValue(property);appleScale.BeginAnimation(property,null);appleScale.SetValue(property,current);});appleScale.BeginAnimation(property,animation);
         }
         private void Animate(Animatable target,DependencyProperty property,double from,double to,int duration,int delay,Action done=null)
         {
-            var animation=new DoubleAnimation(from,to,TimeSpan.FromMilliseconds(duration)){BeginTime=TimeSpan.FromMilliseconds(delay),EasingFunction=new CubicEase{EasingMode=EasingMode.EaseInOut}};
+            var animation=new DoubleAnimation(from,to,TimeSpan.FromMilliseconds(duration)){BeginTime=TimeSpan.FromMilliseconds(delay),EasingFunction=Motion.Ease(true)};
             Timeline.SetDesiredFrameRate(animation,60);activeAnimations++;
             animation.Completed+=delegate{if(dismissing)return;target.SetValue(property,to);target.BeginAnimation(property,null);activeAnimations--;if(done!=null)done();};
             clearAnimations.Add(delegate{var current=target.GetValue(property);target.BeginAnimation(property,null);target.SetValue(property,current);});target.BeginAnimation(property,animation);
         }
         private void Animate(UIElement target,DependencyProperty property,double from,double to,int duration,int delay,Action done=null)
         {
-            var animation=new DoubleAnimation(from,to,TimeSpan.FromMilliseconds(duration)){BeginTime=TimeSpan.FromMilliseconds(delay),EasingFunction=new CubicEase{EasingMode=EasingMode.EaseInOut}};
+            var animation=new DoubleAnimation(from,to,TimeSpan.FromMilliseconds(duration)){BeginTime=TimeSpan.FromMilliseconds(delay),EasingFunction=Motion.Ease(true)};
             Timeline.SetDesiredFrameRate(animation,60);activeAnimations++;
             animation.Completed+=delegate{if(dismissing)return;target.SetValue(property,to);target.BeginAnimation(property,null);activeAnimations--;if(done!=null)done();};
             clearAnimations.Add(delegate{var current=target.GetValue(property);target.BeginAnimation(property,null);target.SetValue(property,current);});target.BeginAnimation(property,animation);
@@ -326,7 +326,7 @@ namespace MacFlow
             if(!animated){Close();return;}
             bool finished=false;var fallback=new System.Windows.Threading.DispatcherTimer{Interval=TimeSpan.FromMilliseconds(400)};
             Action finish=delegate{if(finished)return;finished=true;fallback.Stop();Close();};fallback.Tick+=delegate{finish();};Closed+=delegate{finished=true;fallback.Stop();};fallback.Start();
-            var animation=new DoubleAnimation(opacity,0,TimeSpan.FromMilliseconds(320)){EasingFunction=new CubicEase{EasingMode=EasingMode.EaseInOut}};animation.Completed+=delegate{finish();};surface.BeginAnimation(OpacityProperty,animation);
+            var animation=new DoubleAnimation(opacity,0,TimeSpan.FromMilliseconds(320)){EasingFunction=Motion.Ease(true)};animation.Completed+=delegate{finish();};surface.BeginAnimation(OpacityProperty,animation);
         }
     }
 }

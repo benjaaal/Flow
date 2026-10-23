@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 namespace MacFlow
 {
     // A position notification is not a loss of the taskbar lease. Coalesce

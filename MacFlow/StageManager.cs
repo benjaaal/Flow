@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -71,7 +71,7 @@ namespace MacFlow
         private readonly StageController owner;private readonly StackPanel rows=new StackPanel();private readonly Dictionary<IntPtr,Border> cards=new Dictionary<IntPtr,Border>();private readonly List<Thumbnail> previews=new List<Thumbnail>();
         internal StageSidebar(StageController owner)
         {
-            this.owner=owner;Title="MacFlow · Stage Manager";WindowStyle=WindowStyle.None;ResizeMode=ResizeMode.NoResize;ShowInTaskbar=false;ShowActivated=false;Topmost=true;Background=Brushes.Transparent;
+            this.owner=owner;Title="MacOS · Stage Manager";WindowStyle=WindowStyle.None;ResizeMode=ResizeMode.NoResize;ShowInTaskbar=false;ShowActivated=false;Topmost=true;Background=Brushes.Transparent;
             var root=new DockPanel();var header=new StackPanel{Orientation=Orientation.Horizontal};header.Children.Add(ModuleUI.Button("⋯",owner.OpenSettings,false));header.Children.Add(ModuleUI.Button("×",delegate{owner.State.Enabled=false;owner.Save();owner.Update(owner.Desktop.Windows,Native.GetForegroundWindow(),false);},false));DockPanel.SetDock(header,Dock.Top);root.Children.Add(header);root.Children.Add(new ScrollViewer{Content=rows,VerticalScrollBarVisibility=ScrollBarVisibility.Auto,HorizontalScrollBarVisibility=ScrollBarVisibility.Disabled});Content=Design.Glass(root,22,false);
             SourceInitialized+=delegate{Native.Glass(this,Design.Dark);Native.SetWindowLong(new WindowInteropHelper(this).Handle,-20,Native.GetWindowLong(new WindowInteropHelper(this).Handle,-20)|0x80);};Closed+=delegate{ReleasePreviews();};
             if(owner.Desktop.IsTesting){IsHitTestVisible=false;SourceInitialized+=delegate{Native.NoActivate(this);};}
@@ -88,7 +88,7 @@ namespace MacFlow
                 var icon=Design.AppIcon(app,22);var label=new DockPanel();label.Children.Add(icon);if(owner.State.Labels){var text=Design.Text(w.Title,10,false);text.TextTrimming=TextTrimming.CharacterEllipsis;text.Margin=new Thickness(6,0,0,0);label.Children.Add(text);}content.Children.Add(label);
                 if(owner.State.Live&&!Native.IsIconic(w.Handle)){var preview=new Thumbnail(w.Handle){Width=owner.State.Size,Height=owner.State.Size*.56,Margin=new Thickness(0,5,0,0)};previews.Add(preview);content.Children.Add(preview);}
                 else if(Native.IsIconic(w.Handle))content.Children.Add(Design.Text("Minimizada",10,false));
-                var button=Design.Button("",delegate{if(!Native.Activate(w))MessageBox.Show("Windows no permitió activar esa ventana.","MacFlow");},false);button.Background=Brushes.Transparent;button.Content=new GlassPiece(content,13,new Thickness(6));button.Margin=new Thickness(0);button.Padding=new Thickness(0);var frame=new Border{Child=button,CornerRadius=new CornerRadius(14),BorderThickness=new Thickness(1),Margin=new Thickness(0,0,0,7)};cards[w.Handle]=frame;rows.Children.Add(frame);
+                var button=Design.Button("",delegate{if(!Native.Activate(w))MessageBox.Show("Windows no permitió activar esa ventana.","MacOS");},false);button.Background=Brushes.Transparent;button.Content=new GlassPiece(content,13,new Thickness(6));button.Margin=new Thickness(0);button.Padding=new Thickness(0);var frame=new Border{Child=button,CornerRadius=new CornerRadius(14),BorderThickness=new Thickness(1),Margin=new Thickness(0,0,0,7)};cards[w.Handle]=frame;rows.Children.Add(frame);
             }
             if(windows.Count>capacity)rows.Children.Add(ModuleUI.Button("Más ventanas",owner.Desktop.OpenOverview,false));
         }

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -78,7 +78,7 @@ namespace MacFlow
                 if(!ValidTarget(executable))throw new IOException("El destino de inicio no es MacFlow.");
                 if(File.Exists(link)&&(File.GetAttributes(link)&FileAttributes.ReparsePoint)!=0)throw new IOException("El acceso de inicio está enlazado.");
                 shell=Activator.CreateInstance(Type.GetTypeFromProgID("WScript.Shell"));shortcut=((dynamic)shell).CreateShortcut(link);
-                ((dynamic)shortcut).TargetPath=Path.GetFullPath(executable);((dynamic)shortcut).Arguments="--background";((dynamic)shortcut).WorkingDirectory=Path.GetDirectoryName(Path.GetFullPath(executable));((dynamic)shortcut).IconLocation=executable+",0";((dynamic)shortcut).Description="MacFlow · Inicio automático";((dynamic)shortcut).Save();
+                ((dynamic)shortcut).TargetPath=Path.GetFullPath(executable);((dynamic)shortcut).Arguments="--background";((dynamic)shortcut).WorkingDirectory=Path.GetDirectoryName(Path.GetFullPath(executable));((dynamic)shortcut).IconLocation=executable+",0";((dynamic)shortcut).Description="MacOS · Inicio automático";((dynamic)shortcut).Save();
             }
             finally{if(shortcut!=null)Marshal.ReleaseComObject(shortcut);if(shell!=null)Marshal.ReleaseComObject(shell);}
             string arguments;string saved=ReadShortcut(link,out arguments);if(!String.Equals(Path.GetFullPath(saved),Path.GetFullPath(executable),StringComparison.OrdinalIgnoreCase)||arguments!="--background")throw new IOException("Windows no guardó correctamente el acceso de inicio.");

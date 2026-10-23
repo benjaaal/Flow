@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Windows;
@@ -32,7 +32,7 @@ namespace MacFlow
         private DateTime sampled=DateTime.MinValue;
         public CaptionButtons(Action<string> failure,bool watchEvents=true)
         {
-            report=failure;Title="MacFlow · Controles de ventana";Width=138;Height=32;WindowStyle=WindowStyle.None;AllowsTransparency=true;ResizeMode=ResizeMode.NoResize;ShowInTaskbar=false;ShowActivated=false;Topmost=true;Focusable=false;Background=Brushes.Transparent;
+            report=failure;Title="MacOS · Controles de ventana";Width=138;Height=32;WindowStyle=WindowStyle.None;AllowsTransparency=true;ResizeMode=ResizeMode.NoResize;ShowInTaskbar=false;ShowActivated=false;Topmost=true;Focusable=false;Background=Brushes.Transparent;
             Lights=new WindowControls(delegate{Act(0);},delegate{Act(1);},delegate{Act(2);}){HorizontalAlignment=HorizontalAlignment.Center,VerticalAlignment=VerticalAlignment.Center};
             Lights.CloseButton.ToolTip="Cerrar ventana activa";System.Windows.Automation.AutomationProperties.SetName(Lights.CloseButton,"Cerrar ventana activa");
             plate=new Border{Child=Lights,CornerRadius=new CornerRadius(5),Background=Design.Brush(Design.Dark?"#20252B":"#F5F5F5"),BorderBrush=Design.Brush("#12FFFFFF"),BorderThickness=new Thickness(.5)};Content=plate;

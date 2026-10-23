@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
@@ -23,7 +23,7 @@ namespace MacFlow
         internal string SearchQuery {get{return search.Text;}set{search.Text=value;}}
         public Launchpad(Desktop controller)
         {
-            desktop=controller;Title="MacFlow · Aplicaciones";Width=770;Height=540;WindowStyle=WindowStyle.None;AllowsTransparency=false;ResizeMode=ResizeMode.NoResize;Topmost=true;ShowInTaskbar=true;Background=Brushes.Transparent;
+            desktop=controller;Title="MacOS · Aplicaciones";Width=770;Height=540;WindowStyle=WindowStyle.None;AllowsTransparency=false;ResizeMode=ResizeMode.NoResize;Topmost=true;ShowInTaskbar=true;Background=Brushes.Transparent;
             var root=new DockPanel();var header=new DockPanel{Margin=new Thickness(0,0,0,17)};
             var controls=new WindowControls(this,delegate{Design.Dismiss(this);}){Margin=new Thickness(0,0,17,0)};DockPanel.SetDock(controls,System.Windows.Controls.Dock.Left);header.Children.Add(controls);CloseButton=controls.CloseButton;MinimizeButton=controls.MinimizeButton;ZoomButton=controls.ZoomButton;
             var name=new StackPanel();name.Children.Add(Design.Text("Aplicaciones",20,true));count=Design.Text("",11,false);count.SetResourceReference(TextBlock.ForegroundProperty,"GlassMuted");count.Margin=new Thickness(0,4,0,0);name.Children.Add(count);header.Children.Add(name);DockPanel.SetDock(header,System.Windows.Controls.Dock.Top);root.Children.Add(header);header.MouseLeftButtonDown+=delegate(object sender,MouseButtonEventArgs e){if(e.OriginalSource is TextBlock)DragMove();};
@@ -56,7 +56,7 @@ namespace MacFlow
         public WindowOverview(Desktop desktop,string appKey=null,string appName=null)
         {
             AppKey=appKey;var windows=desktop.Windows.Where(w=>appKey==null||w.Key==appKey).Take(60).ToList();
-            Title="MacFlow · Ventanas abiertas";Width=920;Height=610;WindowStyle=WindowStyle.None;AllowsTransparency=false;ResizeMode=ResizeMode.CanResizeWithGrip;MinWidth=620;MinHeight=430;Topmost=true;ShowInTaskbar=false;Background=Design.Brush(Design.Dark?"#242A36":"#EEF1F6");
+            Title="MacOS · Ventanas abiertas";Width=920;Height=610;WindowStyle=WindowStyle.None;AllowsTransparency=false;ResizeMode=ResizeMode.CanResizeWithGrip;MinWidth=620;MinHeight=430;Topmost=true;ShowInTaskbar=false;Background=Design.Brush(Design.Dark?"#242A36":"#EEF1F6");
             var root=new DockPanel();var header=new DockPanel {Margin=new Thickness(4,0,4,22)};var close=new WindowControls(this,delegate{Design.Dismiss(this);});DockPanel.SetDock(close,System.Windows.Controls.Dock.Left);header.Children.Add(close);var title=Design.Text(String.IsNullOrEmpty(appName)?"Tus ventanas":appName,25,true);title.Margin=new Thickness(12,0,0,0);header.Children.Add(title);DockPanel.SetDock(header,System.Windows.Controls.Dock.Top);root.Children.Add(header);
             var grid=new WrapPanel {HorizontalAlignment=HorizontalAlignment.Center};
             foreach(var entry in windows)
@@ -72,9 +72,9 @@ namespace MacFlow
                     }else if(++ticks>=30)wait.Stop();};Closed+=delegate{wait.Stop();};wait.Start();
                 },delegate{desktop.MinimizeWindow(captured);},delegate{desktop.ZoomWindow(captured);});
                 System.Windows.Automation.AutomationProperties.SetName(lights.CloseButton,"Cerrar "+entry.Title);System.Windows.Automation.AutomationProperties.SetName(lights.MinimizeButton,"Minimizar "+entry.Title);System.Windows.Automation.AutomationProperties.SetName(lights.ZoomButton,"Ampliar o restaurar "+entry.Title);DockPanel.SetDock(lights,System.Windows.Controls.Dock.Top);bar.Children.Add(lights);bar.Children.Add(Design.Text(entry.Title,11,true));card.Children.Add(bar);
-                var activate=Design.Button("",delegate{if(!Native.Activate(captured))MessageBox.Show("Windows no permitió activar la ventana. Usá Alt+Tab.","MacFlow");Design.Dismiss(this);},false);activate.Content=preview;activate.Background=Brushes.Transparent;activate.BorderThickness=new Thickness(0);activate.Padding=new Thickness(0);activate.Margin=new Thickness(0);activate.ToolTip=entry.Title;card.Children.Add(activate);var glassCard=Design.Card(card);glassCard.Width=282;glassCard.Height=220;glassCard.Margin=new Thickness(7);grid.Children.Add(glassCard);
+                var activate=Design.Button("",delegate{if(!Native.Activate(captured))MessageBox.Show("Windows no permitió activar la ventana. Usá Alt+Tab.","MacOS");Design.Dismiss(this);},false);activate.Content=preview;activate.Background=Brushes.Transparent;activate.BorderThickness=new Thickness(0);activate.Padding=new Thickness(0);activate.Margin=new Thickness(0);activate.ToolTip=entry.Title;card.Children.Add(activate);var glassCard=Design.Card(card);glassCard.Width=282;glassCard.Height=220;glassCard.Margin=new Thickness(7);grid.Children.Add(glassCard);
             }
-            if(windows.Count==0)grid.Children.Add(Design.Text("No hay ventanas abiertas.",15,false));root.Children.Add(new ScrollViewer {Content=grid,VerticalScrollBarVisibility=ScrollBarVisibility.Auto,HorizontalScrollBarVisibility=ScrollBarVisibility.Disabled});Content=Design.Glass(root,24,false);SourceInitialized+=delegate{Native.Glass(this,Design.Dark);};KeyDown+=delegate(object sender,KeyEventArgs e){if(e.Key==Key.Escape)Design.Dismiss(this);};Closed+=delegate{foreach(var t in thumbnails)t.Dispose();};
+            if(windows.Count==0)grid.Children.Add(Design.Text("No hay ventanas abiertas.",15,false));root.Children.Add(new ScrollViewer {Content=grid,VerticalScrollBarVisibility=ScrollBarVisibility.Auto,HorizontalScrollBarVisibility=ScrollBarVisibility.Disabled});Content=Design.Glass(root,20,false);SourceInitialized+=delegate{Native.Glass(this,Design.Dark);};KeyDown+=delegate(object sender,KeyEventArgs e){if(e.Key==Key.Escape)Design.Dismiss(this);};Closed+=delegate{foreach(var t in thumbnails)t.Dispose();};
         }
     }
     public sealed class Thumbnail : FrameworkElement, IDisposable

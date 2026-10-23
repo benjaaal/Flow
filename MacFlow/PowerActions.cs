@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Windows;
@@ -53,7 +53,7 @@ namespace MacFlow
         public bool Confirmed {get;private set;}
         public PowerPrompt(PowerAction action,bool testing,Action confirmed)
         {
-            string label=PowerActions.Label(action);Title="MacFlow · "+label;Width=388;Height=304;WindowStyle=WindowStyle.None;AllowsTransparency=false;ResizeMode=ResizeMode.NoResize;ShowInTaskbar=false;Topmost=true;Background=Brushes.Transparent;
+            string label=PowerActions.Label(action);Title="MacOS · "+label;Width=388;Height=304;WindowStyle=WindowStyle.None;AllowsTransparency=false;ResizeMode=ResizeMode.NoResize;ShowInTaskbar=false;Topmost=true;Background=Brushes.Transparent;
             var content=new DockPanel();var buttons=new Grid{Margin=new Thickness(0,20,0,0)};buttons.ColumnDefinitions.Add(new ColumnDefinition());buttons.ColumnDefinitions.Add(new ColumnDefinition());var cancel=Design.Button("Cancelar",delegate{Design.Dismiss(this);},false);cancel.IsCancel=true;cancel.Margin=new Thickness(0,0,5,0);cancel.Height=36;buttons.Children.Add(cancel);var accept=Design.Button(label,delegate{Confirmed=true;Design.Dismiss(this,confirmed);},true);accept.Margin=new Thickness(5,0,0,0);accept.Height=36;Grid.SetColumn(accept,1);buttons.Children.Add(accept);DockPanel.SetDock(buttons,Dock.Bottom);content.Children.Add(buttons);
             var body=new StackPanel();body.Children.Add(new Border{Width=58,Height=58,CornerRadius=new CornerRadius(19),Background=Design.Brush("#18FFFFFF"),Child=Design.Symbol(PowerActions.Symbol(action),28,Design.Ink),HorizontalAlignment=HorizontalAlignment.Center,Margin=new Thickness(0,0,0,16)});
             var heading=Design.Text(label+" la computadora?",22,true);if(action==PowerAction.SignOut)heading.Text="Cerrar tu sesión?";if(action==PowerAction.Lock)heading.Text="Bloquear la computadora?";heading.HorizontalAlignment=HorizontalAlignment.Center;heading.Margin=new Thickness(0,0,0,10);body.Children.Add(heading);

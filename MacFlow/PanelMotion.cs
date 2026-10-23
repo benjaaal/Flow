@@ -1,152 +1,78 @@
-﻿using System;
+using System;
 using System.Windows;
-using System.Windows.Media.Animation;
 using System.Windows.Media;
-using System.Windows.Threading;
+using System.Windows.Media.Animation;
 namespace MacFlow
 {
-    // Analytical damped spring. Short, quiet settling instead of elastic bounce.
-    // The end value is exact so removing its clock never changes the geometry.
     internal sealed class SpringEase : EasingFunctionBase
     {
-        internal static double Progress(double time)
-        {
-            if(time<=0)return 0;if(time>=1)return 1;
-            const double damping=.82,frequency=10;
-            double damped=frequency*Math.Sqrt(1-damping*damping);
-            double ratio=damping/Math.Sqrt(1-damping*damping);
-            double current=1-Math.Exp(-damping*frequency*time)*(Math.Cos(damped*time)+ratio*Math.Sin(damped*time));
-            double end=1-Math.Exp(-damping*frequency)*(Math.Cos(damped)+ratio*Math.Sin(damped));
-            return current/end;
-        }
+        internal static double Progress(double time){return Motion.Arrival(time,.78);}
         protected override double EaseInCore(double time){return Progress(time);}
         protected override Freezable CreateInstanceCore(){return new SpringEase();}
     }
-    // Move the HWND including its compositor material; never scale the UI over
-    // an unmoving rectangle of glass. Base coordinates survive interruptions.
+    // Live windows keep their aspect ratio. A close is a quiet dismissal;
+    // only minimize/restore follows the corresponding Dock icon.
     internal static class PanelMotion
     {
         private static readonly DependencyProperty BaseTop=DependencyProperty.RegisterAttached("BaseTop",typeof(double),typeof(PanelMotion),new PropertyMetadata(Double.NaN));
-        private static readonly DependencyProperty BaseLeft=DependencyProperty.RegisterAttached("BaseLeft",typeof(double),typeof(PanelMotion),new PropertyMetadata(Double.NaN));
         private static readonly DependencyProperty Closing=DependencyProperty.RegisterAttached("Closing",typeof(bool),typeof(PanelMotion),new PropertyMetadata(false));
         private static readonly DependencyProperty Opening=DependencyProperty.RegisterAttached("Opening",typeof(bool),typeof(PanelMotion),new PropertyMetadata(false));
         private static readonly DependencyProperty OriginalTransform=DependencyProperty.RegisterAttached("OriginalTransform",typeof(Transform),typeof(PanelMotion),new PropertyMetadata(null));
         private static readonly DependencyProperty OriginalOrigin=DependencyProperty.RegisterAttached("OriginalOrigin",typeof(Point),typeof(PanelMotion),new PropertyMetadata(new Point()));
-        private static readonly DependencyProperty ClipPending=DependencyProperty.RegisterAttached("ClipPending",typeof(bool),typeof(PanelMotion),new PropertyMetadata(false));
-        private static readonly DependencyProperty ExitProgress=DependencyProperty.RegisterAttached("ExitProgress",typeof(double),typeof(PanelMotion),new PropertyMetadata(0.0,ExitChanged));
-        private static readonly DependencyProperty ExitStart=DependencyProperty.RegisterAttached("ExitStart",typeof(Native.RECT),typeof(PanelMotion),new PropertyMetadata(new Native.RECT()));
-        private static readonly DependencyProperty ExitTarget=DependencyProperty.RegisterAttached("ExitTarget",typeof(Point),typeof(PanelMotion),new PropertyMetadata(new Point()));
-        private static readonly DependencyProperty HasTarget=DependencyProperty.RegisterAttached("HasTarget",typeof(bool),typeof(PanelMotion),new PropertyMetadata(false));
-        private static readonly DependencyProperty ExitState=DependencyProperty.RegisterAttached("ExitState",typeof(WindowState),typeof(PanelMotion),new PropertyMetadata(WindowState.Normal));
+        private static readonly DependencyProperty ExitProgress=DependencyProperty.RegisterAttached("ExitProgress",typeof(double),typeof(PanelMotion),new PropertyMetadata(0.0,Changed));
+        internal static readonly DependencyProperty DockFlight=DependencyProperty.RegisterAttached("DockFlight",typeof(bool),typeof(PanelMotion),new PropertyMetadata(false));
         internal static readonly DependencyProperty UseDockEntrance=DependencyProperty.RegisterAttached("UseDockEntrance",typeof(bool),typeof(PanelMotion),new PropertyMetadata(false));
-        internal static event Action<Window> Frame;
-        internal static Func<Window,Point?> DockDestination;
         internal static readonly DependencyProperty DockKey=DependencyProperty.RegisterAttached("DockKey",typeof(string),typeof(PanelMotion),new PropertyMetadata(null));
         internal static readonly DependencyProperty DockPoint=DependencyProperty.RegisterAttached("DockPoint",typeof(Point),typeof(PanelMotion),new PropertyMetadata(new Point(Double.NaN,Double.NaN)));
+        internal static event Action<Window> Frame;
+        internal static Func<Window,Point?> DockDestination;
+        internal static bool IsClosing(Window window){return (bool)window.GetValue(Closing);}
+        internal static bool IsTransitioning(Window window){return IsClosing(window)||(bool)window.GetValue(Opening);}
+        internal static bool FromTop(Window window)
+        {return window.Title=="MacOS · Centro de control"||window.Title=="MacOS · Conexiones"||window.Title=="MacOS · Widgets"||window.Title=="MacOS · Actividad"||window.Title=="MacOS · Stage Manager · Grupos"||window.Title=="MacOS · Menú";}
         internal static Point? IconDestination(Window source,Window dock,Native.RECT resting)
         {
-            string key=source.GetValue(DockKey) as string;if(String.IsNullOrEmpty(key))return null;
-            var icon=FindIcon(dock.Content as DependencyObject,key);if(icon==null||!icon.IsLoaded)return null;
+            string key=source.GetValue(DockKey) as string;if(String.IsNullOrEmpty(key))return null;var icon=FindIcon(dock.Content as DependencyObject,key);if(icon==null||!icon.IsLoaded)return null;
             Native.RECT current;Native.GetWindowRect(new System.Windows.Interop.WindowInteropHelper(dock).Handle,out current);
             var point=icon.PointToScreen(new Point(icon.ActualWidth/2,icon.ActualHeight/2));return new Point(point.X+resting.Left-current.Left,point.Y+resting.Top-current.Top);
         }
         private static FrameworkElement FindIcon(DependencyObject node,string key)
+        {if(node==null)return null;var item=node as System.Windows.Controls.Border;if(item!=null&&String.Equals(item.Tag as string,key,StringComparison.OrdinalIgnoreCase))return item;for(int i=0;i<VisualTreeHelper.GetChildrenCount(node);i++){var found=FindIcon(VisualTreeHelper.GetChild(node,i),key);if(found!=null)return found;}return null;}
+        private static void Prepare(Window window)
         {
-            if(node==null)return null;var item=node as System.Windows.Controls.Border;if(item!=null&&String.Equals(item.Tag as string,key,StringComparison.OrdinalIgnoreCase))return item;
-            for(int i=0;i<VisualTreeHelper.GetChildrenCount(node);i++){var found=FindIcon(VisualTreeHelper.GetChild(node,i),key);if(found!=null)return found;}return null;
+            var content=window.Content as FrameworkElement;if(content==null||window.GetValue(OriginalTransform)!=null)return;
+            window.SetValue(OriginalTransform,content.RenderTransform??Transform.Identity);window.SetValue(OriginalOrigin,content.RenderTransformOrigin);
+            var transforms=new TransformGroup();transforms.Children.Add((Transform)window.GetValue(OriginalTransform));transforms.Children.Add(new ScaleTransform(1,1));content.RenderTransformOrigin=new Point(.5,.5);content.RenderTransform=transforms;
         }
-        internal static bool IsClosing(Window window){return (bool)window.GetValue(Closing);}
-        internal static bool IsTransitioning(Window window){return IsClosing(window)||(bool)window.GetValue(Opening);}
-        internal static bool FromTop(Window window)
-        {return window.Title=="MacFlow · Centro de control"||window.Title=="MacFlow · Conexiones"||window.Title=="MacFlow · Widgets"||window.Title=="MacFlow · Actividad"||window.Title=="MacFlow · Stage Manager · Grupos"||window.Title=="MacFlow · Menú";}
-        private static void ExitChanged(DependencyObject target,DependencyPropertyChangedEventArgs args)
+        private static void Changed(DependencyObject target,DependencyPropertyChangedEventArgs args)
         {
-            var window=(Window)target;if(!IsTransitioning(window))return;double remaining=Math.Max(.001,Math.Min(1,1-(double)args.NewValue));
-            bool menu=false;var content=window.Content as FrameworkElement;
-            if(content!=null&&!menu){var transform=content.RenderTransform as ScaleTransform;if(transform!=null)transform.ScaleX=transform.ScaleY=remaining;}
-            // Apply the native crop after WPF has submitted the matching scaled
-            // content. Cropping first reveals an unscaled, cut-off text frame.
-            if((bool)window.GetValue(ClipPending))return;window.SetValue(ClipPending,true);
-            window.Dispatcher.BeginInvoke(DispatcherPriority.Loaded,new Action(delegate
-            {
-                window.SetValue(ClipPending,false);if(!IsTransitioning(window)||!window.IsVisible)return;
-                double progress=(double)window.GetValue(ExitProgress);Native.SetGlassClip(window,menu?1:Math.Max(.001,1-progress));
-                if((bool)window.GetValue(HasTarget))
-                {
-                    var start=(Native.RECT)window.GetValue(ExitStart);var targetPoint=(Point)window.GetValue(ExitTarget);
-                    double x=start.Left+(targetPoint.X-(start.Left+start.Right)/2.0)*progress,y=start.Top+(targetPoint.Y-(start.Top+start.Bottom)/2.0)*progress;
-                    // Move only our HWND. One clock drives movement, material
-                    // clipping and content scale, including maximized panels.
-                    Native.SetWindowPos(new System.Windows.Interop.WindowInteropHelper(window).Handle,IntPtr.Zero,(int)Math.Round(x),(int)Math.Round(y),0,0,0x15);
-                }
-                var changed=Frame;if(changed!=null)changed(window);
-            }));
-        }
-        internal static void CompleteClose(Window window)
-        {
-            if(!IsClosing(window)||!window.IsVisible)return;
-            if(FromTop(window))return;
-            // A late frame must not let the opacity clock close the HWND while
-            // the coalesced native geometry is still far from the destination.
-            window.BeginAnimation(ExitProgress,null);window.SetValue(ExitProgress,.999);
-            var content=window.Content as FrameworkElement;var scale=content==null?null:content.RenderTransform as ScaleTransform;if(scale!=null)scale.ScaleX=scale.ScaleY=.001;
-            Native.SetGlassClip(window,.001);
-            if((bool)window.GetValue(HasTarget))
-            {var start=(Native.RECT)window.GetValue(ExitStart);var destination=(Point)window.GetValue(ExitTarget);double x=start.Left+(destination.X-(start.Left+start.Right)/2.0)*.999,y=start.Top+(destination.Y-(start.Top+start.Bottom)/2.0)*.999;Native.SetWindowPos(new System.Windows.Interop.WindowInteropHelper(window).Handle,IntPtr.Zero,(int)Math.Round(x),(int)Math.Round(y),0,0,0x15);}
-            var changed=Frame;if(changed!=null)changed(window);
+            var window=(Window)target;if(!IsTransitioning(window)||!WindowLife.Alive(window))return;double fraction=1-Math.Max(0,Math.Min(.06,(double)args.NewValue));
+            var content=window.Content as FrameworkElement;var group=content==null?null:content.RenderTransform as TransformGroup;
+            if(group!=null&&group.Children.Count>1){var scale=group.Children[group.Children.Count-1] as ScaleTransform;if(scale!=null)scale.ScaleX=scale.ScaleY=fraction;}
+            Native.SetGlassClip(window,fraction);var frame=Frame;if(frame!=null)frame(window);
         }
         internal static void Open(Window window)
         {
-            if(window.WindowState!=WindowState.Normal||Double.IsNaN(window.Top))return;
-            Reset(window);double top=window.Top;window.SetValue(BaseTop,top);window.SetValue(BaseLeft,window.Left);
-            var destination=(bool)window.GetValue(UseDockEntrance)&&!FromTop(window)&&DockDestination!=null?DockDestination(window):(Point?)null;
-            if(destination.HasValue)
-            {
-                var content=window.Content as FrameworkElement;if(content!=null){window.SetValue(OriginalTransform,content.RenderTransform);window.SetValue(OriginalOrigin,content.RenderTransformOrigin);content.RenderTransformOrigin=new Point(.5,.5);content.RenderTransform=new ScaleTransform(1,1);}
-                Native.RECT bounds;Native.GetWindowRect(new System.Windows.Interop.WindowInteropHelper(window).Handle,out bounds);window.SetValue(ExitStart,bounds);window.SetValue(ExitTarget,destination.Value);window.SetValue(HasTarget,true);window.SetValue(Opening,true);window.SetValue(ExitProgress,.985);
-                var expand=new DoubleAnimation(.985,0,TimeSpan.FromMilliseconds(Motion.Panel)){EasingFunction=Motion.Ease()};Timeline.SetDesiredFrameRate(expand,60);expand.Completed+=delegate{if((bool)window.GetValue(Opening))Reset(window);};window.BeginAnimation(ExitProgress,expand);return;
-            }
-            bool menu=window.Title=="MacFlow · Menú";var motion=new DoubleAnimation(top+(FromTop(window)?-18:8),top,TimeSpan.FromMilliseconds(menu?Motion.Menu:Motion.Panel)){EasingFunction=FromTop(window)?(IEasingFunction)new SpringEase{EasingMode=EasingMode.EaseIn}:Motion.Ease()};
-            Timeline.SetDesiredFrameRate(motion,60);motion.Completed+=delegate{if(window.IsVisible&&Math.Abs(window.Top-top)<.1)Reset(window);};window.BeginAnimation(Window.TopProperty,motion);
+            if(window.WindowState!=WindowState.Normal||Double.IsNaN(window.Top)||!Motion.Enabled)return;
+            bool continuing=IsClosing(window);if(!continuing)Reset(window);double top=window.Top;window.SetValue(BaseTop,top);window.SetValue(Opening,true);window.SetValue(Closing,false);Prepare(window);
+            if(!continuing)window.SetValue(ExitProgress,FromTop(window)?.018:.035);
+            Motion.To(window,ExitProgress,0,FromTop(window)?Motion.Menu:Motion.Panel,false,delegate{if(WindowLife.Alive(window)&&(bool)window.GetValue(Opening))Reset(window);});
+            window.Top=top+(FromTop(window)?-10:10);Motion.To(window,Window.TopProperty,top,FromTop(window)?Motion.Menu:Motion.Panel);
         }
         internal static void Close(Window window)
         {
-            if(window.WindowState==WindowState.Minimized)return;
-            if(FromTop(window)){CloseUp(window);return;}
-            if((bool)window.GetValue(Opening))
-            {
-                double progress=(double)window.GetValue(ExitProgress);window.SetValue(Opening,false);window.SetValue(Closing,true);window.BeginAnimation(ExitProgress,null);window.SetValue(ExitProgress,progress);
-                var reverse=new DoubleAnimation(progress,.999,TimeSpan.FromMilliseconds(Motion.WindowClose)){EasingFunction=Motion.Ease(true)};Timeline.SetDesiredFrameRate(reverse,60);window.BeginAnimation(ExitProgress,reverse);return;
-            }
-            double start=window.Top;if(Double.IsNaN((double)window.GetValue(BaseTop)))window.SetValue(BaseTop,start);
-            double left=window.Left;if(Double.IsNaN((double)window.GetValue(BaseLeft)))window.SetValue(BaseLeft,left);
-            window.SetValue(ExitState,window.WindowState);
-            // Freeze any unfinished entry before capturing the actual native
-            // coordinates. Windows preserves normal/maximized placement.
-            window.BeginAnimation(Window.TopProperty,null);window.BeginAnimation(Window.LeftProperty,null);
-            if(window.WindowState==WindowState.Normal){window.Top=start;window.Left=left;}
-            if(!IsClosing(window)){var content=window.Content as FrameworkElement;if(content!=null){window.SetValue(OriginalTransform,content.RenderTransform);window.SetValue(OriginalOrigin,content.RenderTransformOrigin);content.RenderTransformOrigin=new Point(.5,.5);content.RenderTransform=new ScaleTransform(1,1);}window.SetValue(Closing,true);}
-            Native.RECT bounds;Native.GetWindowRect(new System.Windows.Interop.WindowInteropHelper(window).Handle,out bounds);window.SetValue(ExitStart,bounds);
-            bool menu=false;var destination=menu?(Point?)new Point((bounds.Left+bounds.Right)/2.0,(bounds.Top+bounds.Bottom)/2.0-4):DockDestination==null?null:DockDestination(window);window.SetValue(HasTarget,destination.HasValue);if(destination.HasValue)window.SetValue(ExitTarget,destination.Value);
-            var collapse=new DoubleAnimation((double)window.GetValue(ExitProgress),.999,TimeSpan.FromMilliseconds(menu?Motion.Menu:Motion.WindowClose)){EasingFunction=new CubicEase{EasingMode=EasingMode.EaseInOut}};Timeline.SetDesiredFrameRate(collapse,60);window.BeginAnimation(ExitProgress,collapse);
+            if(window.WindowState==WindowState.Minimized)return;double top=window.Top;if(Double.IsNaN((double)window.GetValue(BaseTop)))window.SetValue(BaseTop,top);
+            window.SetValue(Opening,false);window.SetValue(Closing,true);Prepare(window);Motion.To(window,ExitProgress,FromTop(window)?.022:.045,Motion.WindowClose,true);
+            if(window.WindowState==WindowState.Normal)Motion.To(window,Window.TopProperty,top+(FromTop(window)?-8:8),Motion.WindowClose,true);
         }
-        private static void CloseUp(Window window)
-        {
-            double start=window.Top;window.BeginAnimation(Window.TopProperty,null);window.Top=start;window.SetValue(Closing,true);
-            double end=DisplaySpace.UpperEdge(window)-window.Height-12;
-            var slide=new DoubleAnimationUsingKeyFrames{FillBehavior=FillBehavior.HoldEnd};
-            slide.KeyFrames.Add(new EasingDoubleKeyFrame(start,KeyTime.FromTimeSpan(TimeSpan.Zero)));
-            slide.KeyFrames.Add(new EasingDoubleKeyFrame(start+3,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(48)),Motion.Ease()));
-            slide.KeyFrames.Add(new EasingDoubleKeyFrame(end,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(Motion.WindowClose)),Motion.Ease()));
-            Timeline.SetDesiredFrameRate(slide,60);window.BeginAnimation(Window.TopProperty,slide);
-        }
+        internal static void CompleteClose(Window window)
+        {if(IsClosing(window)&&window.IsVisible){window.BeginAnimation(ExitProgress,null);window.SetValue(ExitProgress,FromTop(window)?.022:.045);}}
         internal static void Reset(Window window)
         {
-            window.SetValue(Closing,false);window.SetValue(Opening,false);window.BeginAnimation(ExitProgress,null);window.SetValue(ExitProgress,0.0);var content=window.Content as FrameworkElement;var previous=window.GetValue(OriginalTransform) as Transform;if(content!=null&&previous!=null){content.RenderTransform=previous;content.RenderTransformOrigin=(Point)window.GetValue(OriginalOrigin);window.ClearValue(OriginalTransform);window.ClearValue(OriginalOrigin);}Native.SetGlassClip(window,1);
-            bool maximized=(WindowState)window.GetValue(ExitState)==WindowState.Maximized;
-            if(maximized&&(bool)window.GetValue(HasTarget)){var bounds=(Native.RECT)window.GetValue(ExitStart);Native.SetWindowPos(new System.Windows.Interop.WindowInteropHelper(window).Handle,IntPtr.Zero,bounds.Left,bounds.Top,0,0,0x15);}
-            double top=(double)window.GetValue(BaseTop);window.BeginAnimation(Window.TopProperty,null);if(!maximized&&!Double.IsNaN(top))window.Top=top;window.SetValue(BaseTop,Double.NaN);
-            double left=(double)window.GetValue(BaseLeft);window.BeginAnimation(Window.LeftProperty,null);if(!maximized&&!Double.IsNaN(left))window.Left=left;window.SetValue(BaseLeft,Double.NaN);window.SetValue(HasTarget,false);window.SetValue(ExitState,WindowState.Normal);
+            window.SetValue(Closing,false);window.SetValue(Opening,false);window.BeginAnimation(ExitProgress,null);window.SetValue(ExitProgress,0.0);
+            var content=window.Content as FrameworkElement;var previous=window.GetValue(OriginalTransform) as Transform;
+            if(content!=null&&previous!=null){content.RenderTransform=previous;content.RenderTransformOrigin=(Point)window.GetValue(OriginalOrigin);window.ClearValue(OriginalTransform);window.ClearValue(OriginalOrigin);}
+            double top=(double)window.GetValue(BaseTop);window.BeginAnimation(Window.TopProperty,null);if(window.WindowState==WindowState.Normal&&!Double.IsNaN(top))window.Top=top;window.SetValue(BaseTop,Double.NaN);Native.SetGlassClip(window,1);
         }
     }
 }

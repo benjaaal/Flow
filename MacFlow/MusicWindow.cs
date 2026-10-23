@@ -10,7 +10,7 @@ namespace MacFlow
         internal static void Open(Desktop desktop)
         {
             if(WindowLife.Alive(current)){if(!desktop.IsTesting)current.Activate();return;}
-            var panel=Design.Panel("MacFlow · Música",380,540);current=panel;
+            var panel=Design.Panel("MacOS · Música",380,540);current=panel;
             var media=new MediaCard(desktop.IsTesting?(IMediaSource)new MediaFixture():new WindowsMediaSource()){HideWhenEmpty=true};media.SetExpanded(true);
             var root=new DockPanel();var close=Design.Button("Cerrar",delegate{WindowLife.Close(panel);},false);close.HorizontalAlignment=HorizontalAlignment.Right;DockPanel.SetDock(close,Dock.Top);root.Children.Add(close);root.Children.Add(media);panel.Content=Design.Glass(root,26,false);
             media.MediaChanged+=delegate{if(!media.HasActiveSession)WindowLife.Close(panel);};panel.Closed+=delegate{media.Dispose();if(current==panel)current=null;};

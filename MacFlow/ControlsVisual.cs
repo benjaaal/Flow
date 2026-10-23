@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.IO;
 using System.Windows;
@@ -15,7 +15,7 @@ namespace MacFlow
             app.Startup+=delegate
             {
                 backdrop=new VisualTestBackground{WindowState=WindowState.Normal,Width=920,Height=610,Left=(SystemParameters.PrimaryScreenWidth-920)/2,Top=SystemParameters.PrimaryScreenHeight*.12,ShowActivated=false,ShowInTaskbar=false,IsHitTestVisible=false};backdrop.SourceInitialized+=delegate{Native.NoActivate(backdrop);};backdrop.Show();
-                fixture=new Window{Title="Aplicación de prueba",Width=320,Height=180,Left=-2000,Top=-2000,ShowActivated=false,ShowInTaskbar=false,Content=new TextBlock{Text="Ventana de prueba de MacFlow",FontSize=20}};fixture.SourceInitialized+=delegate{Native.NoActivate(fixture);};fixture.Show();
+                fixture=new Window{Title="Aplicación de prueba",Width=320,Height=180,Left=-2000,Top=-2000,ShowActivated=false,ShowInTaskbar=false,Content=new TextBlock{Text="Ventana de prueba de MacOS",FontSize=20}};fixture.SourceInitialized+=delegate{Native.NoActivate(fixture);};fixture.Show();
                 desktop=new Desktop(Path.Combine(directory,"profile"),true,true);desktop.Windows.Clear();desktop.Windows.Add(new WindowEntry{Handle=new WindowInteropHelper(fixture).Handle,ProcessId=(uint)Process.GetCurrentProcess().Id,Title="Aplicación de prueba",Executable=Process.GetCurrentProcess().MainModule.FileName});desktop.OpenOverview();
                 var timer=new DispatcherTimer{Interval=TimeSpan.FromSeconds(3)};timer.Tick+=async delegate
                 {

@@ -1,28 +1,27 @@
-MacFlow 27.1.5 — Windows 11 x64 / WPF / .NET Framework 4.8
+MacFlow 27.2.2 — Windows 11 x64 / WPF / .NET Framework 4.8
 
-Centro de control sin contorno exterior, controles compactos, materiales
-coherentes y animaciones reversibles. Iconos contenidos en el Dock.
-La isla muestra música, temporizadores, concentración y el asistente;
-los cambios de volumen y brillo permanecen en sus paneles.
+Isla dinámica flotante, Dock y barra adaptativos, física centralizada con
+continuidad de velocidad, ventanas proporcionales y bienvenida Hola renovada.
 
-MODO IPAD
-Manzana → Modo iPad, o Configuración → Sistema → Cambiar modo.
-Deslizá arriba desde el borde inferior para Inicio; mantené para multitarea.
-Esc vuelve al modo Mac. Las ventanas flotantes y distribuidas conservan
-su funcionamiento de Windows y recuperan su geometría al salir del modo.
+PANTALLA Y NOTIFICACIONES
+Fondo de escritorio o foto, reloj de vidrio y reproductor compacto. Arrastrá
+desde la esquina superior izquierda de la barra para abrir reloj y avisos
+sin bloquear Windows. Arrastrá hacia arriba o presioná Escape para volver.
+La cortina conserva posición y velocidad del gesto; su borde se curva durante
+el recorrido y se integra con la pantalla al abrirse completamente.
+Tierra sigue disponible en Configuración → Privacidad → Personalizar.
+La actualización aplica una vez la composición de escritorio solicitada;
+conserva la foto elegida y permite volver a seleccionar Tierra.
+La carátula amplía la música y vuelve al reproductor compacto al tocarla.
 
-ASISTENTE
-Acciones locales, reconocimiento español Vosk y voz local de Windows.
-Detener interrumpe la voz. El micrófono requiere autorización de Windows.
-Las preguntas libres conservan Gemini en Chrome. Se informa si faltan
-micrófono, voces instaladas o dispositivo de audio.
+La pantalla visual de MacFlow no reemplaza el bloqueo seguro de Windows.
+Ctrl+Windows abre la cortina de privacidad; Ctrl+Windows+Alt recupera MacFlow.
+El EXE clásico no puede leer avisos de otras apps sin identidad de paquete y
+permiso de Windows. El historial propio y los avisos nativos siguen disponibles.
+No incluye acceso remoto ni modo iPad. No configura inicio automático por sí solo.
 
-PRIVACIDAD Y RECUPERACION
-Ctrl+Windows abre la cortina de MacFlow. Deslizá arriba para el PIN local.
-Ctrl+Windows+Alt recupera el escritorio. No sustituye el bloqueo de Windows.
-Usá la manzana o bandeja para salir de MacFlow y restaurar Windows.
-Hola sólo aparece manualmente o después de una versión nueva habilitada.
+Los controles multimedia requieren un reproductor con controles de sesión de
+Windows. Voz local conserva sus motores; las consultas libres usan la integración
+existente con Gemini en Chrome y requieren sesión del usuario.
 
-No incluye acceso remoto ni modifica los archivos esenciales de Windows.
-No se instaló ni publicó esta entrega. Referencias, pruebas y limitaciones:
-source/docs/27.1.5.md en la carpeta de entrega.
+Fuente, pruebas, referencias y límites: source/docs/RELEASE-27.2.2.md.

@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 namespace MacFlow
 {
     // Vector paths adapted from kumailnanji/letters (MIT). Full license is shipped.

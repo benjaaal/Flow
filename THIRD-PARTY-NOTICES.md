@@ -101,3 +101,12 @@ MacFlow 26.1.2 adds an original clipped Windows.UI.Composition host-backdrop imp
 OpenCV, OpenCvSharp, YuNet, SFace, MiniFASNetV2, Vosk Spanish es-0.42, NAudio and their runtime libraries are bundled unmodified. Full licenses and attribution: NATIVE-THIRD-PARTY.txt. Original integration code is in BuildTools/FaceWorker.cs, BuildTools/VoiceWorker.cs and MacFlow/. Model downloads are pinned with SHA-256.
 Sources: https://github.com/opencv/opencv_zoo ; https://github.com/shimat/opencvsharp ; https://github.com/minivision-ai/Silent-Face-Anti-Spoofing ; https://github.com/alphacep/vosk-api ; https://github.com/naudio/NAudio .
 
+
+## Artwork in 27.2.1
+Seda.png is original generated artwork. The earlier Prisma.png and EarthSurface.png are original generated assets retained only in historical source backups, not this package. No Apple wallpaper, SF Symbols font, Siri footage or third-party notch source code is included in these new assets. Microsoft native composition ABI documentation informed NativeBlurEffect; no external blur dependency was added.
+
+EarthSurface-NASA.jpg: NASA Earth Observatory, Blue Marble Next Generation (January 2004), Reto Stöckli. SHA-256: 99f5faad74efe985fbf1714c8be7296ca9999759a1215b65f99b7f1df278dde5.
+Source: https://science.nasa.gov/earth/earth-observatory/blue-marble-next-generation/base-map/
+Asset: https://assets.science.nasa.gov/content/dam/science/esd/eo/images/bmng/bmng-base/january/world.200401.3x5400x2700.jpg
+Media guidelines: https://www.nasa.gov/nasa-brand-center/images-and-media/
+The photograph is used as a texture on an original WPF sphere. Tierra.png is an original rendering of this credited texture, not generated geography. Lighting is art-directed by local time, not live weather, geolocation or an astronomical ephemeris. NASA does not endorse this product. No NASA logo or identifier is used as product branding.

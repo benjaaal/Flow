@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -48,7 +48,13 @@ namespace MacFlow
         {
             if(!active)return;
             if(DateTime.UtcNow-enumerated>TimeSpan.FromSeconds(1)){enumerated=DateTime.UtcNow;foreach(var h in discover())TrackAndHide(h);}
-            foreach(var entry in entries.Values.ToArray())if(Identity(entry)&&valid(entry.Handle)&&(ReplacementReady==null||ReplacementReady(entry.Handle))&&Native.IsWindowVisible(entry.Handle))Native.ShowWindowAsync(entry.Handle,0);
+            foreach(var entry in entries.Values.ToArray())
+            {
+                if(!Identity(entry)||!valid(entry.Handle))continue;
+                bool ready=ReplacementReady==null||ReplacementReady(entry.Handle);
+                if(ready&&Native.IsWindowVisible(entry.Handle))Native.ShowWindowAsync(entry.Handle,0);
+                else if(!ready&&entry.Visible&&!Native.IsWindowVisible(entry.Handle))Native.ShowWindowAsync(entry.Handle,4);
+            }
         }
         private bool Identity(Entry entry){uint pid;Native.GetWindowThreadProcessId(entry.Handle,out pid);return Native.IsWindow(entry.Handle)&&pid==entry.Process;}
         private void TrackAndHide(IntPtr h)

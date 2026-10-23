@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
@@ -89,7 +89,7 @@ namespace MacFlow
                 if(picture==null)using(var original=new System.Drawing.Bitmap(bounds.Width,bounds.Height))
                 {using(var graphics=System.Drawing.Graphics.FromImage(original))graphics.CopyFromScreen(bounds.Left,bounds.Top,0,0,bounds.Size);using(var reduced=new System.Drawing.Bitmap(original,Math.Min(1280,bounds.Width),Math.Max(1,(int)(bounds.Height*Math.Min(1,1280.0/bounds.Width)))))using(var stream=new System.IO.MemoryStream()){reduced.Save(stream,System.Drawing.Imaging.ImageFormat.Png);stream.Position=0;var bitmap=new BitmapImage();bitmap.BeginInit();bitmap.CacheOption=BitmapCacheOption.OnLoad;bitmap.StreamSource=stream;bitmap.EndInit();bitmap.Freeze();picture=bitmap;}}
                 var fromDevice=PresentationSource.FromVisual(host).CompositionTarget.TransformFromDevice;var origin=fromDevice.Transform(new Point(bounds.Left,bounds.Top));var extent=fromDevice.Transform(new Point(bounds.Width,bounds.Height));
-                overlay=new Window{Title="MacFlow · Transición de tapa",Left=origin.X,Top=origin.Y,Width=extent.X,Height=extent.Y,WindowStyle=WindowStyle.None,AllowsTransparency=true,Background=Brushes.Transparent,ResizeMode=ResizeMode.NoResize,ShowActivated=false,ShowInTaskbar=false,Topmost=true,Focusable=false,IsHitTestVisible=false};
+                overlay=new Window{Title="MacOS · Transición de tapa",Left=origin.X,Top=origin.Y,Width=extent.X,Height=extent.Y,WindowStyle=WindowStyle.None,AllowsTransparency=true,Background=Brushes.Transparent,ResizeMode=ResizeMode.NoResize,ShowActivated=false,ShowInTaskbar=false,Topmost=true,Focusable=false,IsHitTestVisible=false};
                 var own=overlay;image=new Image{Source=picture,Stretch=Stretch.Fill};var fold=new LidFold();effect=fold;fold.SetValue(LidFold.PixelProperty,new Point(1.0/picture.PixelWidth,1.0/picture.PixelHeight));if(RenderCapability.IsPixelShaderVersionSupported(3,0)){image.Effect=fold;own.Content=image;}else{effect=null;plane=new LidPlane(picture);own.Content=plane;}
                 own.SourceInitialized+=delegate{Native.NoActivate(own);var h=new WindowInteropHelper(own).Handle;Native.SetWindowLong(h,-20,Native.GetWindowLong(h,-20)|0x20);Native.SetWindowPos(h,new IntPtr(-1),bounds.Left,bounds.Top,bounds.Width,bounds.Height,0x10);};own.Show();
                 if(follow){following=true;timeout.Start();return;}

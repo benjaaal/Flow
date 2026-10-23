@@ -18,7 +18,7 @@ namespace MacFlow
         private DateTime recovered=DateTime.MinValue;
         public DockEdge(Action reveal)
         {
-            Title="MacFlow · Borde del Dock";WindowStyle=WindowStyle.None;AllowsTransparency=true;ResizeMode=ResizeMode.NoResize;ShowActivated=false;ShowInTaskbar=false;Topmost=true;Focusable=false;
+            Title="MacOS · Borde del Dock";WindowStyle=WindowStyle.None;AllowsTransparency=true;ResizeMode=ResizeMode.NoResize;ShowActivated=false;ShowInTaskbar=false;Topmost=true;Focusable=false;
             var surface=new SolidColorBrush(Color.FromArgb(1,0,0,0));surface.Freeze();Background=surface;
             SourceInitialized+=delegate{Native.NoActivate(this);handle=new WindowInteropHelper(this).Handle;};MouseEnter+=delegate{reveal();};MouseLeftButtonUp+=delegate{reveal();};
         }

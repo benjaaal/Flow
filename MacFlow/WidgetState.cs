@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -47,8 +47,8 @@ namespace MacFlow
     }
     internal static class WidgetCatalog
     {
-        internal static readonly string[] Kinds={"Digital","Analog","Calendar","Weather","Battery","Performance","Music","Notes","Tasks","Timer","Stopwatch","Shortcuts","Network"};
-        internal static readonly string[] Names={"Reloj digital","Reloj analógico","Calendario","Clima","Batería","Actividad","Música","Notas","Tareas","Temporizador","Cronómetro","Aplicaciones","Conexión"};
+        internal static readonly string[] Kinds={"Digital","Analog","Calendar","Weather","Battery","Performance","Music","Notes","Tasks","Timer","Stopwatch","Shortcuts","Network","Clipboard"};
+        internal static readonly string[] Names={"Reloj digital","Reloj analógico","Calendario","Clima","Batería","Actividad","Música","Notas","Tareas","Temporizador","Cronómetro","Aplicaciones","Conexión","Portapapeles"};
         internal static string Name(string kind){int i=Array.IndexOf(Kinds,kind);return i<0?kind:Names[i];}
         internal static Size Dimensions(string size){return size=="L"?new Size(340,340):size=="M"?new Size(340,164):new Size(164,164);}
         internal static Rect Bounds(WidgetSpec x){var d=Dimensions(x.Size);return new Rect(16+x.Column*88,58+x.Row*88,d.Width,d.Height);}

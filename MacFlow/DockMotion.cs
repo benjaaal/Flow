@@ -14,7 +14,7 @@ namespace MacFlow
         internal static double Slot(double size){return size+12;}
         internal static double LayoutScale(double size){return 1.28-Math.Max(0,Math.Min(36,size-36))*.08/36;}
         internal static double Row(double size){double peak=LayoutScale(size);return Math.Ceiling(size*peak*1.035+LaunchTravel*peak*2)+6;}
-        internal static double Thickness(double size){return Row(size)+Indicator+Padding*2;}
+        internal static double Thickness(double size){return Row(size)+Indicator+Padding*2+2;}
         internal static double Reserve(double size){return Math.Ceiling(size*.55)+4;}
     }
     // One time-based hover controller; mouse events only replace a target point.

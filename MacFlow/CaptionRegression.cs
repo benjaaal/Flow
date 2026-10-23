@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -19,7 +19,7 @@ namespace MacFlow
             try
             {
                 if(Application.Current==null)new Application{ShutdownMode=ShutdownMode.OnExplicitShutdown};Design.InstallTheme();
-                fixture=new Window{Title="MacFlow · Ventana propia de prueba",Width=520,Height=260,Left=180,Top=130,ShowActivated=false,ShowInTaskbar=false,Topmost=true,Background=Brushes.White,Content=new TextBlock{Text="Prueba de controles Apple\n\nEsta ventana pertenece al test de MacFlow.",Margin=new Thickness(28),FontSize=18,Foreground=Brushes.Black}};
+                fixture=new Window{Title="MacOS · Ventana propia de prueba",Width=520,Height=260,Left=180,Top=130,ShowActivated=false,ShowInTaskbar=false,Topmost=true,Background=Brushes.White,Content=new TextBlock{Text="Prueba de controles Apple\n\nEsta ventana pertenece al test de MacFlow.",Margin=new Thickness(28),FontSize=18,Foreground=Brushes.Black}};
                 bool cancel=true;fixture.Closing+=delegate(object sender,System.ComponentModel.CancelEventArgs e){e.Cancel=cancel;};fixture.Show();Pump(200);
                 var entry=new WindowEntry{Handle=new WindowInteropHelper(fixture).Handle,ProcessId=(uint)Process.GetCurrentProcess().Id};Native.RECT area;
                 DumpBounds(entry,output,"Normal");Check(CaptionButtons.TryBounds(entry,out area),"DWM: límites válidos en ventana normal",output);

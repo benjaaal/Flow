@@ -23,7 +23,7 @@ float4 main(float2 uv : TEXCOORD) : COLOR
     float crown=pow(saturate(dot(normal,normalize(float2(-.55,-.83)))),3);
     float foot=pow(saturate(dot(normal,normalize(float2(.55,.83)))),4);
     float reflection=exp(-pow((uv.y-(.08+uv.x*.20))/.095,2))*.13;
-    float alpha=(.18+reflection+edge*(.36*crown+.13*foot)+fine*(.58*crown+.23*foot))*a;
+    float alpha=(.30+reflection+edge*(.36*crown+.13*foot)+fine*(.58*crown+.23*foot))*a;
     float3 color=lerp(float3(.88,.88,.88),float3(1,1,1),saturate(crown+reflection*4));
     color=lerp(color,float3(.13,.13,.13),darkInk*.90);
     float2 sourceUV=saturate(offset+uv*extent+normal*edge*extent*.018);
@@ -32,7 +32,7 @@ float4 main(float2 uv : TEXCOORD) : COLOR
     // lettering. The actual wallpaper remains visible through the alpha.
     float light=dot(photo,float3(.2126,.7152,.0722));
     float3 imageGlass=saturate(color*lerp(.86,1.05,light));
-    float clearAlpha=saturate(.14+frost*.24+reflection+edge*(.30*crown+.12*foot)+fine*(.48*crown+.20*foot))*a;
+    float clearAlpha=saturate(.30+frost*.30+reflection+edge*(.30*crown+.12*foot)+fine*(.48*crown+.20*foot))*a;
     // An opposing neutral reflection gives the transparent body a curved lip.
     imageGlass=lerp(imageGlass,float3(.18,.18,.18),fine*foot*.36);
     return lerp(float4(color*alpha,alpha),float4(imageGlass*clearAlpha,clearAlpha),hasWallpaper);

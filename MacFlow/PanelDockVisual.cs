@@ -84,7 +84,7 @@ namespace MacFlow
         }
         private static Window CreatePanel()
         {
-            var panel=Design.Panel("MacFlow · Movimiento de prueba",360,220);panel.Left=SystemParameters.PrimaryScreenWidth*.22;panel.Top=SystemParameters.PrimaryScreenHeight*.2;panel.ShowActivated=false;
+            var panel=Design.Panel("MacOS · Movimiento de prueba",360,220);panel.Left=SystemParameters.PrimaryScreenWidth*.22;panel.Top=SystemParameters.PrimaryScreenHeight*.2;panel.ShowActivated=false;
             var stack=new StackPanel{Margin=new Thickness(20)};stack.Children.Add(new Image{Source=FeatureIcons.Get("settings"),Width=48,Height=48,HorizontalAlignment=HorizontalAlignment.Left});stack.Children.Add(Design.Text("Configuración",22,true));stack.Children.Add(Design.Text("Un cierre hacia tu Dock",14,false));panel.Content=Design.Glass(stack,22,false);panel.SourceInitialized+=delegate{Native.NoActivate(panel);};panel.Show();return panel;
         }
         private static async Task Track(Window panel,Action action,Point destination,string directory,string name,List<string> results)

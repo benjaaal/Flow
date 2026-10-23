@@ -10,7 +10,7 @@ using System.Windows.Media.Media3D;
 using System.Windows.Threading;
 namespace MacFlow
 {
-    // A short-lived texture of an OWN window, bent into a curved funnel.
+    // A short-lived, proportional texture of an OWN window for minimize/restore.
     // The application UI remains real controls and live compositor glass.
     // No frame-by-frame desktop capture and no changes to foreign HWNDs.
     internal static class GenieTransition
@@ -43,7 +43,7 @@ namespace MacFlow
                     // supply their own PrintWindow texture in the Image branch.
                     var content=source.Content as Visual;if(content==null)return false;
                     var viewSource=PresentationSource.FromVisual(source);double dpi=viewSource==null?1:viewSource.CompositionTarget.TransformToDevice.M11;
-                    var bitmap=new RenderTargetBitmap(width,height,96*dpi,96*dpi,PixelFormats.Pbgra32);bitmap.Render(content);bitmap.Freeze();texture=bitmap;
+                    double factor=Math.Min(1,1440.0/Math.Max(width,height));var bitmap=new RenderTargetBitmap(Math.Max(1,(int)(width*factor)),Math.Max(1,(int)(height*factor)),96*dpi*factor,96*dpi*factor,PixelFormats.Pbgra32);bitmap.Render(content);bitmap.Freeze();texture=bitmap;
                 }
                 var presentation=PresentationSource.FromVisual(source);double scale=presentation==null?1:presentation.CompositionTarget.TransformToDevice.M11;
                 double left=Math.Min(rect.Left,destination.Value.X)-3,top=Math.Min(rect.Top,destination.Value.Y)-3,right=Math.Max(rect.Right,destination.Value.X)+3,bottom=Math.Max(rect.Bottom,destination.Value.Y)+3;
@@ -51,7 +51,7 @@ namespace MacFlow
                 var monitor=System.Windows.Forms.Screen.FromPoint(new System.Drawing.Point((int)destination.Value.X,(int)destination.Value.Y)).Bounds;bool verticalAxis=DockUsesVertical(destination.Value,new Rect(monitor.Left,monitor.Top,monitor.Width,monitor.Height));
                 var surface=new GenieSurface(texture,start,target,Native.GlassRadius(source),(right-left)/scale,(bottom-top)/scale,verticalAxis);
                 if(opening)surface.SetValue(GenieSurface.ProgressProperty,1.0);
-                overlay=new Window{Title="MacFlow · Transición al Dock",Width=(right-left)/scale,Height=(bottom-top)/scale,Left=left/scale,Top=top/scale,WindowStyle=WindowStyle.None,ResizeMode=ResizeMode.NoResize,AllowsTransparency=true,Background=Brushes.Transparent,ShowInTaskbar=false,ShowActivated=false,Topmost=true,IsHitTestVisible=false,Content=surface};
+                overlay=new Window{Title="MacOS · Transición al Dock",Width=(right-left)/scale,Height=(bottom-top)/scale,Left=left/scale,Top=top/scale,WindowStyle=WindowStyle.None,ResizeMode=ResizeMode.NoResize,AllowsTransparency=true,Background=Brushes.Transparent,ShowInTaskbar=false,ShowActivated=false,Topmost=true,IsHitTestVisible=false,Content=surface};
                 var view=overlay;overlay.SourceInitialized+=delegate{Native.NoActivate(view);var handle=new WindowInteropHelper(view).Handle;Native.SetWindowLong(handle,-20,Native.GetWindowLong(handle,-20)|0x20);};
                 var timeout=new DispatcherTimer(DispatcherPriority.Background){Interval=TimeSpan.FromMilliseconds(duration+160)};bool ended=false,counted=false,enteringNow=opening;int revision=0;EventHandler sourceClosed=null;DependencyPropertyChangedEventHandler hidden=null;
                 Action stop=delegate{if(ended)return;ended=true;++revision;active.Remove(source);timeout.Stop();surface.BeginAnimation(GenieSurface.ProgressProperty,null);source.Closed-=sourceClosed;source.IsVisibleChanged-=hidden;if(WindowLife.Alive(view))view.Close();};
@@ -66,36 +66,27 @@ namespace MacFlow
     internal sealed class GenieSurface : Grid
     {
         internal static readonly DependencyProperty ProgressProperty=DependencyProperty.Register("Progress",typeof(double),typeof(GenieSurface),new PropertyMetadata(0.0,Changed));
-        private readonly Rect start;private readonly Point target;private readonly MeshGeometry3D mesh;private readonly double canvasHeight;private readonly bool vertical,positive;
+        private readonly Rect start;private readonly Point target;private readonly Border image;private readonly ScaleTransform scale=new ScaleTransform(1,1);private readonly TranslateTransform shift=new TranslateTransform();private readonly bool vertical;
         internal double Progress{get{return (double)GetValue(ProgressProperty);}}
         internal Point Tail{get;private set;}
         internal double TopWidth{get;private set;}internal double TailWidth{get;private set;}
+        internal double AspectRatioError{get{return Math.Abs(scale.ScaleX-scale.ScaleY);}}
         internal GenieSurface(BitmapSource texture,Rect start,Point target,double radius,double width,double height,bool? verticalAxis=null)
         {
-            this.start=start;this.target=target;canvasHeight=height;double dx=target.X-(start.Left+start.Width/2),dy=target.Y-(start.Top+start.Height/2);vertical=verticalAxis??(Math.Abs(dy)>=Math.Abs(dx));positive=vertical?dy>=0:dx>=0;
-            // Shared vertices, one cached texture and ambient lighting. Eight
-            // columns avoid diagonal texture kinks in curved, stretched text.
-            var uv=new PointCollection(441);var indices=new Int32Collection(2304);
-            for(int row=0;row<=48;row++){double along=row/48.0;for(int side=0;side<=8;side++)uv.Add(vertical?new Point(side/8.0,along):new Point(along,side/8.0));if(row<48)for(int col=0;col<8;col++){int n=row*9+col;indices.Add(n);indices.Add(n+1);indices.Add(n+9);indices.Add(n+1);indices.Add(n+10);indices.Add(n+9);}}
-            uv.Freeze();indices.Freeze();mesh=new MeshGeometry3D{TextureCoordinates=uv,TriangleIndices=indices};
-            var drawing=new DrawingGroup();drawing.ClipGeometry=new RectangleGeometry(new Rect(0,0,texture.PixelWidth,texture.PixelHeight),radius*texture.PixelWidth/start.Width,radius*texture.PixelHeight/start.Height);drawing.Children.Add(new ImageDrawing(texture,new Rect(0,0,texture.PixelWidth,texture.PixelHeight)));drawing.Freeze();
-            var brush=new DrawingBrush(drawing){Stretch=Stretch.Fill};brush.Freeze();var material=new DiffuseMaterial(brush);material.Freeze();var model=new GeometryModel3D(mesh,material){BackMaterial=material};
-            var viewport=new Viewport3D{ClipToBounds=false,IsHitTestVisible=false,Camera=new OrthographicCamera(new Point3D(width/2,height/2,10),new Vector3D(0,0,-1),new Vector3D(0,1,0),width)};viewport.Children.Add(new ModelVisual3D{Content=new AmbientLight(Colors.White)});viewport.Children.Add(new ModelVisual3D{Content=model});Children.Add(viewport);Update(0);
+            this.start=start;this.target=target;vertical=verticalAxis??(Math.Abs(target.Y-start.Top)>=Math.Abs(target.X-start.Left));
+            image=new Border{Width=start.Width,Height=start.Height,CornerRadius=new CornerRadius(radius),HorizontalAlignment=HorizontalAlignment.Left,VerticalAlignment=VerticalAlignment.Top,Child=new Image{Source=texture,Stretch=Stretch.Fill},Clip=new RectangleGeometry(new Rect(0,0,start.Width,start.Height),radius,radius)};
+            var transform=new TransformGroup();transform.Children.Add(scale);transform.Children.Add(shift);image.RenderTransformOrigin=new Point(.5,.5);image.RenderTransform=transform;Children.Add(image);Update(0);
         }
         private static void Changed(DependencyObject value,DependencyPropertyChangedEventArgs e){((GenieSurface)value).Update((double)e.NewValue);}
-        private static double Smooth(double value){value=Math.Max(0,Math.Min(1,value));return value*value*(3-2*value);}
         private void Update(double progress)
         {
-            double pinch=Smooth(progress/.48),travel=Smooth((progress-.32)/.68);var points=new Point3DCollection(441);
-            for(int row=0;row<=48;row++)
-            {
-                double along=row/48.0,t=positive?along:1-along,bend=pinch*Smooth(t),cross=(vertical?start.Width:start.Height)*(1-.985*bend)*(1-travel);
-                double center=(vertical?start.Left+start.Width/2:start.Top+start.Height/2);double destination=vertical?target.X:target.Y;center+=(destination-center)*(bend+(1-bend)*travel);
-                double axis=(vertical?start.Top:start.Left)+along*(vertical?start.Height:start.Width),tailPull=bend,axisTravel=tailPull+(1-tailPull)*travel;axis+=((vertical?target.Y:target.X)-axis)*axisTravel;
-                for(int side=0;side<=8;side++){double across=center+(side/8.0-.5)*cross;double x=vertical?across:axis,y=vertical?axis:across;points.Add(new Point3D(x,canvasHeight-y,0));}
-                if(t==0)TopWidth=cross;if(t==1){TailWidth=cross;Tail=vertical?new Point(center,axis):new Point(axis,center);}
-            }
-            mesh.Positions=points;
+            double p=Motion.Smooth(progress),minimum=Math.Min(1,38/Math.Max(start.Width,start.Height)),size=1-(1-minimum)*p;
+            scale.ScaleX=scale.ScaleY=size;double cx=start.Left+start.Width/2,cy=start.Top+start.Height/2;
+            // A single smooth arc; the complete rectangle keeps its proportions.
+            double x=cx+(target.X-cx)*p,y=cy+(target.Y-cy)*p;
+            if(vertical)x+=Math.Sin(Math.PI*p)*(target.X-cx)*.06;else y+=Math.Sin(Math.PI*p)*(target.Y-cy)*.06;
+            shift.X=x-start.Width/2;shift.Y=y-start.Height/2;image.Opacity=1-Motion.Smooth((progress-.76)/.24);
+            TopWidth=TailWidth=(vertical?start.Width:start.Height)*size;Tail=new Point(x,y);
         }
     }
 }

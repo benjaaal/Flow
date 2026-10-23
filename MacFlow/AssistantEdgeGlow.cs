@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Windows;
@@ -19,7 +19,7 @@ namespace MacFlow
         {
             for(int i=0;i<4;i++)
             {
-                var view=new Window{Title="MacFlow · Luz del asistente",WindowStyle=WindowStyle.None,ResizeMode=ResizeMode.NoResize,AllowsTransparency=true,Background=Brushes.Transparent,ShowActivated=false,ShowInTaskbar=false,Topmost=true,IsHitTestVisible=false};lights[i]=new EdgeLight(i);view.Content=lights[i];windows[i]=view;
+                var view=new Window{Title="MacOS · Luz del asistente",WindowStyle=WindowStyle.None,ResizeMode=ResizeMode.NoResize,AllowsTransparency=true,Background=Brushes.Transparent,ShowActivated=false,ShowInTaskbar=false,Topmost=true,IsHitTestVisible=false};lights[i]=new EdgeLight(i);view.Content=lights[i];windows[i]=view;
                 view.SourceInitialized+=delegate{Native.NoActivate(view);Native.RemoveGlassFrame(view);var h=new WindowInteropHelper(view).Handle;Native.SetWindowLong(h,-20,Native.GetWindowLong(h,-20)|0x20|0x80);};
             }
         }

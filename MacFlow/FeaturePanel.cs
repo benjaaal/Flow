@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -12,7 +12,7 @@ namespace MacFlow
         public Button MinimizeButton { get; private set; }
         protected FeaturePanel(string name, double width, double height)
         {
-            Title = "MacFlow · " + name; Width = width; Height = height; MinWidth = 340; MinHeight = 300;
+            Title = "MacOS · " + name; Width = width; Height = height; MinWidth = 340; MinHeight = 300;
             WindowStyle = WindowStyle.None; AllowsTransparency = false; ResizeMode = ResizeMode.CanResizeWithGrip;
             ShowInTaskbar = true; Topmost = true; Background = Brushes.Transparent;
             var root = new DockPanel(); var header = new DockPanel { Margin = new Thickness(0, 0, 0, 18) };

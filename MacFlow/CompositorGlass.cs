@@ -50,18 +50,18 @@ namespace MacFlow
                 action.GetResults();action.Close();Log.Write("Compositor: cola cerrada");
             }
             catch(Exception ex){Log.Write("Cierre del compositor: "+ex.Message);}
-            if(compositor!=null){compositor.Dispose();compositor=null;}
+            if(blurFactory!=null){blurFactory.Dispose();blurFactory=null;}if(compositor!=null){compositor.Dispose();compositor=null;}
         }
         private static bool registered;
         private static Windows.System.DispatcherQueueController queue;
-        private static Compositor compositor;
+        private static Compositor compositor;private static CompositionEffectFactory blurFactory;
         private static readonly Dictionary<Window,CompositorGlass> windows=new Dictionary<Window,CompositorGlass>();
         private readonly Window window;
         private DesktopWindowTarget target;
         private SpriteVisual visual;
         private CompositionRoundedRectangleGeometry geometry;
         private CompositionGeometricClip clip;
-        private CompositionBrush brush;
+        private CompositionBrush brush,backdrop;
         private IntPtr backgroundWindow;
         private HwndSource source;
         private bool disposed;
@@ -88,7 +88,9 @@ namespace MacFlow
             int enabled=1;Native.DwmSetWindowAttribute(backgroundWindow,17,ref enabled,4);Native.DwmSetWindowAttribute(backgroundWindow,33,ref enabled,4);
             IntPtr raw;((IDesktopInterop)(object)compositor).CreateDesktopWindowTarget(backgroundWindow,true,out raw);
             try{target=(DesktopWindowTarget)Marshal.GetObjectForIUnknown(raw);}finally{Marshal.Release(raw);}
-            brush=compositor.CreateHostBackdropBrush();visual=compositor.CreateSpriteVisual();visual.Brush=brush;
+            backdrop=compositor.CreateHostBackdropBrush();
+            if(blurFactory==null)blurFactory=compositor.CreateEffectFactory(new NativeBlurEffect{Name="BackdropBlur",Amount=10,Source=new CompositionEffectSourceParameter("source")});
+            var effect=blurFactory.CreateBrush();effect.SetSourceParameter("source",backdrop);brush=effect;visual=compositor.CreateSpriteVisual();visual.Brush=brush;
             geometry=compositor.CreateRoundedRectangleGeometry();clip=compositor.CreateGeometricClip(geometry);visual.Clip=clip;target.Root=visual;
             source=HwndSource.FromHwnd(new WindowInteropHelper(window).Handle);if(source!=null)source.AddHook(Hook);
             window.Closed+=Closed;window.IsVisibleChanged+=Visibility;Update(1);
@@ -135,6 +137,6 @@ namespace MacFlow
         private void Visibility(object sender,DependencyPropertyChangedEventArgs e){Update(lastFraction);}
         private void Closed(object sender,EventArgs e){Dispose();windows.Remove(window);}
         public void Dispose()
-        {if(disposed)return;disposed=true;window.Closed-=Closed;window.IsVisibleChanged-=Visibility;if(source!=null)source.RemoveHook(Hook);if(target!=null)target.Root=null;if(visual!=null)visual.Dispose();if(clip!=null)clip.Dispose();if(geometry!=null)geometry.Dispose();if(brush!=null)brush.Dispose();if(target!=null)target.Dispose();if(backgroundWindow!=IntPtr.Zero){DestroyWindow(backgroundWindow);backgroundWindow=IntPtr.Zero;}}
+        {if(disposed)return;disposed=true;window.Closed-=Closed;window.IsVisibleChanged-=Visibility;if(source!=null)source.RemoveHook(Hook);if(target!=null)target.Root=null;if(visual!=null)visual.Dispose();if(clip!=null)clip.Dispose();if(geometry!=null)geometry.Dispose();if(brush!=null)brush.Dispose();if(backdrop!=null)backdrop.Dispose();if(target!=null)target.Dispose();if(backgroundWindow!=IntPtr.Zero){DestroyWindow(backgroundWindow);backgroundWindow=IntPtr.Zero;}}
     }
 }

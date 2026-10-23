@@ -37,14 +37,14 @@ namespace MacFlow
             double start=window.IsVisible?Current:resting+Travel;
             if(immediately||!Motion.Enabled){Reset();if(!window.IsVisible)window.Show();return;}
             window.BeginAnimation(Axis,null);window.SetValue(Axis,resting);
-            var slide=new DoubleAnimation(start,resting,TimeSpan.FromMilliseconds(240)){EasingFunction=new CubicEase{EasingMode=EasingMode.EaseOut}};Timeline.SetDesiredFrameRate(slide,60);
+            var slide=new DoubleAnimation(start,resting,TimeSpan.FromMilliseconds(240)){EasingFunction=Motion.Ease()};Timeline.SetDesiredFrameRate(slide,60);
             slide.Completed+=delegate{if(request==generation&&requested)Reset();};window.BeginAnimation(Axis,slide);if(!window.IsVisible)window.Show();
         }
         internal void Hide(bool immediately=false)
         {
             if(!requested&&!immediately)return;Prepare();requested=false;int request=++generation;window.IsHitTestVisible=false;
             if(immediately||!Motion.Enabled){window.Hide();Reset();window.IsHitTestVisible=true;return;}
-            var slide=new DoubleAnimation(Current,resting+Travel,TimeSpan.FromMilliseconds(300)){EasingFunction=new CubicEase{EasingMode=EasingMode.EaseInOut}};Timeline.SetDesiredFrameRate(slide,60);slide.Completed+=delegate{FinishHide(request);};fallback.Start();window.BeginAnimation(Axis,slide);
+            var slide=new DoubleAnimation(Current,resting+Travel,TimeSpan.FromMilliseconds(300)){EasingFunction=Motion.Ease(true)};Timeline.SetDesiredFrameRate(slide,60);slide.Completed+=delegate{FinishHide(request);};fallback.Start();window.BeginAnimation(Axis,slide);
         }
         private void FinishHide(int request){if(request!=generation||requested)return;fallback.Stop();window.Hide();Reset();window.IsHitTestVisible=true;}
     }

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -21,9 +21,8 @@ namespace MacFlow
         public static List<WallpaperChoice> Load(string directory)
         {
             string folder=Path.Combine(directory,"Wallpapers");Directory.CreateDirectory(folder);
-            string[] names={"Aurora","Océano","Alba","Noche"};
             var result=new List<WallpaperChoice>();
-            string[] art={"Aqua","Midnight","Sierra"},labels={"Aqua","Medianoche","Sierra"};
+            string[] art={"Seda","Sierra","Aqua","Midnight"},labels={"Seda","Sierra","Aqua","Medianoche"};
             for(int i=0;i<art.Length;i++)
             {
                 string file=Path.Combine(folder,"MacFlow-"+art[i]+"-1.png");
@@ -33,12 +32,6 @@ namespace MacFlow
                     {if(resource==null)throw new IOException("Falta el fondo integrado: "+art[i]);using(var output=new FileStream(file,FileMode.CreateNew,FileAccess.Write,FileShare.None))resource.CopyTo(output);}
                 }
                 result.Add(new WallpaperChoice{Name=labels[i],File=file,Thumbnail=Decode(file,380)});
-            }
-            for(int i=0;i<names.Length;i++)
-            {
-                string file=Path.Combine(folder,"MacFlow-"+i+".jpg");
-                if(!System.IO.File.Exists(file))Create(file,i);
-                result.Add(new WallpaperChoice{Name=names[i],File=file,Thumbnail=Decode(file,380)});
             }
             return result;
         }

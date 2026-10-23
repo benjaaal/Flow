@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 namespace MacFlow
 {
     // Logon can start MacFlow before Explorer has created its taskbar. Keep the

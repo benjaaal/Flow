@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Windows;
@@ -36,7 +36,7 @@ namespace MacFlow
         {
             read=provider;settings=openSettings;connect=connectSaved;WifiMode=wifiMode;
             readRadio=radioRead??(mode=>Task.FromResult(new RadioSnapshot{Message="Datos de prueba"}));setRadio=radioSet??((mode,on,cancellation)=>Task.FromResult(new RadioChange{Message="Prueba aislada"}));
-            Title="MacFlow · Conexiones";Width=390;Height=Math.Min(555,SystemParameters.WorkArea.Height-70);
+            Title="MacOS · Conexiones";Width=390;Height=Math.Min(555,SystemParameters.WorkArea.Height-70);
             WindowStyle=WindowStyle.None;AllowsTransparency=false;ResizeMode=ResizeMode.NoResize;Topmost=true;ShowInTaskbar=true;Background=Brushes.Transparent;
             var root=new Grid();root.RowDefinitions.Add(new RowDefinition{Height=GridLength.Auto});root.RowDefinitions.Add(new RowDefinition{Height=GridLength.Auto});root.RowDefinitions.Add(new RowDefinition());root.RowDefinitions.Add(new RowDefinition{Height=GridLength.Auto});
             var head=new DockPanel{Margin=new Thickness(0,0,0,14)};

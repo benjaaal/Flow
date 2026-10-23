@@ -1,4 +1,4 @@
-name: Build Windows installer
+ï»¿name: Build Windows installer
 on:
   workflow_dispatch:
   push:
@@ -22,13 +22,13 @@ jobs:
       - name: Run isolated regression and interface checks
         shell: powershell
         run: |
-          foreach($check in @(@('--self-test','core','self-tests.txt'),@('--modern-smoke','modern','checks.txt'))){
+          foreach($check in @(@('--self-test','core','self-tests.txt'),@('--modern-smoke','modern','checks.txt'),@('--renewal-27-test','renewal','checks.txt'),@('--curtain-27-test','curtain','checks.txt'))){
             $out=Join-Path $PWD ('artifacts/verification/'+$check[1])
             $app=Start-Process -FilePath './artifacts/portable/MacFlow.exe' -ArgumentList @($check[0],('"'+$out+'"')) -PassThru -WindowStyle Hidden
             if(!$app.WaitForExit(180000)){Stop-Process -Id $app.Id;throw ('Timeout: '+$check[0])}
             if($app.ExitCode -ne 0){Get-Content (Join-Path $out $check[2]);throw ('Validation failed: '+$check[0])}
           }
-          Copy-Item 'docs/RELEASE-27.1.5.md' 'artifacts/RELEASE-NOTES.md'
+          Copy-Item 'docs/RELEASE-27.2.2.md' 'artifacts/RELEASE-NOTES.md'
       - name: Publish build artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -54,7 +54,7 @@ jobs:
         run: |
           $package=Get-Content -Raw -LiteralPath artifacts/MacFlow-update.json | ConvertFrom-Json
           $tag='v'+$package.Version
-          if ($env:GITHUB_REF -like 'refs/tags/*' -and $env:GITHUB_REF_NAME -ne $tag) { throw 'El tag no coincide con la versión compilada.' }
+          if ($env:GITHUB_REF -like 'refs/tags/*' -and $env:GITHUB_REF_NAME -ne $tag) { throw 'El tag no coincide con la versiÃ³n compilada.' }
           $installer=Join-Path 'artifacts' $package.Installer
           if ((Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash -ne $package.Sha256) { throw 'El SHA256 del instalador no coincide.' }
           $oldPreference=$ErrorActionPreference
@@ -62,6 +62,6 @@ jobs:
           gh release view $tag --repo $env:GH_REPO --json tagName 2>$null
           $exists=$LASTEXITCODE -eq 0
           $ErrorActionPreference=$oldPreference
-          if ($exists) { Write-Output 'Esta versión ya está publicada; no se reemplazará.'; exit 0 }
+          if ($exists) { Write-Output 'Esta versiÃ³n ya estÃ¡ publicada; no se reemplazarÃ¡.'; exit 0 }
           gh release create $tag $installer ($installer+'.config') 'artifacts/MacFlow-update.json' --repo $env:GH_REPO --target $env:GITHUB_SHA --notes-file artifacts/RELEASE-NOTES.md --title ('MacFlow '+$package.Version)
-          if ($LASTEXITCODE -ne 0) { throw 'No se pudo publicar la versión.' }
+          if ($LASTEXITCODE -ne 0) { throw 'No se pudo publicar la versiÃ³n.' }

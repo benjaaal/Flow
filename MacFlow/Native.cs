@@ -273,9 +273,18 @@ namespace MacFlow
             int noBorder=unchecked((int)0xFFFFFFFE);DwmSetWindowAttribute(h,34,ref noBorder,4);
             window.Tag="Welcome live compositor · recordable";
         }
+        internal static void SetPresentationClip(Window window,double radius)
+        {
+            var h=new WindowInteropHelper(window).Handle;if(h==IntPtr.Zero)return;
+            if(radius<.5){SetWindowRgn(h,IntPtr.Zero,true);return;}
+            RECT rect;if(!GetWindowRect(h,out rect))return;var source=PresentationSource.FromVisual(window);double dpi=source==null?1:source.CompositionTarget.TransformToDevice.M11;
+            int curve=Math.Max(1,(int)Math.Round(radius*2*dpi));var region=CreateRoundRectRgn(0,0,rect.Right-rect.Left+1,rect.Bottom-rect.Top+1,curve,curve);
+            if(region!=IntPtr.Zero&&SetWindowRgn(h,region,true)==0)DeleteObject(region);
+        }
         internal static void OpaquePresentation(Window window)
         {
             var h=new WindowInteropHelper(window).Handle;RemoveGlassFrame(window);
+            int borderColor=unchecked((int)0xFFFFFFFE);DwmSetWindowAttribute(h,34,ref borderColor,4);
             int none=1;DwmSetWindowAttribute(h,38,ref none,4);DwmSetWindowAttribute(h,33,ref none,4);DwmSetWindowAttribute(h,2,ref none,4);
             var empty=new MARGINS();DwmExtendFrameIntoClientArea(h,ref empty);
             window.Background=Brushes.Black;var source=HwndSource.FromHwnd(h);if(source!=null){source.CompositionTarget.BackgroundColor=Colors.Black;source.AddHook(PresentationHook);}
