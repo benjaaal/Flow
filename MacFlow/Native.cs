@@ -276,10 +276,10 @@ namespace MacFlow
         internal static void SetPresentationClip(Window window,double radius)
         {
             var h=new WindowInteropHelper(window).Handle;if(h==IntPtr.Zero)return;
-            if(radius<.5){SetWindowRgn(h,IntPtr.Zero,true);return;}
+            if(radius<.5){SetWindowRgn(h,IntPtr.Zero,false);return;}
             RECT rect;if(!GetWindowRect(h,out rect))return;var source=PresentationSource.FromVisual(window);double dpi=source==null?1:source.CompositionTarget.TransformToDevice.M11;
             int curve=Math.Max(1,(int)Math.Round(radius*2*dpi));var region=CreateRoundRectRgn(0,0,rect.Right-rect.Left+1,rect.Bottom-rect.Top+1,curve,curve);
-            if(region!=IntPtr.Zero&&SetWindowRgn(h,region,true)==0)DeleteObject(region);
+            if(region!=IntPtr.Zero&&SetWindowRgn(h,region,false)==0)DeleteObject(region);
         }
         internal static void OpaquePresentation(Window window)
         {

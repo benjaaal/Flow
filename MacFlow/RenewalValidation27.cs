@@ -49,7 +49,18 @@ namespace MacFlow
                         pull.Pull(600);var longView=desktop.NotificationView;pull.Release();await Task.Delay(650);Check(WindowLife.Alive(longView)&&!longView.AuthenticationVisible,"un arrastre largo abre la vista directamente");longView.Recover();
                     }
                     desktop.Activity.Clear();
-                    desktop.OpenSettings();var settings=(SettingsWindow)desktop.Settings;for(int i=0;i<17;i++){settings.SelectPage(i);await Task.Delay(45);}settings.SelectPage(0);await Task.Delay(450);await Snapshot(settings,"settings");WindowLife.Close(settings);
+                    desktop.OpenSettings();var settings=(SettingsWindow)desktop.Settings;for(int i=0;i<17;i++){settings.SelectPage(i);await Task.Delay(45);}settings.SelectPage(0);await Task.Delay(450);await Snapshot(settings,"settings");
+                    if((RenderCapability.Tier>>16)>0)
+                    {
+                        int flights=0,samples=0;double maxError=0;GenieSurface flight=null;
+                        Action<Window,GenieSurface> started=delegate(Window source,GenieSurface surface){if(source==settings){flights++;flight=surface;}};
+                        EventHandler frame=delegate{if(flight!=null&&GenieTransition.ActiveCount>0){maxError=Math.Max(maxError,flight.AspectRatioError);samples++;}};
+                        GenieTransition.Started+=started;CompositionTarget.Rendering+=frame;double left=settings.Left,top=settings.Top,width=settings.Width,height=settings.Height;
+                        try{Design.Minimize(settings);await Task.Delay(520);Check(settings.WindowState==WindowState.Minimized,"minimizar cambia el estado real de la ventana");settings.WindowState=WindowState.Normal;await Task.Delay(600);Check(flights>=2&&samples>=3&&maxError<.00001,"minimizar y restaurar recorren el Dock con textura proporcional en cuadros reales");Check(Math.Abs(settings.Left-left)<1&&Math.Abs(settings.Top-top)<1&&settings.Width==width&&settings.Height==height&&settings.Opacity>.99&&settings.IsHitTestVisible&&GenieTransition.ActiveCount==0,"restaurar recupera geometría e interacción y libera la textura temporal");}
+                        finally{GenieTransition.Started-=started;CompositionTarget.Rendering-=frame;}
+                    }
+                    else File.AppendAllText(Path.Combine(folder,"checks.txt"),"SKIP vuelo GPU: render tier 0; geometría proporcional verificada por self-test."+Environment.NewLine);
+                    WindowLife.Close(settings);
                     desktop.OpenLaunchpad();await Task.Delay(450);await Snapshot(desktop.Launcher,"applications");WindowLife.Close(desktop.Launcher);
                     desktop.OpenWidgets(null);await Task.Delay(400);Check(desktop.Widgets!=null,"catálogo de widgets conserva el controlador y sus datos");
                     var media=new MediaFixture();media.State.Title="Continuidad";media.State.Artist="Prueba de transición";media.State.Playing=media.State.CanToggle=true;media.State.Artwork=wallpaper.Thumbnail;

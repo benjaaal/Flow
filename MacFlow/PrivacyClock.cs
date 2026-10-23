@@ -10,7 +10,7 @@ namespace MacFlow
     {
         private string text="";private FontWeight weight=FontWeights.Normal;
         private Color color=Colors.White;private Geometry shape;private FrameworkElement wallpaper;
-        private LockGlass glass;
+        private LockGlass glass;private ImageBrush photoBrush;
         internal void AttachWallpaper(FrameworkElement source)
         {
             wallpaper=source;
@@ -19,10 +19,10 @@ namespace MacFlow
             Loaded+=delegate{UpdateMaterial();};SizeChanged+=delegate{shape=null;UpdateMaterial();InvalidateVisual();};
         }
         internal bool Refractive{get{return glass!=null;}}
-        private void UpdateMaterial()
+        internal void UpdateMaterial()
         {
             if(glass==null||wallpaper==null||wallpaper.ActualWidth<1||wallpaper.ActualHeight<1)return;
-            try{var bounds=TransformToVisual(wallpaper).TransformBounds(new Rect(0,0,ActualWidth,ActualHeight));glass.Offset=new Point(bounds.Left/wallpaper.ActualWidth,bounds.Top/wallpaper.ActualHeight);glass.Extent=new Point(bounds.Width/wallpaper.ActualWidth,bounds.Height/wallpaper.ActualHeight);glass.Size=new Point(ActualWidth,ActualHeight);}catch(InvalidOperationException){}
+            try{var image=WallpaperSampling.Photo(wallpaper);if(image!=null&&image.Source!=null&&image.ActualWidth>0&&image.ActualHeight>0){if(photoBrush==null||photoBrush.ImageSource!=image.Source){photoBrush=new ImageBrush(image.Source){Stretch=Stretch.Fill};glass.Backdrop=photoBrush;}var crop=WallpaperSampling.Coordinates(this,image);glass.Offset=new Point(crop.Left,crop.Top);glass.Extent=new Point(crop.Width,crop.Height);glass.Size=new Point(ActualWidth,ActualHeight);return;}var bounds=TransformToVisual(wallpaper).TransformBounds(new Rect(0,0,ActualWidth,ActualHeight));glass.Offset=new Point(bounds.Left/wallpaper.ActualWidth,bounds.Top/wallpaper.ActualHeight);glass.Extent=new Point(bounds.Width/wallpaper.ActualWidth,bounds.Height/wallpaper.ActualHeight);glass.Size=new Point(ActualWidth,ActualHeight);}catch(InvalidOperationException){}
         }
         internal void Appearance(string style,string ink)
         {weight=style=="Regular"?FontWeights.Normal:style=="Medium"?FontWeights.Medium:style=="Bold"?FontWeights.Bold:FontWeights.SemiBold;color=(Color)ColorConverter.ConvertFromString(ink??"#FFFFFF");if(glass!=null)glass.Tint=color;shape=null;InvalidateVisual();}
