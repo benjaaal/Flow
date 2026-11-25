@@ -17,36 +17,22 @@ namespace MacFlow
         public static GlassMenu Current;
         internal Window Anchor;
         internal bool IsAppleMenu{get;private set;}
+        private readonly AppleMenuGlass appleGlass;
         private bool closing;
         private double restingTop;
         public GlassMenu(string title,IList<GlassCommand> commands,bool dismissOnDeactivate=true,bool apple=false)
         {
             IsAppleMenu=apple;
-            Title=apple?"MacFlow · Menú principal":"MacOS · Menú";Width=apple?294:270;Height=Math.Min(apple?480:430,commands.Count*32+60);WindowStyle=WindowStyle.None;AllowsTransparency=false;ResizeMode=ResizeMode.NoResize;Topmost=true;ShowInTaskbar=false;Background=Brushes.Transparent;
-            if(apple)SetValue(Native.TransientAcrylic,true);
+            Title=apple?"MacFlow · Menú principal":"MacOS · Menú";Width=apple?304:270;Height=apple?Math.Min(515,commands.Count*39+75):Math.Min(430,commands.Count*32+60);WindowStyle=WindowStyle.None;AllowsTransparency=apple;ResizeMode=ResizeMode.NoResize;Topmost=true;ShowInTaskbar=false;Background=Brushes.Transparent;
             var root=new DockPanel();var heading=Design.Text(title,11,true);heading.Margin=new Thickness(10,0,0,10);DockPanel.SetDock(heading,System.Windows.Controls.Dock.Top);root.Children.Add(heading);var rows=new StackPanel();
             foreach(var command in commands){var captured=command;var b=Design.Button("",delegate {HideMenu(captured.Action);},false);var text=Design.Text(command.Label,apple?13:12,false);text.HorizontalAlignment=HorizontalAlignment.Left;if(String.IsNullOrEmpty(command.Icon))b.Content=text;else{var row=new DockPanel();row.Children.Add(new Border{Child=Design.Symbol(command.Icon,17,Design.Ink),Margin=new Thickness(0,0,12,0),VerticalAlignment=VerticalAlignment.Center});text.VerticalAlignment=VerticalAlignment.Center;row.Children.Add(text);b.Content=row;}b.Background=Brushes.Transparent;b.BorderThickness=new Thickness(0);b.Margin=new Thickness(0,1,0,1);b.Padding=new Thickness(10,6,10,6);b.HorizontalContentAlignment=HorizontalAlignment.Left;System.Windows.Automation.AutomationProperties.SetName(b,command.Label);rows.Children.Add(b);}
             root.Children.Add(new ScrollViewer {Content=rows,VerticalScrollBarVisibility=ScrollBarVisibility.Auto,HorizontalScrollBarVisibility=ScrollBarVisibility.Disabled});
-            var glass=Design.Glass(root,apple?18:13,false);glass.Padding=new Thickness(8);Content=glass;
-            if(apple&&!SystemParameters.HighContrast)
-            {
-                glass.Background=MenuTint(Design.Dark?"#AA252A37":"#BAF5F9FF",Design.Dark?"#68202430":"#8DF5F8FE",Design.Dark?"#96232734":"#A4F3F7FF");
-                glass.BorderBrush=MenuTint(Design.Dark?"#B8CDDDFD":"#F6FFFFFF",Design.Dark?"#3BDBE8FF":"#5BFFFFFF",Design.Dark?"#6C8EADD6":"#96B8C9DE");
-                glass.BorderThickness=new Thickness(1);heading.Margin=new Thickness(11,4,0,8);
-            }
-            SourceInitialized+=delegate {Native.Glass(this,Design.Dark);};
+            if(apple){heading.Margin=new Thickness(11,4,0,8);appleGlass=new AppleMenuGlass(root);Content=appleGlass;}
+            else{var glass=Design.Glass(root,13,false);glass.Padding=new Thickness(8);Content=glass;SourceInitialized+=delegate {Native.Glass(this,Design.Dark);};}
             KeyDown+=delegate(object sender,KeyEventArgs e){if(e.Key==Key.Escape&&!closing){e.Handled=true;HideMenu();}};
             Closing+=delegate {closing=true;};
             Deactivated+=delegate {if(dismissOnDeactivate&&!closing)HideMenu();};
             Closed+=delegate {if(Current==this)Current=null;};
-        }
-        private static LinearGradientBrush MenuTint(string top,string middle,string bottom)
-        {
-            var brush=new LinearGradientBrush{StartPoint=new Point(0,0),EndPoint=new Point(.85,1)};
-            brush.GradientStops.Add(new GradientStop(((SolidColorBrush)Design.Brush(top)).Color,0));
-            brush.GradientStops.Add(new GradientStop(((SolidColorBrush)Design.Brush(middle)).Color,.53));
-            brush.GradientStops.Add(new GradientStop(((SolidColorBrush)Design.Brush(bottom)).Color,1));
-            brush.Freeze();return brush;
         }
         private void HideMenu(Action after=null)
         {
@@ -59,7 +45,8 @@ namespace MacFlow
         {
             closing=false;
             if(ShowActivated&&!IsActive)Activate();
-            Motion.To(this,OpacityProperty,1,150,false,null,null,true);
+            if(Opacity<.999)Motion.To(this,OpacityProperty,1,150,false,null,null,true);
+            else{Motion.Cancel(this,OpacityProperty);Opacity=1;}
             Motion.MenuBounce(this,restingTop);
         }
         internal static void ToggleApple(Window anchor,FrameworkElement trigger,IList<GlassCommand> commands,bool nonInteractive)
@@ -80,7 +67,9 @@ namespace MacFlow
             double left=Math.Max(work.Left+8*display.Scale,Math.Min(point.X,work.Right-(menu.Width+8)*display.Scale));
             double top=Math.Max(work.Top+10*display.Scale,Math.Min(point.Y+6*display.Scale,work.Bottom-(menu.Height+10)*display.Scale));
             double offset=Motion.Enabled?7:0;
-            menu.Opacity=Motion.Enabled?.8:1;
+            int sampleLeft=(int)Math.Round(left+5*display.Scale),sampleTop=(int)Math.Round(top+3*display.Scale);
+            menu.appleGlass.Sample(sampleLeft,sampleTop,(int)Math.Round((menu.Width-10)*display.Scale),(int)Math.Round((menu.Height-10)*display.Scale));
+            menu.Tag="Material sólido";
             DisplaySpace.Place(menu,display,(left-display.Pixels.Left)/display.Scale,(top-display.Pixels.Top)/display.Scale-offset);
             menu.Show();
             menu.restingTop=top/display.Scale;

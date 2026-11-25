@@ -2,7 +2,7 @@
 
 La versión de distribución es 28.0.1 para permitir la actualización desde instalaciones locales de 28.0.0.
 
-- El menú de la manzanita responde al primer clic. Se abre debajo del botón con un rebote corto y usa Desktop Acrylic donde Windows lo admite.
+- El menú de la manzanita responde al primer clic y rebota debajo del botón. Tiene un solo borde con transparencia por píxel. El vidrio desenfoca una muestra local de la zona en segundo plano y simula refracción en el borde. La muestra se libera al cerrar el menú.
 - El Dock y las ventanas propias comparten la física del motor. Podés invertir una minimización desde el Dock. Las transiciones respetan el ajuste de animación de Windows. En modo ahorro las pistas WPF tienen un máximo de 60 cuadros y en modo normal Windows controla su cadencia.
 - Finder añade columnas y descarta las selecciones viejas durante la navegación. Launchpad y Spotlight incluyen Calculadora, Calendario, Notas, Monitor de actividad y la Biblioteca de MacFlow.
 - El asistente consulta el índice autorizado de Spotlight, informa sobre el equipo y permite configurar Ollama o Gemini. Las respuestas del modelo se muestran como texto.

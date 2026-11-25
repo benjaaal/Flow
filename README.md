@@ -2,7 +2,7 @@
 
 Entorno de escritorio nativo para Windows 11 x64. Incluye Dock, barra superior, Mission Control, Launchpad, Spotlight, widgets, una pantalla de privacidad y aplicaciones propias. Las ventanas de Windows siguen disponibles en el Dock y en Mission Control.
 
-- **Menú principal.** Un clic abre el menú anclado a la manzanita. La apertura tiene un rebote corto y el material usa el desenfoque nativo de Windows cuando está disponible.
+- **Menú principal.** Un clic abre el menú anclado a la manzanita con un rebote corto. El vidrio usa una muestra de lo que queda detrás para desenfocar y refractar el borde, que se dibuja con transparencia por píxel.
 - **Finder.** Lista, iconos, galería y columnas. Spotlight busca en las carpetas que agregues desde Configuración → Preferencias.
 - **Aplicaciones.** Calculadora, Calendario, Notas, Monitor de actividad, Finder, Configuración y Vista rápida. La Biblioteca permite abrirlas y fijarlas en el Dock. Papelera y Terminal abren las herramientas de Windows.
 - **Asistente.** Órdenes locales por defecto. En Configuración → Privacidad podés elegir un modelo instalado en Ollama o habilitar Gemini en Chrome. Cerrar ventanas, escribir en otra aplicación y resumir pestañas requiere confirmación.

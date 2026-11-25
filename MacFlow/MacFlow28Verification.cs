@@ -38,7 +38,7 @@ namespace MacFlow
                     apple.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                     var appleMenu=GlassMenu.Current;
                     check(appleMenu!=null&&appleMenu.IsAppleMenu&&appleMenu.IsVisible,"la manzanita muestra el menú en el mismo clic, sin esperar un doble clic");
-                    report.Add("INFO apertura síncrona del menú "+click.Elapsed.TotalMilliseconds.ToString("F1",System.Globalization.CultureInfo.InvariantCulture)+" ms · "+appleMenu.Tag);
+                    report.Add("INFO apertura síncrona del menú "+click.Elapsed.TotalMilliseconds.ToString("F1",System.Globalization.CultureInfo.InvariantCulture)+" ms");
                     var firstTop=appleMenu.Top;
                     apple.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                     if(Motion.Enabled)
@@ -53,7 +53,9 @@ namespace MacFlow
                         check(GlassMenu.Current==null,"movimiento reducido cierra sin un reloj de animación");
                         apple.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));appleMenu=GlassMenu.Current;
                     }
-                    check((bool)appleMenu.GetValue(Native.TransientAcrylic)&&LiquidMaterial.ForWindow(appleMenu)==null,"el menú usa material transitorio y no inicia captura de pantalla");
+                    check(appleMenu.AllowsTransparency&&appleMenu.Content is AppleMenuGlass&&LiquidMaterial.ForWindow(appleMenu)==null,"la manzanita dibuja un borde por píxel con una muestra inicial, sin sondeo de pantalla");
+                    for(int i=0;i<20&&!((AppleMenuGlass)appleMenu.Content).HasBackdrop&&LiquidMaterial.LiveBackdrop&&!SystemParameters.HighContrast;i++)await Task.Delay(50);
+                    report.Add("INFO material del menú · "+appleMenu.Tag);
                     Program.Render(appleMenu,Path.Combine(directory,"menu-macflow.png"));
                     await Program.CaptureOwnWindow(appleMenu,Path.Combine(directory,"menu-macflow-desktop.png"));
                     apple.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));await Task.Delay(280);

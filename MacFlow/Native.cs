@@ -115,7 +115,6 @@ namespace MacFlow
         }
         private static readonly DependencyProperty IntegratedRegionSignature=DependencyProperty.RegisterAttached("IntegratedRegionSignature",typeof(string),typeof(Native),new PropertyMetadata(null));
         internal static readonly DependencyProperty CustomShellRegion=DependencyProperty.RegisterAttached("CustomShellRegion",typeof(Action),typeof(Native),new PropertyMetadata(null));
-        internal static readonly DependencyProperty TransientAcrylic=DependencyProperty.RegisterAttached("TransientAcrylic",typeof(bool),typeof(Native),new PropertyMetadata(false));
         [DllImport("user32.dll")]private static extern int GetWindowRgn(IntPtr window,IntPtr region);
         [DllImport("gdi32.dll")]private static extern bool PtInRegion(IntPtr region,int x,int y);
         internal static bool IntegratedHitTest(Window window,int x,int y)
@@ -256,7 +255,6 @@ namespace MacFlow
             value = unchecked((int)0xFFFFFFFE); DwmSetWindowAttribute(h,34,ref value,4);
             bool composition;DwmIsCompositionEnabled(out composition);
             if(!composition||SystemParameters.HighContrast){value=1;DwmSetWindowAttribute(h,38,ref value,4);window.Background=SystemParameters.HighContrast?SystemColors.WindowBrush:Design.Brush(dark?"#252C39":"#F0F2F6");window.Tag="Solid fallback";return;}
-            bool transient=(bool)window.GetValue(TransientAcrylic);
             // Public Windows 11 22H2 backdrop API; solid WPF background is the fallback.
             value = LiquidMaterial.LiveBackdrop?3:1;
             var source=HwndSource.FromHwnd(h);
@@ -266,13 +264,6 @@ namespace MacFlow
             {
                 window.SetCurrentValue(System.Windows.Controls.Control.BackgroundProperty,Brushes.Transparent);
                 if(source!=null&&source.CompositionTarget!=null)source.CompositionTarget.BackgroundColor=Colors.Transparent;
-                if(transient)
-                {
-                    if(!LiquidMaterial.LiveBackdrop)window.Background=Design.Brush(dark?"#22252C":"#F1F4F8");
-                    window.Tag=LiquidMaterial.LiveBackdrop?"Native Desktop Acrylic":"Solid fallback";
-                    RoundGlass(window);
-                    return;
-                }
                 window.Tag=LiquidMaterial.LiveBackdrop?"Native Desktop Acrylic":"Clear glass fallback";
                 int none=1,host=1;DwmSetWindowAttribute(h,38,ref none,4);
                 IntPtr clear=Marshal.AllocHGlobal(Marshal.SizeOf(typeof(ACCENT)));
@@ -282,8 +273,7 @@ namespace MacFlow
                 else window.Tag="Clear glass fallback · no rectangular backdrop";
             }
             else {value=1;DwmSetWindowAttribute(h,38,ref value,4);var empty=new MARGINS();DwmExtendFrameIntoClientArea(h,ref empty);window.Background=Design.Brush(dark?"#28282A":"#F5F5F7");window.Tag="Solid fallback";}
-            if(!transient)LiquidMaterial.Apply(window,dark);
-            RoundGlass(window);
+            LiquidMaterial.Apply(window,dark);RoundGlass(window);
         }
         internal static void WelcomeBackdrop(Window window)
         {
