@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -46,7 +46,7 @@ namespace MacFlow
         }
         internal static string ResolveExecutable()
         {
-            string installed=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"Programs","MacFlow","MacFlow.exe"),marker=Path.Combine(Path.GetDirectoryName(installed),"install.manifest");
+            string installed=Path.Combine(StoragePaths.InstallDirectory,"MacFlow.exe"),marker=Path.Combine(Path.GetDirectoryName(installed),"install.manifest");
             try{if(ValidTarget(installed)&&File.Exists(marker)){using(var reader=new StreamReader(marker)){if(reader.ReadLine()=="MacFlow install v1")return installed;}}}catch{}
             string current=Assembly.GetExecutingAssembly().Location;if(ValidTarget(current))return current;
             throw new IOException("Instalá MacFlow antes de activar el inicio automático.");

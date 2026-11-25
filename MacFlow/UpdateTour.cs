@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -96,14 +96,14 @@ namespace MacFlow
                     example=new DesktopWidget(desktop.Widgets,new WidgetSpec{Kind="Calendar",Size="S",Surface="Dark"}){Width=164,Height=164};ShowExample();SlidePreview(18);break;
                 case 4:
                     title.Text="Lo que pasa, siempre a la vista.";description.Text="Carátula, reproducción y progreso en un mismo espacio. La música, los temporizadores y el asistente comparten el notch; los ajustes se quedan en sus paneles. Clic derecho para contraer u ocultar el notch.";
-                    var provider=new MediaFixture();provider.State.Playing=true;provider.State.Title="Música · Demostración";provider.State.Artist="Reproducción de ejemplo";provider.State.Duration=TimeSpan.FromSeconds(226);provider.State.Position=TimeSpan.FromSeconds(7);provider.State.Artwork=WallpaperLibrary.Load(desktop.Store.DirectoryPath)[0].Thumbnail;islandPreview=new ActivityIsland(desktop,provider,true);example=islandPreview.View;ShowExample();SlidePreview(18);break;
+                    description.Text="La Isla Dinámica forma parte de la barra superior. Abrila con clic, Enter o Espacio; Escape la contrae. Los controles aparecen cuando un proveedor real informa una actividad.";if(desktop.Island!=null)desktop.Island.ShowActivity();break;
                 case 5:
                     title.Text="Preguntá con tus palabras.";description.Text="El asistente distingue acciones locales y preguntas libres. Las preguntas se envían a Gemini en Chrome; la luz acompaña el trabajo y se apaga al terminar. Incluye reconocimiento local en español; Hey Siri activa la escucha.";
                     // Read-only instance of the actual menu: a tour must never
                     // execute a power action or change the user's preferences.
                     example=new AssistantWindow(desktop,null);ShowExample();SlidePreview(24);break;
                 case 6:
-                    title.Text="Un escritorio, a tu medida.";description.Text="Ajustes organizados, búsqueda, importación y exportación. La isla dinámica flota bajo la barra y reúne música, actividades y Shelf con movimiento continuo.";
+                    title.Text="Un escritorio, a tu medida.";description.Text="Ajustes organizados, búsqueda, importación y exportación. La isla dinámica se integra dentro de la barra y reúne música, actividades y Shelf con movimiento continuo.";
                     example=new SettingsWindow(desktop,true);ShowExample();SlidePreview(12);break;
             }
             Motion.Fade(title,0,1,300);Motion.Fade(description,0,1,380);
@@ -112,13 +112,13 @@ namespace MacFlow
         private void SlidePreview(double distance)
         {
             if(example==null||!Motion.Enabled)return;double top=example.Top;
-            var slide=new DoubleAnimation(top-distance,top,TimeSpan.FromMilliseconds(600)){EasingFunction=Motion.Ease(),FillBehavior=FillBehavior.Stop};Timeline.SetDesiredFrameRate(slide,60);example.BeginAnimation(Window.TopProperty,slide);Motion.Fade(example,.15,1,400);
+            var slide=new DoubleAnimation(top-distance,top,TimeSpan.FromMilliseconds(600)){EasingFunction=Motion.Ease(),FillBehavior=FillBehavior.Stop};Motion.Pace(slide);example.BeginAnimation(Window.TopProperty,slide);Motion.Fade(example,.15,1,400);
         }
         private void CreatePointer(double x,double y,double travel)
         {
             CreateCursor();cursor.Left=example.Left+x;double top=(double)example.GetAnimationBaseValue(Window.TopProperty)+y;cursor.Top=top+travel;
             if(!Motion.Enabled)return;
-            var slide=new DoubleAnimation(top,top+travel,TimeSpan.FromMilliseconds(850)){EasingFunction=Motion.Ease(),BeginTime=TimeSpan.FromMilliseconds(150),FillBehavior=FillBehavior.Stop};Timeline.SetDesiredFrameRate(slide,60);cursor.BeginAnimation(Window.TopProperty,slide);
+            var slide=new DoubleAnimation(top,top+travel,TimeSpan.FromMilliseconds(850)){EasingFunction=Motion.Ease(),BeginTime=TimeSpan.FromMilliseconds(150),FillBehavior=FillBehavior.Stop};Motion.Pace(slide);cursor.BeginAnimation(Window.TopProperty,slide);
         }
         private void ShowExample()
         {

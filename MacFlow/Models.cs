@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.Serialization;
@@ -22,6 +22,11 @@ namespace MacFlow
     [DataContract]
     public sealed class Preferences
     {
+        [DataMember] public bool SafeShell28Applied,AllowExternalAssistant;
+        [DataMember] public string AssistantProvider="Local";
+        [DataMember] public string OllamaModel="";
+        [DataMember] public List<string> SearchFolders=new List<string>();
+        [DataMember] public Dictionary<string,int> IslandPriorities=new Dictionary<string,int>();
         [DataMember] public double NotchScale=1;
         [DataMember] public bool NotchHover=true,NotchMedia=true,NotchTimers=true,NotchShelf=true,NotchNotifications=true;
         [DataMember] public bool ShowNotifications=true;
@@ -212,7 +217,7 @@ namespace MacFlow
 
     public static class Log
     {
-        public static string DirectoryPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MacFlow");
+        public static string DirectoryPath = StoragePaths.DataDirectory;
         private static readonly object Gate = new object();
         public static void Write(string message)
         {

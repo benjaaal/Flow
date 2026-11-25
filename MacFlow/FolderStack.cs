@@ -11,7 +11,7 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 namespace MacFlow
 {
-    internal sealed class StackEntry { internal string Path, Name; internal bool Folder; internal DateTime Modified; internal long Size; }
+    internal sealed class StackEntry { internal string Path; public string Name { get; set; } internal bool Folder; internal DateTime Modified; internal long Size; }
     internal static class FolderSnapshot
     {
         internal static List<StackEntry> Read(string path, CancellationToken stop)

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -13,7 +13,7 @@ namespace MacFlow
         public Button CloseButton { get; private set; }
         public Button MinimizeButton { get; private set; }
         public Button ZoomButton { get; private set; }
-        public WindowControls(Window window,Action close):this(close,delegate{Design.Minimize(window);},delegate{window.WindowState=window.WindowState==WindowState.Maximized?WindowState.Normal:WindowState.Maximized;}){}
+        public WindowControls(Window window,Action close):this(close,delegate{Design.Minimize(window);},delegate{window.WindowState=window.WindowState==WindowState.Maximized?WindowState.Normal:WindowState.Maximized;}){ZoomButton.IsEnabled=window.ResizeMode!=ResizeMode.NoResize&&window.ResizeMode!=ResizeMode.CanMinimize;window.Activated+=delegate{Opacity=1;};window.Deactivated+=delegate{Opacity=.72;};}
         public WindowControls(Action close,Action minimize,Action zoom)
         {
             Orientation=Orientation.Horizontal;
@@ -30,7 +30,7 @@ namespace MacFlow
             var lens=new Grid{Width=13,Height=13};lens.Children.Add(new Ellipse{Fill=Design.Brush(color),Stroke=Design.Brush("#241B202A"),StrokeThickness=.65});lens.Children.Add(glyph);
             var button=Design.Button("",action,false);button.Content=lens;button.Width=25;button.Height=28;button.Padding=new Thickness(0);button.Margin=new Thickness(0);button.Background=Brushes.Transparent;button.BorderThickness=new Thickness(0);button.ToolTip=label;
             System.Windows.Automation.AutomationProperties.SetName(button,label);
-            var hover=hoverSurface??button;hover.MouseEnter+=delegate{Fade(glyph,1);};hover.MouseLeave+=delegate{Fade(glyph,0);};return button;
+            button.GotKeyboardFocus+=delegate{Fade(glyph,1);};button.LostKeyboardFocus+=delegate{Fade(glyph,0);};var hover=hoverSurface??button;hover.MouseEnter+=delegate{Fade(glyph,1);};hover.MouseLeave+=delegate{Fade(glyph,0);};return button;
         }
         public static Button MinimizeControl(Action action)
         {

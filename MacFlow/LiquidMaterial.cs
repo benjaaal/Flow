@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Windows;
@@ -63,7 +63,7 @@ namespace MacFlow
         internal static void DesktopChanged(){foreach(var material in instances.Values){if(material.disposed||!material.window.IsVisible)continue;if(!material.window.AllowsTransparency){material.RefreshContrast();continue;}if(!material.enabled)continue;material.quietFrames=0;material.timer.Interval=TimeSpan.FromMilliseconds(166);material.Refresh();}}
         public static void Apply(Window window,bool dark)
         {
-            LiquidMaterial material;if(!instances.TryGetValue(window,out material)){material=new LiquidMaterial(window);instances.Add(window,material);}material.Update(dark);
+            if(window.GetValue(Native.CustomShellRegion)!=null)return;LiquidMaterial material;if(!instances.TryGetValue(window,out material)){material=new LiquidMaterial(window);instances.Add(window,material);}material.Update(dark);
         }
         public static void SetLensForTest(Window window,double strength)
         {LiquidMaterial material;if(instances.TryGetValue(window,out material)&&material.lens!=null)material.lens.Strength=strength;}

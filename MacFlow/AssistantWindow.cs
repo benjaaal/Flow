@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.IO;
 using System.Threading.Tasks;
@@ -30,7 +30,7 @@ namespace MacFlow
             var footer=new StackPanel();destination=Design.Text("",11,false);destination.TextTrimming=TextTrimming.CharacterEllipsis;destination.Margin=new Thickness(0,8,0,8);footer.Children.Add(destination);
             var row=new DockPanel();send=ActionButton("↑",async delegate{await Execute(input.Text);});send.FontSize=23;send.Width=40;send.Background=Design.Brush("#007AFF");send.Foreground=Brushes.White;send.Margin=new Thickness(8,0,0,0);send.ToolTip="Enviar · Enter";System.Windows.Automation.AutomationProperties.SetName(send,"Enviar orden");DockPanel.SetDock(send,Dock.Right);row.Children.Add(send);
             input=new TextBox{FontSize=15,Padding=new Thickness(12,10,12,10),MaxLength=4000,Background=Brushes.Transparent,BorderThickness=new Thickness(0),Foreground=Brushes.White,CaretBrush=Brushes.White,VerticalContentAlignment=VerticalAlignment.Center};System.Windows.Automation.AutomationProperties.SetName(input,"Orden para MacFlow");var field=new Grid();field.Children.Add(input);var placeholder=Design.Text("Escribí una pregunta o una acción…",14,false);placeholder.Foreground=Design.Brush("#91919C");placeholder.Margin=new Thickness(12,0,12,0);placeholder.IsHitTestVisible=false;field.Children.Add(placeholder);input.TextChanged+=delegate{placeholder.Visibility=input.Text.Length==0?Visibility.Visible:Visibility.Collapsed;};row.Children.Add(new Border{Background=Design.Brush("#18FFFFFF"),CornerRadius=new CornerRadius(18),Child=field});footer.Children.Add(row);
-            var actions=new WrapPanel{Margin=new Thickness(0,9,0,0)};microphone=ActionButton("Hablar",Listen);microphone.ToolTip="Usar el micrófono para reconocimiento local; Detener interrumpe la captura. Ajustes de privacidad del micrófono en Windows.";actions.Children.Add(microphone);actions.Children.Add(ActionButton("Detener",delegate{StopAllVoice();answer.Text="Operación detenida.";UpdateState();}));actions.Children.Add(ActionButton("Leer respuesta",delegate{Speak(answer.Text);}));actions.Children.Add(ActionButton("Copiar",delegate{try{Clipboard.SetText(answer.Text);}catch{status.Text="No se pudo copiar";}}));footer.Children.Add(actions);DockPanel.SetDock(footer,Dock.Bottom);root.Children.Add(footer);
+            var actions=new WrapPanel{Margin=new Thickness(0,9,0,0)};microphone=ActionButton("Hablar",Listen);microphone.ToolTip="Usar el micrófono para reconocimiento local; Detener interrumpe la captura. Ajustes de privacidad del micrófono en Windows.";actions.Children.Add(microphone);actions.Children.Add(ActionButton("Detener",delegate{StopAllVoice();answer.Text="Operación detenida.";UpdateState();}));actions.Children.Add(ActionButton("Leer respuesta",delegate{Speak(answer.Text);}));actions.Children.Add(ActionButton("Copiar",delegate{try{Clipboard.SetText(answer.Text);}catch{status.Text="No se pudo copiar";}}));actions.Children.Add(ActionButton("Borrar historial",delegate{if(query!=null)query.Cancel();history.Clear();historyIndex=0;draft="";input.Clear();answer.Text="Historial local borrado. El historial de Gemini se administra dentro de Gemini.";}));footer.Children.Add(actions);DockPanel.SetDock(footer,Dock.Bottom);root.Children.Add(footer);
             var content=new StackPanel();answer=Design.Text("¿En qué te ayudo?",26,false);answer.TextWrapping=TextWrapping.Wrap;answer.Margin=new Thickness(0,0,0,14);content.Children.Add(answer);
             suggestions=new WrapPanel();foreach(string command in new[]{"Investigá comparando tres fuentes","Resumí las pestañas","Abrí Chrome"}){string selected=command;suggestions.Children.Add(ActionButton(command,delegate{input.Text=selected;input.Focus();input.CaretIndex=input.Text.Length;}));}content.Children.Add(suggestions);
             var hint=Design.Text("Investigación → Gemini en Chrome · fuentes visibles · acciones locales",11,false);hint.Foreground=Design.Brush("#A7A7B0");hint.Margin=new Thickness(0,10,0,0);content.Children.Add(hint);
@@ -48,7 +48,7 @@ namespace MacFlow
         internal void ShowInput(){if(closed)return;desktop.HideAssistantPresence();appearance.Stop();StopListening();if(!IsVisible){PlaceUnderIsland();Show();Design.Reveal(this);}UpdateState();desktop.UpdateVoiceWake();desktop.UpdateAssistantEdge();if(!desktop.IsTesting){Activate();input.Focus();}}
         internal void SetTarget(WindowEntry source){target=source;destination.Text=source==null?"Para escribir o leer Chrome, abrí el asistente desde la barra con esa ventana activa.":"Ventana elegida: "+source.Title;}
         private void Say(string text){answer.Text=text;answer.FontSize=15;answer.FontWeight=FontWeights.Normal;desktop.SetAssistantVisual(AssistantStage.Answer,text);visual.Set(AssistantStage.Ready);completion.Stop();completion.Start();if(voiceReply)Speak(text);else if(!desktop.IsTesting)SoundCue.Play("done");}
-        internal async Task Execute(string command)
+        internal async Task Execute(string command,bool readTabsAllowed=false)
         {
             if(closed||busy||String.IsNullOrWhiteSpace(command))return;command=command.Trim();if(history.Count==0||history[history.Count-1]!=command){history.Add(command);if(history.Count>12)history.RemoveAt(0);}historyIndex=history.Count;draft="";StopVoice();StopListening();pending=null;confirm.Visibility=Visibility.Collapsed;var request=LocalCommands.Parse(command);int token=++operation;busy=true;completion.Stop();suggestions.Visibility=Visibility.Collapsed;desktop.SetAssistantVisual(AssistantStage.Working,"Procesando la orden…");UpdateState();
             try
@@ -61,9 +61,39 @@ namespace MacFlow
                 else if(request.Intent==LocalIntent.Read){answer.Text="Leyendo el texto accesible de Chrome…";desktop.SetAssistantVisual(AssistantStage.Working,answer.Text);string text=await ReadPage(target);if(!closed&&token==operation){Say(text);Speak(text);}}
                 else if(request.Intent==LocalIntent.DockShow||request.Intent==LocalIntent.DockHide){bool hidden=request.Intent==LocalIntent.DockHide;desktop.Preferences.SetDockAutoHide(hidden);if(!hidden)desktop.Preferences.HideInFullscreen=false;desktop.ApplyDockBehavior(desktop.Preferences);Say(hidden?"El Dock se ocultará dentro de las aplicaciones.":"El Dock queda visible. Guardé la preferencia.");}
                 else if(request.Intent==LocalIntent.Control)desktop.OpenControl();else if(request.Intent==LocalIntent.Settings)desktop.OpenSettings();else if(request.Intent==LocalIntent.Tasks)desktop.OpenTaskManager();
+                else if(request.Intent==LocalIntent.FindFiles)
+                {
+                    string term=LocalCommands.Normalize(request.Argument);
+                    var files=desktop.Files.Where(p=>LocalCommands.Normalize(Path.GetFileName(p)).Contains(term)).Take(6).ToArray();
+                    Say(files.Length==0?"No encontré archivos en las carpetas indexadas por Spotlight.":String.Join("\n",files.Select(Path.GetFileName)));
+                    suggestions.Children.Clear();
+                    foreach(string path in files.Select(Path.GetDirectoryName).Distinct(StringComparer.OrdinalIgnoreCase))
+                    {
+                        string folder=path;var button=ActionButton(Path.GetFileName(folder),delegate{desktop.OpenFinderAt(folder);});button.ToolTip=folder;suggestions.Children.Add(button);
+                    }
+                    suggestions.Visibility=suggestions.Children.Count>0?Visibility.Visible:Visibility.Collapsed;
+                }
+                else if(request.Intent==LocalIntent.SystemInfo)
+                {
+                    using(var process=System.Diagnostics.Process.GetCurrentProcess())
+                        Say(Environment.OSVersion.VersionString+" · "+Environment.ProcessorCount+" procesadores lógicos.\nMemoria privada de MacFlow: "+FilePreview.FormatSize(process.PrivateMemorySize64)+".");
+                }
                 else if(request.Intent==LocalIntent.VolumeUp||request.Intent==LocalIntent.VolumeDown){using(var backend=new ControlBackend()){var state=backend.Sound();if(!state.Available)throw new IOException("No hay salida de audio.");double value=Math.Max(0,Math.Min(100,state.Volume+(request.Intent==LocalIntent.VolumeUp?10:-10)));backend.Volume(value);Say("Volumen · "+(int)value+"%.");}}
                 else
                 {
+                    if(desktop.Preferences.AssistantProvider=="Ollama"&&(request.Intent==LocalIntent.Unknown||request.Intent==LocalIntent.Search))
+                    {
+                        var localQuery=new System.Threading.CancellationTokenSource();query=localQuery;
+                        try
+                        {
+                            string response=await OllamaAssistant.Ask(desktop.Preferences.OllamaModel,request.Intent==LocalIntent.Search?request.Argument:command,localQuery.Token);
+                            if(!closed&&token==operation){Say(response);ShowInput();}
+                        }
+                        finally{if(query==localQuery)query=null;localQuery.Dispose();}
+                        return;
+                    }
+                    if(!desktop.Preferences.AllowExternalAssistant){Say("Probá «abrí Calculadora», «buscá archivo informe» o «estado del sistema». Para preguntas generales, elegí un proveedor en Ajustes → Privacidad.");return;}
+                    if(request.Intent==LocalIntent.Summary&&!readTabsAllowed){answer.Text="¿Leer el contenido accesible de tus pestañas de Chrome y enviarlo a Gemini para resumirlo? Se excluirá Gemini. Podés cancelar cerrando el asistente.";Confirm(async delegate{await Execute(command,true);});return;}
                     query=new System.Threading.CancellationTokenSource();var currentQuery=query;
                     try
                     {
@@ -76,7 +106,7 @@ namespace MacFlow
                     }
                     finally{if(query==currentQuery)query=null;currentQuery.Dispose();}
                 }
-            }catch(OperationCanceledException){if(!closed&&token==operation)Say("Consulta detenida. Si ya se había enviado, permanece en Gemini.");}catch(Exception ex){Log.Write("Asistente · "+ex.GetType().Name+": "+ex.Message);if(!closed&&token==operation){Say(ex.Message);ShowInput();}}finally{if(token==operation){busy=false;voiceReply=false;if(!closed&&desktop.AssistantMode==AssistantStage.Working)Say("Listo.");UpdateState();}}
+            }catch(OperationCanceledException){if(!closed&&token==operation)Say("Consulta detenida.");}catch(Exception ex){Log.Write("Asistente · "+ex.GetType().Name+": "+ex.Message);if(!closed&&token==operation){Say(ex.Message);ShowInput();}}finally{if(token==operation){busy=false;voiceReply=false;if(!closed&&desktop.AssistantMode==AssistantStage.Working)Say("Listo.");UpdateState();}}
         }
         private void Confirm(Action action){pending=action;confirm.Visibility=Visibility.Visible;desktop.SetAssistantVisual(AssistantStage.Answer,"Revisá y confirmá la acción.");ShowInput();}
         private void Speak(string text){if(String.IsNullOrWhiteSpace(text)||desktop.IsTesting||closed)return;if(speaker==null){speaker=new LocalSpeech(desktop.Store.DirectoryPath);speaker.Progress+=delegate(string progress){if(!closed){status.Text=progress;visual.Set(AssistantStage.Working);}};speaker.SpeakingChanged+=delegate(bool value){if(!closed){desktop.SetAssistantSpeaking(value);UpdateState();}};speaker.Failed+=delegate(string error){if(!closed){desktop.SetAssistantSpeaking(false);visual.Set(AssistantStage.Ready);status.Text=error;}};}speaker.Speak(text);}

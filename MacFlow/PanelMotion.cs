@@ -54,25 +54,36 @@ namespace MacFlow
         internal static void Open(Window window)
         {
             if(window.WindowState!=WindowState.Normal||Double.IsNaN(window.Top)||!Motion.Enabled)return;
-            bool continuing=IsClosing(window);if(!continuing)Reset(window);double top=window.Top;window.SetValue(BaseTop,top);window.SetValue(Opening,true);window.SetValue(Closing,false);Prepare(window);
-            if(!continuing)window.SetValue(ExitProgress,FromTop(window)?.018:.035);
-            Motion.To(window,ExitProgress,0,FromTop(window)?Motion.Menu:Motion.Panel,false,delegate{if(WindowLife.Alive(window)&&(bool)window.GetValue(Opening))Reset(window);});
-            window.Top=top+(FromTop(window)?-10:10);Motion.To(window,Window.TopProperty,top,FromTop(window)?Motion.Menu:Motion.Panel);
+            bool continuing=IsClosing(window),fromTop=FromTop(window);
+            if(!continuing)Reset(window);
+            double top=(double)window.GetValue(BaseTop);
+            if(Double.IsNaN(top)){top=window.Top;window.SetValue(BaseTop,top);}
+            window.SetValue(Opening,true);window.SetValue(Closing,false);Prepare(window);
+            if(!continuing)
+            {
+                window.SetValue(ExitProgress,fromTop?.018:.035);
+                window.Top=top+(fromTop?-10:10);
+            }
+            int duration=fromTop?Motion.Menu:Motion.Panel;
+            Motion.To(window,Window.TopProperty,top,duration);
+            Motion.To(window,ExitProgress,0,duration,false,delegate{if(WindowLife.Alive(window)&&(bool)window.GetValue(Opening))Reset(window);});
         }
         internal static void Close(Window window)
         {
-            if(window.WindowState==WindowState.Minimized)return;double top=window.Top;if(Double.IsNaN((double)window.GetValue(BaseTop)))window.SetValue(BaseTop,top);
+            if(window.WindowState==WindowState.Minimized)return;
+            double top=(double)window.GetValue(BaseTop);
+            if(Double.IsNaN(top)){top=window.Top;window.SetValue(BaseTop,top);}
             window.SetValue(Opening,false);window.SetValue(Closing,true);Prepare(window);Motion.To(window,ExitProgress,FromTop(window)?.022:.045,Motion.WindowClose,true);
             if(window.WindowState==WindowState.Normal)Motion.To(window,Window.TopProperty,top+(FromTop(window)?-8:8),Motion.WindowClose,true);
         }
         internal static void CompleteClose(Window window)
-        {if(IsClosing(window)&&window.IsVisible){window.BeginAnimation(ExitProgress,null);window.SetValue(ExitProgress,FromTop(window)?.022:.045);}}
+        {if(IsClosing(window)&&window.IsVisible){Motion.Cancel(window,ExitProgress);window.SetValue(ExitProgress,FromTop(window)?.022:.045);}}
         internal static void Reset(Window window)
         {
-            window.SetValue(Closing,false);window.SetValue(Opening,false);window.BeginAnimation(ExitProgress,null);window.SetValue(ExitProgress,0.0);
+            window.SetValue(Closing,false);window.SetValue(Opening,false);Motion.Cancel(window,ExitProgress);window.SetValue(ExitProgress,0.0);
             var content=window.Content as FrameworkElement;var previous=window.GetValue(OriginalTransform) as Transform;
             if(content!=null&&previous!=null){content.RenderTransform=previous;content.RenderTransformOrigin=(Point)window.GetValue(OriginalOrigin);window.ClearValue(OriginalTransform);window.ClearValue(OriginalOrigin);}
-            double top=(double)window.GetValue(BaseTop);window.BeginAnimation(Window.TopProperty,null);if(window.WindowState==WindowState.Normal&&!Double.IsNaN(top))window.Top=top;window.SetValue(BaseTop,Double.NaN);Native.SetGlassClip(window,1);
+            double top=(double)window.GetValue(BaseTop);Motion.Cancel(window,Window.TopProperty);if(window.WindowState==WindowState.Normal&&!Double.IsNaN(top))window.Top=top;window.SetValue(BaseTop,Double.NaN);Native.SetGlassClip(window,1);
         }
     }
 }

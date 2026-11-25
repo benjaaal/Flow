@@ -70,6 +70,45 @@ namespace MacFlow
                     dc.DrawRoundedRectangle(Gradient("#83C8DF","#4F96B9"),null,new Rect(16,17,29,24),2,2);dc.DrawGeometry(Brush("#D6EEF5"),null,Geometry.Parse("M16,39 L25,27 32,33 37,29 45,39 Z"));dc.DrawEllipse(Brush("#FFE3AE"),null,new Point(38,23),2.8,2.8);dc.Pop();
                     dc.DrawEllipse(Brush("#55FFFFFF"),Line("#426B89",2.2),new Point(44,43),7.5,7.5);dc.DrawLine(Line("#426B89",3),new Point(49,49),new Point(55,55));
                 }
+                else if(kind=="calculator")
+                {
+                    Plate(dc,"#57738F","#32495F");
+                    dc.DrawRoundedRectangle(Brush("#DBE7EF"),null,new Rect(13,12,38,13),3,3);
+                    for(int y=0;y<3;y++)for(int x=0;x<3;x++)
+                        dc.DrawRoundedRectangle(Brush(x==2?"#FFC686":"#C2D5E2"),null,new Rect(13+x*14,30+y*8,10,5),1.8,1.8);
+                }
+                else if(kind=="calendar")
+                {
+                    Plate(dc,"#EF7065","#B53543");
+                    dc.DrawRoundedRectangle(Brush("#FFF9F4"),null,new Rect(12,18,40,34),5,5);
+                    for(int x=19;x<=45;x+=13)dc.DrawLine(Line("#6E2D3B",3),new Point(x,12),new Point(x,22));
+                    for(int y=30;y<=42;y+=6)dc.DrawLine(Line("#FB998B",2),new Point(20,y),new Point(44,y));
+                }
+                else if(kind=="notes")
+                {
+                    Plate(dc,"#FFCB76","#A7682B");
+                    dc.DrawRoundedRectangle(Brush("#FFF5D9"),null,new Rect(14,10,36,44),4,4);
+                    for(int y=23;y<=43;y+=10)dc.DrawLine(Line("#BD7F41",2.5),new Point(22,y),new Point(y==43?36:42,y));
+                }
+                else if(kind=="performance")
+                {
+                    Plate(dc,"#278880","#135754");
+                    dc.DrawRoundedRectangle(Brush("#202A38"),null,new Rect(9,15,46,34),5,5);
+                    dc.DrawGeometry(null,Line("#9CFFD1",2.8),Geometry.Parse("M13,35 L21,35 27,24 33,41 39,30 45,35 51,35"));
+                }
+                else if(kind=="terminal")
+                {
+                    Plate(dc,"#526887","#29364B");
+                    dc.DrawRoundedRectangle(Brush("#182130"),null,new Rect(9,15,46,34),5,5);
+                    dc.DrawGeometry(null,Line("#E5EDF9",3.5),Geometry.Parse("M17,24 L27,32 17,40 M33,40 L45,40"));
+                }
+                else if(kind=="trash")
+                {
+                    Plate(dc,"#6D8299","#42556B");
+                    dc.DrawGeometry(Brush("#D3E1EF"),null,Geometry.Parse("M17,24 L47,24 44,49 Q44,52 40,52 L24,52 Q20,52 20,49 Z"));
+                    dc.DrawGeometry(null,Line("#F4F8FF",3),Geometry.Parse("M15,20 L49,20 M26,20 L26,14 38,14 38,20"));
+                    dc.DrawGeometry(null,Line("#667D94",2),Geometry.Parse("M27,31 L28,45 M37,31 L36,45"));
+                }
                 else
                 {
                     Plate(dc,"#7ABCEB","#4379D6");dc.DrawGeometry(null,new Pen(Gradient("#F9FDFF","#D0E7FA"),5.5){StartLineCap=PenLineCap.Round,EndLineCap=PenLineCap.Round},Geometry.Parse("M13,42 C19,42 18,22 25,22 C32,22 30,42 37,42 C44,42 44,23 51,22"));

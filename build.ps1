@@ -1,4 +1,4 @@
-﻿param([switch]$RunTests,[switch]$CoreBridge,[switch]$CoreOnly,[string]$OutputDirectory,[string]$UpdateFeedUrl,[switch]$Offline,[string]$DependencyCacheRoot,[string]$NativeRuntimeDirectory)
+param([switch]$RunTests,[switch]$CoreBridge,[switch]$CoreOnly,[string]$OutputDirectory,[string]$UpdateFeedUrl,[switch]$Offline,[string]$DependencyCacheRoot,[string]$NativeRuntimeDirectory)
 $ErrorActionPreference = 'Stop'
 if($CoreBridge){throw 'La publicación 27.0.0 requiere el paquete completo.'}
 $ProgressPreference = 'SilentlyContinue'
@@ -29,6 +29,9 @@ $iconPath = Join-Path $bin 'MacFlow.ico'
 $stream = [System.IO.File]::Create($iconPath)
 $icon.Save($stream); $stream.Dispose(); $icon.Dispose(); $pen.Dispose(); $graphics.Dispose(); $bitmap.Dispose()
 $references = @('System.dll','System.Security.dll','System.Core.dll','System.Numerics.dll','System.Management.dll','System.Drawing.dll','System.Windows.Forms.dll','System.Runtime.Serialization.dll','System.IO.Compression.dll','System.IO.Compression.FileSystem.dll','Microsoft.CSharp.dll','WPF\WindowsBase.dll','WPF\PresentationCore.dll','WPF\PresentationFramework.dll','WPF\System.Speech.dll','WPF\UIAutomationClient.dll','WPF\UIAutomationTypes.dll','System.Xaml.dll') | ForEach-Object { '/reference:' + (Join-Path $framework $_) }
+$vbRuntime=Get-ChildItem -LiteralPath (Join-Path $env:WINDIR 'Microsoft.NET/assembly/GAC_MSIL/Microsoft.VisualBasic') -Filter Microsoft.VisualBasic.dll -Recurse | Select-Object -First 1
+if(!$vbRuntime){throw 'No se encontró la biblioteca de operaciones de archivos de Windows.'}
+$references+=('/reference:'+$vbRuntime.FullName)
 $common = @('/nologo','/target:winexe','/platform:x64','/optimize+','/langversion:5','/utf8output',('/resource:' + (Join-Path $root 'MacFlow\Theme.xaml') + ',MacFlow.Theme.xaml'),('/win32manifest:' + (Join-Path $root 'MacFlow\app.manifest')),('/win32icon:' + $iconPath)) + $references
 $common+=('/resource:'+$channelFile+',MacFlow.Channel.json')
 $radioRuntime = Get-ChildItem -LiteralPath (Join-Path $env:WINDIR 'Microsoft.NET/assembly/GAC_MSIL/System.Runtime') -Filter System.Runtime.dll -Recurse | Select-Object -First 1
@@ -95,9 +98,10 @@ Copy-Item -LiteralPath (Join-Path $root 'NATIVE-THIRD-PARTY.txt') -Destination $
 $payload = Join-Path $build 'payload.zip'
 if (Test-Path -LiteralPath $payload) { Remove-Item -LiteralPath $payload }
 $coreFiles=@('MacFlow.exe','MacFlow.exe.config','MacFlow.ico','README.txt','LICENSE.txt','THIRD-PARTY-NOTICES.md','NATIVE-THIRD-PARTY.txt')
-$payloadFiles=@(Get-ChildItem -LiteralPath $bin -File | Where-Object { !$CoreBridge -or $_.Name -in $coreFiles } | ForEach-Object FullName)
+$nativePayload=@('MacFlow.Face.exe','MacFlow.Face.exe.config','MacFlow.Voice.exe','MacFlow.Voice.exe.config','OpenCvSharp.dll','OpenCvSharpExtern.dll','System.Memory.dll','System.Runtime.CompilerServices.Unsafe.dll','System.Buffers.dll','System.Numerics.Vectors.dll','yunet.onnx','sface.onnx','antispoof.onnx','Vosk.dll','NAudio.dll','libvosk.dll','libgcc_s_seh-1.dll','libstdc++-6.dll','libwinpthread-1.dll','voice-es.zip','voice-en.zip')
+$payloadFiles=@(Get-ChildItem -LiteralPath $bin -File | Where-Object { $_.Name -in $coreFiles -or (!$CoreBridge -and $_.Name -in $nativePayload) } | ForEach-Object FullName)
 Compress-Archive -LiteralPath $payloadFiles -DestinationPath $payload
-$shared = @('Models.cs','WindowLife.cs','CompositorGlass.cs','NativeBlurEffect.cs','Native.cs','Services.cs','Startup.cs','TaskbarSurfaces.cs','Design.cs','Motion.cs','DisplaySpace.cs','GenieTransition.cs','SystemSymbols.cs','FeatureIcons.cs','IconThemes.cs','PanelMotion.cs','GlassPiece.cs','LiquidMaterial.cs','CrystalLight.cs','WallpaperLibrary.cs','SystemFeatures.cs','UpdateService.cs','AssemblyInfo.cs','WindowsMenuKey.cs') | ForEach-Object { Join-Path $root ('MacFlow\' + $_) }
+$shared = @('StoragePaths.cs','Models.cs','WindowLife.cs','CompositorGlass.cs','NativeBlurEffect.cs','Native.cs','Services.cs','Startup.cs','TaskbarSurfaces.cs','Design.cs','Motion.cs','DisplaySpace.cs','GenieTransition.cs','SystemSymbols.cs','FeatureIcons.cs','IconThemes.cs','PanelMotion.cs','GlassPiece.cs','LiquidMaterial.cs','CrystalLight.cs','WallpaperLibrary.cs','SystemFeatures.cs','UpdateService.cs','AssemblyInfo.cs','WindowsMenuKey.cs') | ForEach-Object { Join-Path $root ('MacFlow\' + $_) }
 $shared=@($shared | Where-Object { [IO.Path]::GetFileName($_) -ne 'AssemblyInfo.cs' })+@($assemblySource)
 $versionSource=[System.IO.File]::ReadAllText($assemblySource)
 $versionMatch=[regex]::Match($versionSource,'AssemblyFileVersion\("(\d+\.\d+\.\d+)\.0"\)')
@@ -109,10 +113,10 @@ if ($LASTEXITCODE -ne 0) { throw 'Falló la compilación del instalador.' }
 Copy-Item -LiteralPath (Join-Path $root 'MacFlow\App.config') -Destination ($setup + '.config') -Force
 $packageInfo=Get-Item -LiteralPath $setup
 if($CoreBridge -and $packageInfo.Length -gt 64MB){throw 'La actualización base supera el límite de 26.4.1.'}
-$packageJson=@{Product='MacFlow';Architecture='x64';Version=$packageVersion;Installer=$packageInfo.Name;Sha256=(Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash;Size=$packageInfo.Length;FeedUrl=$UpdateFeedUrl;Notes='27.2.2: isla dinámica flotante, física compartida, ventanas proporcionales, barra y Dock adaptativos, interfaces y Hola renovados.'} | ConvertTo-Json
+$packageJson=@{Product='MacFlow';Architecture='x64';Version=$packageVersion;Installer=$packageInfo.Name;Sha256=(Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash;Size=$packageInfo.Length;FeedUrl=$UpdateFeedUrl;Notes='Final Edition: transiciones reversibles, aplicaciones de MacFlow, Finder por columnas, Ollama opcional y reparación desde el instalador.'} | ConvertTo-Json
 [System.IO.File]::WriteAllText((Join-Path $deliverables 'MacFlow-update.json'),$packageJson,[System.Text.UTF8Encoding]::new($false))
 if ($RunTests) {
-    if(!$CoreBridge){ & (Join-Path $root 'BuildTools/TestNativeModels.ps1') -Bin $bin -Output (Join-Path $deliverables 'verification') }
+    if(!$CoreBridge){ & (Join-Path $root 'BuildTools/TestNativeModels.ps1') -Bin $bin -Output (Join-Path $deliverables 'verification') -Offline:$Offline }
     $tests = Join-Path $deliverables 'verification'
     New-Item -ItemType Directory -Force -Path $tests | Out-Null
     $app = Start-Process -FilePath (Join-Path $bin 'MacFlow.exe') -ArgumentList @('--self-test',('"' + $tests + '"')) -PassThru -WindowStyle Hidden

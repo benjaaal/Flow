@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
@@ -65,7 +65,7 @@ namespace MacFlow
         {
             BeginAnimation(ProgressProperty,null);Progress=Motion.Enabled?0:1;if(!Motion.Enabled)return;
             var animation=new DoubleAnimation(0,1,TimeSpan.FromMilliseconds(1480)){BeginTime=TimeSpan.FromMilliseconds(delay),EasingFunction=new SineEase{EasingMode=EasingMode.EaseInOut}};
-            Timeline.SetDesiredFrameRate(animation,60);animation.Completed+=delegate{Progress=1;BeginAnimation(ProgressProperty,null);};BeginAnimation(ProgressProperty,animation);
+            Motion.Pace(animation);animation.Completed+=delegate{Progress=1;BeginAnimation(ProgressProperty,null);};BeginAnimation(ProgressProperty,animation);
         }
         protected override void OnRender(DrawingContext dc)
         {
@@ -272,21 +272,21 @@ namespace MacFlow
             animation.KeyFrames.Add(new EasingDoubleKeyFrame(1,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(520)),ease));
             animation.KeyFrames.Add(new EasingDoubleKeyFrame(1,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(620)),ease));
             animation.KeyFrames.Add(new EasingDoubleKeyFrame(.42,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(1250)),ease));
-            Timeline.SetDesiredFrameRate(animation,60);activeAnimations++;
+            Motion.Pace(animation);activeAnimations++;
             animation.Completed+=delegate{if(dismissing)return;appleScale.SetValue(property,.42);appleScale.BeginAnimation(property,null);activeAnimations--;};
             clearAnimations.Add(delegate{var current=appleScale.GetValue(property);appleScale.BeginAnimation(property,null);appleScale.SetValue(property,current);});appleScale.BeginAnimation(property,animation);
         }
         private void Animate(Animatable target,DependencyProperty property,double from,double to,int duration,int delay,Action done=null)
         {
             var animation=new DoubleAnimation(from,to,TimeSpan.FromMilliseconds(duration)){BeginTime=TimeSpan.FromMilliseconds(delay),EasingFunction=Motion.Ease(true)};
-            Timeline.SetDesiredFrameRate(animation,60);activeAnimations++;
+            Motion.Pace(animation);activeAnimations++;
             animation.Completed+=delegate{if(dismissing)return;target.SetValue(property,to);target.BeginAnimation(property,null);activeAnimations--;if(done!=null)done();};
             clearAnimations.Add(delegate{var current=target.GetValue(property);target.BeginAnimation(property,null);target.SetValue(property,current);});target.BeginAnimation(property,animation);
         }
         private void Animate(UIElement target,DependencyProperty property,double from,double to,int duration,int delay,Action done=null)
         {
             var animation=new DoubleAnimation(from,to,TimeSpan.FromMilliseconds(duration)){BeginTime=TimeSpan.FromMilliseconds(delay),EasingFunction=Motion.Ease(true)};
-            Timeline.SetDesiredFrameRate(animation,60);activeAnimations++;
+            Motion.Pace(animation);activeAnimations++;
             animation.Completed+=delegate{if(dismissing)return;target.SetValue(property,to);target.BeginAnimation(property,null);activeAnimations--;if(done!=null)done();};
             clearAnimations.Add(delegate{var current=target.GetValue(property);target.BeginAnimation(property,null);target.SetValue(property,current);});target.BeginAnimation(property,animation);
         }

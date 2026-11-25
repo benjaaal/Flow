@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -16,7 +16,7 @@ namespace MacFlowSetup
 {
     public static class Program
     {
-        public static string Target { get { return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "MacFlow"); } }
+        public static string Target { get { return StoragePaths.InstallDirectory; } }
         private static string cleanupDirectory;
         [STAThread]
         public static int Main(string[] args)
@@ -27,27 +27,28 @@ namespace MacFlowSetup
             if (worker && !String.Equals(Path.GetFullPath(args[1]), Target, StringComparison.OrdinalIgnoreCase)) return 2;
             if (Path.GetFileName(Assembly.GetExecutingAssembly().Location).Equals("Uninstall.exe", StringComparison.OrdinalIgnoreCase) && !worker)
             {
-                var temp = Path.Combine(Path.GetTempPath(), "MacFlow-Uninstall-" + Guid.NewGuid().ToString("N")); Directory.CreateDirectory(temp);
+                var temp = Path.Combine(StoragePaths.TemporaryDirectory, "MacFlow-Uninstall-" + Guid.NewGuid().ToString("N")); Directory.CreateDirectory(temp);
                 var dest = Path.Combine(temp, "MacFlow-Uninstall.exe"); File.Copy(Assembly.GetExecutingAssembly().Location, dest);
+                var storage=Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"macflow.storage.json");if(File.Exists(storage))File.Copy(storage,Path.Combine(temp,"macflow.storage.json"));
                 var config = Assembly.GetExecutingAssembly().Location + ".config"; if (File.Exists(config)) File.Copy(config, dest + ".config");
                 Process.Start(new ProcessStartInfo(dest, "--uninstall-worker \"" + Target + "\"") { UseShellExecute = false }); return 0;
             }
             if (worker) cleanupDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
             var app = new Application(); Design.Dark = true; Design.InstallTheme();
             app.DispatcherUnhandledException += delegate(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e) { MessageBox.Show(e.Exception.Message, "MacFlow"); e.Handled = true; };
-            var window = new Wizard(worker,args.Contains("--update")||File.Exists(Path.Combine(Target,"MacFlow.exe"))); app.MainWindow = window; int result = app.Run(window);
+            var window = new Wizard(worker,args.Contains("--update")||File.Exists(Path.Combine(Target,"MacFlow.exe"))||File.Exists(Path.Combine(Target,"Uninstall.exe"))); app.MainWindow = window; int result = app.Run(window);
             if (cleanupDirectory != null) Cleanup(); return result;
         }
         private static void Cleanup()
         {
             try
             {
-                var root = Path.GetFullPath(Path.GetTempPath()).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+                var root = Path.GetFullPath(StoragePaths.TemporaryDirectory).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
                 var dir = Path.GetFullPath(cleanupDirectory); var name = Path.GetFileName(dir);
                 if (!dir.StartsWith(root, StringComparison.OrdinalIgnoreCase) || !System.Text.RegularExpressions.Regex.IsMatch(name, "^MacFlow-Uninstall-[a-f0-9]{32}$")) return;
                 // A hidden native PowerShell helper waits until the mapped executable has exited.
                 string quoted = dir.Replace("'", "''");
-                string script = "$ErrorActionPreference='SilentlyContinue'; Wait-Process -Id " + Process.GetCurrentProcess().Id + "; $target='" + quoted + "'; if ((Split-Path -Leaf $target) -match '^MacFlow-Uninstall-[a-f0-9]{32}$') { Remove-Item -LiteralPath (Join-Path $target 'MacFlow-Uninstall.exe') -Force; Remove-Item -LiteralPath (Join-Path $target 'MacFlow-Uninstall.exe.config') -Force; Remove-Item -LiteralPath $target -ErrorAction SilentlyContinue }";
+                string script = "$ErrorActionPreference='SilentlyContinue'; Wait-Process -Id " + Process.GetCurrentProcess().Id + "; $target='" + quoted + "'; if ((Split-Path -Leaf $target) -match '^MacFlow-Uninstall-[a-f0-9]{32}$') { Remove-Item -LiteralPath (Join-Path $target 'MacFlow-Uninstall.exe') -Force; Remove-Item -LiteralPath (Join-Path $target 'MacFlow-Uninstall.exe.config') -Force; Remove-Item -LiteralPath (Join-Path $target 'macflow.storage.json') -Force; Remove-Item -LiteralPath $target -ErrorAction SilentlyContinue }";
                 var shell = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "WindowsPowerShell", "v1.0", "powershell.exe");
                 Process.Start(new ProcessStartInfo(shell, "-NoProfile -NonInteractive -WindowStyle Hidden -EncodedCommand " + Convert.ToBase64String(Encoding.Unicode.GetBytes(script))) { UseShellExecute = false, CreateNoWindow = true, WindowStyle = ProcessWindowStyle.Hidden });
             }
@@ -62,7 +63,7 @@ namespace MacFlowSetup
         private bool installCommitting;
         private CancellationTokenSource installCancellation;
         private readonly StackPanel body;
-        private bool startup, desktopShortcut = true, removeSettings = true;
+        private bool startup, desktopShortcut = true, removeSettings = false;
         public Wizard(bool removing,bool isUpdate=false)
         {
             updating=isUpdate&&!removing;
@@ -76,33 +77,38 @@ namespace MacFlowSetup
             if (uninstall)
             {
                 var text = Design.Text("El desinstalador cerrará MacFlow, restaurará la barra de tareas\ny quitará sus archivos, accesos directos y entrada de inicio.", 15, false); text.TextWrapping = TextWrapping.Wrap; body.Children.Add(text);
-                body.Children.Add(Design.Check("Eliminar también mis preferencias y registros", true, delegate(bool value) { removeSettings = value; }));
+                body.Children.Add(Design.Check("Eliminar también mis preferencias y registros", false, delegate(bool value) { removeSettings = value; }));
                 body.Children.Add(Design.Button("Desinstalar MacFlow", Remove, true)); body.Children.Add(Design.Button("Cancelar", Close, false)); return;
             }
             var intro = Design.Text("Dock animado, barra superior, buscador y centro de control.\nAplicación nativa para Windows 11 de 64 bits.", 15, false); intro.TextWrapping = TextWrapping.Wrap; body.Children.Add(intro);
             var location = Design.Text("Se instalará para tu usuario en:\n" + Program.Target, 12, false); location.TextWrapping = TextWrapping.Wrap; location.Foreground = Design.Muted; location.Margin = new Thickness(0, 16, 0, 12); body.Children.Add(location);
             body.Children.Add(Design.Check("Iniciar MacFlow automáticamente con Windows", Startup.Requested, delegate(bool value) { startup = value; })); startup = Startup.Requested;
             body.Children.Add(Design.Check("Crear acceso directo en el escritorio", true, delegate(bool value) { desktopShortcut = value; }));
-            var note = Design.Text(updating?"Pantalla negra en todos los monitores y preparación de 2 minutos.\nWindows × 3 o Esc cancela antes de guardar los cambios.":"El ocultamiento de la barra de tareas se activa desde MacFlow.\nNo se necesitan permisos de administrador.", 12, false); note.Foreground = Design.Muted; note.Margin = new Thickness(0, 8, 0, 10); body.Children.Add(note);
-            var row = new StackPanel { Orientation = Orientation.Horizontal }; row.Children.Add(Design.Button(updating?"Actualizar":"Instalar", Install, true)); row.Children.Add(Design.Button("Cancelar", Close, false)); body.Children.Add(row);
+            var note = Design.Text(updating?"Reinstala los archivos de MacFlow y conserva tus datos.":"La instalación usa tu cuenta de Windows.", 12, false); note.Foreground = Design.Muted; note.Margin = new Thickness(0, 8, 0, 10); body.Children.Add(note);
+            var row = new StackPanel { Orientation = Orientation.Horizontal }; row.Children.Add(Design.Button(updating?"Actualizar o reparar":"Instalar", Install, true)); row.Children.Add(Design.Button("Cancelar", Close, false)); body.Children.Add(row);
         }
         private async void Install()
         {
-            if(installing)return;installing=true;body.IsEnabled=false;installCancellation=new CancellationTokenSource();UpdatePresentation presentation=null;bool stopped=false;
+            if(installing)return;installing=true;installCancellation=new CancellationTokenSource();bool stopped=false;
+            body.Children.Clear();
+            var progress=Design.Text("Preparando archivos…",16,true);body.Children.Add(progress);
+            body.Children.Add(new ProgressBar{Height=5,IsIndeterminate=true,Margin=new Thickness(0,16,0,16)});
+            var cancel=Design.Button("Cancelar",delegate{installCancellation.Cancel();},false);body.Children.Add(cancel);
             try
             {
-                if(updating)presentation=new UpdatePresentation(installCancellation);
                 await System.Threading.Tasks.Task.Run(delegate
                 {
-                    Installer.StopDesktop();stopped=true;installCancellation.Token.ThrowIfCancellationRequested();if(presentation!=null)Dispatcher.Invoke(new Action(presentation.Cover));
-                    Installer.Install(Program.Target,true,startup,desktopShortcut,installCancellation.Token,presentation==null?(Action)null:presentation.WaitBeforeCommit,delegate{Dispatcher.Invoke(new Action(delegate{installCancellation.Token.ThrowIfCancellationRequested();installCommitting=true;if(presentation!=null)presentation.Commit();}));});
+                    Installer.StopDesktop();stopped=true;installCancellation.Token.ThrowIfCancellationRequested();
+                    Installer.Install(Program.Target,true,startup,desktopShortcut,installCancellation.Token,null,delegate{Dispatcher.Invoke(new Action(delegate{
+                        installCancellation.Token.ThrowIfCancellationRequested();installCommitting=true;
+                        cancel.IsEnabled=false;progress.Text="Guardando la instalación…";
+                    }));});
                 });
-                if(presentation!=null){presentation.Complete();await System.Threading.Tasks.Task.Delay(400);presentation.Dispose();presentation=null;}
                 CompleteInstall(delegate{Process.Start(new ProcessStartInfo(Path.Combine(Program.Target,"MacFlow.exe")){UseShellExecute=true});});
             }
-            catch(OperationCanceledException){if(presentation!=null){presentation.Dispose();presentation=null;}if(stopped&&File.Exists(Path.Combine(Program.Target,"MacFlow.exe")))try{Process.Start(new ProcessStartInfo(Path.Combine(Program.Target,"MacFlow.exe")){UseShellExecute=true});}catch{}Intro();MessageBox.Show("Actualización cancelada. Se conservó la instalación anterior.","MacFlow");}
-            catch (Exception ex) { if(presentation!=null){presentation.Dispose();presentation=null;}MessageBox.Show("No se pudo instalar MacFlow.\n" + ex.Message, "MacFlow", MessageBoxButton.OK, MessageBoxImage.Error); }
-            finally{if(presentation!=null)presentation.Dispose();installing=false;installCommitting=false;body.IsEnabled=true;installCancellation.Dispose();installCancellation=null;}
+            catch(OperationCanceledException){if(stopped&&File.Exists(Path.Combine(Program.Target,"MacFlow.exe")))try{Process.Start(new ProcessStartInfo(Path.Combine(Program.Target,"MacFlow.exe")){UseShellExecute=true});}catch{}Intro();MessageBox.Show("Instalación cancelada.","MacFlow");}
+            catch (Exception ex) { if(IsVisible)Intro();MessageBox.Show("No se pudo completar MacFlow.\n" + ex.Message, "MacFlow", MessageBoxButton.OK, MessageBoxImage.Error); }
+            finally{installing=false;installCommitting=false;installCancellation.Dispose();installCancellation=null;}
         }
         internal void CompleteInstall(Action launch)
         {
@@ -119,7 +125,7 @@ namespace MacFlowSetup
         {
             try
             {
-                Installer.StopDesktop(); var data = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MacFlow"); new TaskbarLease(data).Restore(); Wallpapers.Restore(data);
+                Installer.StopDesktop(); var data = StoragePaths.DataDirectory; new TaskbarLease(data).Restore(); Wallpapers.Restore(data);
                 if (File.Exists(Path.Combine(data, "taskbar.restore"))||File.Exists(Path.Combine(data,"taskbar.restore.visibility"))) throw new IOException("La restauración de la barra de tareas está pendiente. Ejecutá MacFlow.exe --restore y volvé a intentar la desinstalación.");
                 Installer.Remove(Program.Target, true, removeSettings); body.Children.Clear(); body.Children.Add(Design.Text("MacFlow se desinstaló", 25, true)); var t = Design.Text("Tu barra de tareas está restaurada.\nGracias por usar MacFlow.", 15, false); t.Margin = new Thickness(0, 22, 0, 24); body.Children.Add(t); body.Children.Add(Design.Button("Finalizar", Close, true));
             }
@@ -131,9 +137,9 @@ namespace MacFlowSetup
         private const string RegistryPath = "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\MacFlow";
         private const string Marker = "MacFlow install v1";
 #if CORE_BRIDGE
-        private static readonly string[] Owned = { "MacFlow.exe", "MacFlow.exe.config", "MacFlow.ico", "README.txt", "LICENSE.txt", "THIRD-PARTY-NOTICES.md", "NATIVE-THIRD-PARTY.txt", "Uninstall.exe", "Uninstall.exe.config", "install.manifest" };
+        private static readonly string[] Owned = { "MacFlow.exe", "MacFlow.exe.config", "MacFlow.ico", "README.txt", "LICENSE.txt", "THIRD-PARTY-NOTICES.md", "NATIVE-THIRD-PARTY.txt", "Uninstall.exe", "Uninstall.exe.config", "install.manifest", "macflow.storage.json" };
 #else
-        private static readonly string[] Owned = { "MacFlow.exe", "MacFlow.exe.config", "MacFlow.ico", "README.txt", "LICENSE.txt", "THIRD-PARTY-NOTICES.md", "Uninstall.exe", "Uninstall.exe.config", "install.manifest", "MacFlow.Face.exe", "MacFlow.Face.exe.config", "OpenCvSharp.dll", "OpenCvSharpExtern.dll", "System.Memory.dll", "System.Runtime.CompilerServices.Unsafe.dll", "System.Buffers.dll", "System.Numerics.Vectors.dll", "yunet.onnx", "sface.onnx", "antispoof.onnx", "NATIVE-THIRD-PARTY.txt", "MacFlow.Voice.exe", "MacFlow.Voice.exe.config", "Vosk.dll", "NAudio.dll", "libvosk.dll", "libgcc_s_seh-1.dll", "libstdc++-6.dll", "libwinpthread-1.dll", "voice-es.zip", "voice-en.zip" };
+        private static readonly string[] Owned = { "MacFlow.exe", "MacFlow.exe.config", "MacFlow.ico", "README.txt", "LICENSE.txt", "THIRD-PARTY-NOTICES.md", "Uninstall.exe", "Uninstall.exe.config", "install.manifest", "MacFlow.Face.exe", "MacFlow.Face.exe.config", "OpenCvSharp.dll", "OpenCvSharpExtern.dll", "System.Memory.dll", "System.Runtime.CompilerServices.Unsafe.dll", "System.Buffers.dll", "System.Numerics.Vectors.dll", "yunet.onnx", "sface.onnx", "antispoof.onnx", "NATIVE-THIRD-PARTY.txt", "MacFlow.Voice.exe", "MacFlow.Voice.exe.config", "Vosk.dll", "NAudio.dll", "libvosk.dll", "libgcc_s_seh-1.dll", "libstdc++-6.dll", "libwinpthread-1.dll", "voice-es.zip", "voice-en.zip", "macflow.storage.json" };
 #endif
         private static string Identity { get { return System.Security.Principal.WindowsIdentity.GetCurrent().User.Value; } }
         public static void StopDesktop()
@@ -179,6 +185,7 @@ namespace MacFlowSetup
                 }
                 File.Copy(Assembly.GetExecutingAssembly().Location, Path.Combine(stage, "Uninstall.exe"));
                 File.Copy(Path.Combine(stage, "MacFlow.exe.config"), Path.Combine(stage, "Uninstall.exe.config"));
+                using(var configStream=File.Create(Path.Combine(stage,"macflow.storage.json")))new System.Runtime.Serialization.Json.DataContractJsonSerializer(typeof(StorageLocation)).WriteObject(configStream,new StorageLocation{DataDirectory=StoragePaths.DataDirectory,InstallDirectory=target});
                 File.WriteAllLines(Path.Combine(stage, "install.manifest"), new[] { Marker, Product.VersionText }.Concat(Owned));
                 if(beforeCommit!=null)beforeCommit();cancellation.ThrowIfCancellationRequested();
                 foreach (var name in Owned)
@@ -216,7 +223,7 @@ namespace MacFlowSetup
             var menu = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Programs), "MacFlow"); Directory.CreateDirectory(menu);
             Shortcut(Path.Combine(menu, "MacFlow.lnk"), Path.Combine(target, "MacFlow.exe")); Shortcut(Path.Combine(menu, "Desinstalar MacFlow.lnk"), Path.Combine(target, "Uninstall.exe"));
             if (desktop) Shortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "MacFlow.lnk"), Path.Combine(target, "MacFlow.exe"));
-            try{RememberLocalChannel(Assembly.GetExecutingAssembly().Location,Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"MacFlow"));}catch(Exception ex){Log.Write("Canal local no conectado: "+ex.Message);}
+            try{RememberLocalChannel(Assembly.GetExecutingAssembly().Location,StoragePaths.DataDirectory);}catch(Exception ex){Log.Write("Canal local no conectado: "+ex.Message);}
         }
         internal static bool RememberLocalChannel(string setupFile,string data)
         {
@@ -239,14 +246,14 @@ namespace MacFlowSetup
             if (unregister)
             {
                 Startup.Configure(false,Path.Combine(target,"MacFlow.exe"));
-                Registry.CurrentUser.DeleteSubKeyTree(RegistryPath, false);
+                Registry.CurrentUser.DeleteSubKeyTree(RegistryPath, false);RemoveLegacyForwarders(target);
                 var menu = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Programs), "MacFlow"); CheckDirectory(menu);
                 foreach (var name in new[] { "MacFlow.lnk", "Desinstalar MacFlow.lnk" }) if (File.Exists(Path.Combine(menu, name))) File.Delete(Path.Combine(menu, name));
                 if (Directory.Exists(menu) && !Directory.EnumerateFileSystemEntries(menu).Any()) Directory.Delete(menu);
                 string shortcut = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "MacFlow.lnk"); if (File.Exists(shortcut)) File.Delete(shortcut);
                 if (settings)
                 {
-                    var data = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MacFlow"); CheckDirectory(data);
+                    var data = StoragePaths.DataDirectory; CheckDirectory(data);
                     foreach (var name in new[] { "settings.json", "settings.json.tmp", "MacFlow.log", "widgets.json", "widgets.json.new", "widgets.json.bak", "stage-manager.json", "stage-manager.json.new", "stage-manager.json.bak" }) { var file = Path.Combine(data, name); if (File.Exists(file)) File.Delete(file); }
                     var wallpapers=Path.Combine(data,"Wallpapers");CheckDirectory(wallpapers);
                     var generated=Enumerable.Range(0,4).Select(i=>"MacFlow-"+i+".jpg").Concat(new[]{"MacFlow-Aqua-1.png","MacFlow-Midnight-1.png","MacFlow-Sierra-1.png"});foreach(var name in generated){var file=Path.Combine(wallpapers,name);if(File.Exists(file)){if((File.GetAttributes(file)&FileAttributes.ReparsePoint)!=0)throw new IOException("Fondo enlazado.");File.Delete(file);}}
@@ -254,6 +261,12 @@ namespace MacFlowSetup
                     if (Directory.Exists(data) && !Directory.EnumerateFileSystemEntries(data).Any()) Directory.Delete(data);
                 }
             }
+        }
+        private static void RemoveLegacyForwarders(string currentTarget)
+        {
+            string legacy=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"Programs","MacFlow");if(String.Equals(Path.GetFullPath(currentTarget),legacy,StringComparison.OrdinalIgnoreCase)||!Directory.Exists(legacy))return;
+            foreach(string name in new[]{"MacFlow.exe","Uninstall.exe"}){string file=Path.Combine(legacy,name);if(!File.Exists(file)||(File.GetAttributes(file)&FileAttributes.ReparsePoint)!=0)continue;string hash;using(var stream=File.OpenRead(file))using(var digest=System.Security.Cryptography.SHA256.Create())hash=BitConverter.ToString(digest.ComputeHash(stream)).Replace("-","");if(hash=="FEA0B9BE7C4F91B82E7C877EE7FF25697CAF5D5779C3282F293B205DB0F42081")File.Delete(file);}
+            if(!Directory.EnumerateFileSystemEntries(legacy).Any())Directory.Delete(legacy);
         }
         public static int Test(string directory)
         {

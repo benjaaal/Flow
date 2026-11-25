@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -25,7 +25,9 @@ namespace MacFlow
         [STAThread]
         public static int Main(string[] args)
         {
-            var data = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MacFlow");
+            var data = ProfileStore.ActiveDirectory(StoragePaths.DataDirectory);
+            if(args.Length==2&&args[0]=="--acceptance-28")return MacFlow28Verification.Run(args[1]);
+            if(args.Length==2&&args[0]=="--storage-info")return StoragePaths.WriteDiagnostic(args[1]);
             if ((args.Length == 3 || args.Length == 4) && args[0] == "--watch")
             {
                 int pid; if (!Int32.TryParse(args[1], out pid)) return 2;
@@ -81,7 +83,8 @@ namespace MacFlow
             using (var mutex = new Mutex(true, smoke ? MutexName + ".Smoke" : MutexName, out created))
             {
                 if (!created) { if(!smoke&&!(args.Length>0&&args[0]=="--background")){for(int attempt=0;attempt<20;attempt++){if(SignalSettings(args.Length>0&&args[0]=="--welcome"?WelcomeEvent:SettingsEvent))return 0;Thread.Sleep(50);}}return 0; }
-                if(!smoke)LaunchDiagnostics.Begin(data,args.Length>0&&args[0]=="--background");
+                StartupHealth health=null;bool needsOnboarding=!File.Exists(Path.Combine(data,"settings.json"));
+                if(!smoke){Log.DirectoryPath=data;health=new StartupHealth(data);if(!health.Begin()){try{Startup.Configure(false,Path.Combine(StoragePaths.InstallDirectory,"MacFlow.exe"));}catch(Exception ex){Log.Write("Recuperación de inicio: "+ex.Message);}try{new TaskbarLease(data).Restore();TaskbarSurfaces.RecoverVisible();}catch(Exception ex){Log.Write("Recuperación: "+ex.Message);}if(MessageBox.Show("MacFlow falló varias veces. ¿Abrirlo en modo seguro? Windows quedará visible; los efectos y la activación por voz estarán apagados.","Recuperación de MacFlow",MessageBoxButton.YesNo,MessageBoxImage.Question)!=MessageBoxResult.Yes)return 2;var recoveryStore=new SettingsStore(data);var safe=recoveryStore.Load();safe.AutoHideTaskbar=false;safe.WindowsMenu=false;safe.Animations=false;safe.LiveGlass=false;safe.VoiceWakeEnabled=false;safe.CheckUpdatesAutomatically=false;recoveryStore.Save(safe);health.Reset();health.Begin();}LaunchDiagnostics.Begin(data,args.Length>0&&args[0]=="--background");}
                 var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown }; Desktop desktop = null;
                 bool failing=false;
                 app.DispatcherUnhandledException += delegate(object sender, DispatcherUnhandledExceptionEventArgs e)
@@ -111,6 +114,7 @@ namespace MacFlow
                         if(smoke&&!preview){var fixture=new VisualTestBackground {WindowState=WindowState.Normal,Width=SystemParameters.PrimaryScreenWidth,Height=SystemParameters.PrimaryScreenHeight,Left=0,Top=0,ShowActivated=false,IsHitTestVisible=false};fixture.SourceInitialized+=delegate {Native.NoActivate(fixture);};fixture.Show();}
                         if(!smoke)Log.Write((args.Length>0&&args[0]=="--background"?"Inicio automático solicitado: ":"Inicio manual solicitado: ")+Product.VersionText);
                         desktop = new Desktop(smoke ? Path.Combine(Path.GetFullPath(args[1]), "profile") : data, smoke,smoke&&!preview,args.Length>0&&args[0]=="--background");
+                        if(!smoke&&needsOnboarding){var onboarding=new OnboardingWindow(desktop);onboarding.Show();}
                         if(!smoke){Log.Write("MacFlow listo: "+Product.VersionText);LaunchDiagnostics.Mark("Interfaz creada");}
                         if (preview) desktop.OpenSettings();
                         else if (smoke)
@@ -163,7 +167,7 @@ namespace MacFlow
                         /* Background startup never starts a presentation. */
                         else if (args.Length == 0 || !File.Exists(desktop.Store.PathName)) desktop.OpenSettings();
                     };
-                    app.Exit += delegate { wait.Unregister(null);settingsWait.Unregister(null);greetingWait.Unregister(null); if (desktop != null) desktop.Dispose(); };
+                    app.Exit += delegate(object sender,ExitEventArgs exitArgs) { if(health!=null)try{health.End(exitArgs.ApplicationExitCode==0);}catch{}wait.Unregister(null);settingsWait.Unregister(null);greetingWait.Unregister(null); if (desktop != null) desktop.Dispose(); };
                     return app.Run();
                 }
             }

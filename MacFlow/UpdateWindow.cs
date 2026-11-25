@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
@@ -52,7 +52,7 @@ namespace MacFlow
             if(busy||closed||package==null)return;SetBusy(true);status.Text=package.LocalFile==null?"Descargando la nueva versión…":"Preparando el paquete…";progress.Visibility=Visibility.Visible;progress.Value=0;
             try
             {
-                var cache=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"MacFlow","Updates");var reporter=new Progress<int>(value=>{if(!closed)progress.Value=value;});var file=await UpdateService.Prepare(package,cache,reporter,lifetime.Token);if(closed)return;prepared=file;status.Text="Actualización lista. Integridad y versión comprobadas.";notes.Text="Actualizar ahora abre el asistente. MacOS se cerrará cuando confirmes la instalación y conservará tus ajustes.";
+                var cache=Path.Combine(StoragePaths.DataDirectory,"Updates");var reporter=new Progress<int>(value=>{if(!closed)progress.Value=value;});var file=await UpdateService.Prepare(package,cache,reporter,lifetime.Token);if(closed)return;prepared=file;status.Text="Actualización lista. Integridad y versión comprobadas.";notes.Text="Actualizar ahora abre el asistente. MacOS se cerrará cuando confirmes la instalación y conservará tus ajustes.";
             }
             catch(Exception ex){prepared=null;Report(ex);}finally{SetBusy(false);if(closed)lifetime.Dispose();}
         }

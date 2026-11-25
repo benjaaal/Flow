@@ -1,21 +1,23 @@
-# MacFlow 27.2.2
+# MacFlow 28 Final Edition
 
-Escritorio nativo para Windows 11 x64, construido con C# 5, WPF y .NET Framework 4.8. Continúa el proyecto MacFlow existente: Dock, barra superior, isla dinámica, Centro de control, Configuración, Spotlight, widgets, multimedia, notificaciones y asistente local.
+Entorno de escritorio nativo para Windows 11 x64. Incluye Dock, barra superior, Mission Control, Launchpad, Spotlight, widgets, una pantalla de privacidad y aplicaciones propias. Las ventanas de Windows siguen disponibles en el Dock y en Mission Control.
 
-Esta versión comparte una física de movimiento con continuidad de velocidad, mantiene proporciones al minimizar hacia el Dock y renueva materiales, interfaces y bienvenida. La pantalla visual usa el fondo de escritorio o una foto, reloj de vidrio y reproductor compacto. Desde la esquina superior izquierda se despliega el reloj con notificaciones sin bloquear Windows.
+- **Menú principal.** Un clic abre el menú anclado a la manzanita. La apertura tiene un rebote corto y el material usa el desenfoque nativo de Windows cuando está disponible.
+- **Finder.** Lista, iconos, galería y columnas. Spotlight busca en las carpetas que agregues desde Configuración → Preferencias.
+- **Aplicaciones.** Calculadora, Calendario, Notas, Monitor de actividad, Finder, Configuración y Vista rápida. La Biblioteca permite abrirlas y fijarlas en el Dock. Papelera y Terminal abren las herramientas de Windows.
+- **Asistente.** Órdenes locales por defecto. En Configuración → Privacidad podés elegir un modelo instalado en Ollama o habilitar Gemini en Chrome. Cerrar ventanas, escribir en otra aplicación y resumir pestañas requiere confirmación.
+- **Recuperación.** Podés volver a Windows desde el menú de MacFlow. El instalador ofrece actualización o reparación y permite conservar los datos al desinstalar.
 
-[Cambios y límites](docs/RELEASE-27.2.2.md) · [Arquitectura y referencias](docs/RENOVACION-27.2.2.md)
+[Descargas de GitHub](https://github.com/benjaaal/Flow/releases) · [Cambios y límites](RELEASE-28.md) · [Arquitectura](docs/ARQUITECTURA-28.md)
 
-Compilar desde esta carpeta:
+## Compilar en Windows
+
+Necesitás Windows x64 y .NET Framework 4.8. El script usa el compilador C# 5 de Windows y comprueba el SHA-256 de las dependencias nativas.
 
 ```powershell
-./build.ps1 -OutputDirectory ../artifacts -UpdateFeedUrl https://github.com/benjaaal/Flow/releases/latest/download/MacFlow-update.json
+./build.ps1 -RunTests -OutputDirectory ./artifacts -UpdateFeedUrl https://github.com/benjaaal/Flow/releases/latest/download/MacFlow-update.json
 ```
 
-`-Offline` exige la caché de dependencias verificadas. `-CoreOnly` compila la interfaz sin los motores nativos. `-NativeRuntimeDirectory <portable anterior>` permite reutilizar un runtime íntegro sólo si sus workers no cambiaron y sus modelos coinciden con los hashes fijados.
+`-CoreOnly` compila el núcleo para iterar. `-Offline` usa la caché local y exige las imágenes de prueba en `build/model-tests` si también activás `-RunTests`. La aceptación de la versión se ejecuta mediante `artifacts/portable/MacFlow.exe --acceptance-28 <carpeta>` con un perfil aislado.
 
-Pruebas aisladas: `MacFlow.exe --self-test <carpeta>`, `--modern-smoke <carpeta>`, `--renewal-27-test <carpeta>` y `--curtain-27-test <carpeta>`. Las pruebas visuales abren ventanas propias y perfiles temporales. No adquieren la barra de Windows ni cambian inicio automático, fondo o conexiones. `MacFlow-Setup-27.2.2.exe --setup-test <carpeta>` verifica instalación y reversión en una carpeta de prueba.
-
-El bloqueo seguro y la autenticación de Windows siguen a cargo del sistema. La cortina visual no los reemplaza. El lector de avisos externos necesita identidad de paquete compatible y permiso del usuario; el EXE clásico conserva el historial propio. Los controles multimedia dependen de las sesiones que publique el reproductor. El asistente conserva su integración existente con Gemini en Chrome, que requiere sesión del usuario.
-
-No incluye acceso remoto ni modo iPad. Ver LICENSE.txt y los avisos de terceros.
+La gestión de escritorios virtuales pertenece a Vista de tareas y la autenticación al bloqueo de Windows. MacFlow conserva su propio historial de notificaciones. Las notificaciones de otras aplicaciones requieren permiso y una identidad de paquete compatible. Consultá la licencia y los avisos de terceros incluidos en la distribución.

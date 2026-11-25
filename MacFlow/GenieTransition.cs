@@ -18,8 +18,9 @@ namespace MacFlow
         [DllImport("gdi32.dll")]private static extern bool DeleteObject(IntPtr value);
         internal static int ActiveCount;
         internal static event Action<Window,GenieSurface> Started;
-        private sealed class Transition{internal Action<bool,int> Retarget;}
+        private sealed class Transition{internal Action<bool,int> Retarget;internal Action Stop;}
         private static readonly System.Collections.Generic.Dictionary<Window,Transition> active=new System.Collections.Generic.Dictionary<Window,Transition>();
+        internal static void Cancel(Window source){Transition transition;if(active.TryGetValue(source,out transition))transition.Stop();}
         internal static bool DockUsesVertical(Point target,Rect monitor){return Math.Min(Math.Abs(target.Y-monitor.Top),Math.Abs(monitor.Bottom-target.Y))<=Math.Min(Math.Abs(target.X-monitor.Left),Math.Abs(monitor.Right-target.X));}
         internal static bool TryStart(Window source,int duration,bool opening=false)
         {
@@ -53,12 +54,25 @@ namespace MacFlow
                 if(opening)surface.SetValue(GenieSurface.ProgressProperty,1.0);
                 overlay=new Window{Title="MacOS · Transición al Dock",Width=(right-left)/scale,Height=(bottom-top)/scale,Left=left/scale,Top=top/scale,WindowStyle=WindowStyle.None,ResizeMode=ResizeMode.NoResize,AllowsTransparency=true,Background=Brushes.Transparent,ShowInTaskbar=false,ShowActivated=false,Topmost=true,IsHitTestVisible=false,Content=surface};
                 var view=overlay;overlay.SourceInitialized+=delegate{Native.NoActivate(view);var handle=new WindowInteropHelper(view).Handle;Native.SetWindowLong(handle,-20,Native.GetWindowLong(handle,-20)|0x20);};
-                var timeout=new DispatcherTimer(DispatcherPriority.Background){Interval=TimeSpan.FromMilliseconds(duration+160)};bool ended=false,counted=false,enteringNow=opening;int revision=0;EventHandler sourceClosed=null;DependencyPropertyChangedEventHandler hidden=null;
-                Action stop=delegate{if(ended)return;ended=true;++revision;active.Remove(source);timeout.Stop();surface.BeginAnimation(GenieSurface.ProgressProperty,null);source.Closed-=sourceClosed;source.IsVisibleChanged-=hidden;if(WindowLife.Alive(view))view.Close();};
-                abort=stop;sourceClosed=delegate{stop();};hidden=delegate{if(!source.IsVisible)stop();};source.Closed+=sourceClosed;source.IsVisibleChanged+=hidden;timeout.Tick+=delegate{stop();};overlay.Closed+=delegate{if(counted){ActiveCount--;counted=false;}if(!ended)stop();};
+                var timeout=new DispatcherTimer(DispatcherPriority.Background);
+                bool ended=false,counted=false,enteringNow=opening;
+                EventHandler sourceClosed=null;DependencyPropertyChangedEventHandler hidden=null;
+                Action stop=delegate{if(ended)return;ended=true;active.Remove(source);timeout.Stop();Motion.Cancel(surface,GenieSurface.ProgressProperty);source.Closed-=sourceClosed;source.IsVisibleChanged-=hidden;if(WindowLife.Alive(view))view.Close();};
+                Action finish=delegate{if(ended)return;if(enteringNow)Design.CompleteGenieOpen(source);stop();};
+                abort=stop;sourceClosed=delegate{stop();};hidden=delegate{if(!source.IsVisible)stop();};source.Closed+=sourceClosed;source.IsVisibleChanged+=hidden;timeout.Tick+=delegate{finish();};overlay.Closed+=delegate{if(counted){ActiveCount--;counted=false;}if(!ended)stop();};
                 overlay.Show();ActiveCount++;counted=true;Native.SetWindowPos(new WindowInteropHelper(overlay).Handle,new IntPtr(-1),(int)left,(int)top,(int)(right-left),(int)(bottom-top),0x50);
                 var notify=Started;if(notify!=null)notify(source,surface);if(ended)return false;
-                var transition=new Transition();transition.Retarget=delegate(bool entering,int milliseconds){if(ended)return;enteringNow=entering;int token=++revision;double current=surface.Progress,end=entering?0:1;surface.BeginAnimation(GenieSurface.ProgressProperty,null);surface.SetValue(GenieSurface.ProgressProperty,current);double length=Math.Max(90,milliseconds*Math.Abs(end-current));timeout.Stop();timeout.Interval=TimeSpan.FromMilliseconds(length+160);var motion=new DoubleAnimation(current,end,TimeSpan.FromMilliseconds(length)){FillBehavior=FillBehavior.HoldEnd};Timeline.SetDesiredFrameRate(motion,60);motion.Completed+=delegate{if(token!=revision||ended)return;if(enteringNow)Design.CompleteGenieOpen(source);stop();};surface.BeginAnimation(GenieSurface.ProgressProperty,motion);timeout.Start();};active[source]=transition;transition.Retarget(opening,duration);return true;
+                var transition=new Transition{Stop=stop};
+                transition.Retarget=delegate(bool entering,int milliseconds)
+                {
+                    if(ended)return;
+                    enteringNow=entering;
+                    double end=entering?0:1;
+                    int length=(int)Math.Max(110,milliseconds*(.45+.55*Math.Abs(end-surface.Progress)));
+                    timeout.Stop();timeout.Interval=TimeSpan.FromMilliseconds(length+160);timeout.Start();
+                    Motion.To(surface,GenieSurface.ProgressProperty,end,length,false,finish,null,true);
+                };
+                active[source]=transition;transition.Retarget(opening,duration);return true;
             }
             catch(Exception ex){if(abort!=null)abort();else if(overlay!=null&&overlay.IsVisible)overlay.Close();Log.Write("Transición curva no disponible: "+ex.Message);return false;}
         }

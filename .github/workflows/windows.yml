@@ -18,17 +18,18 @@ jobs:
         shell: powershell
         env:
           MACFLOW_REPOSITORY: ${{ github.repository }}
-        run: ./build.ps1 -OutputDirectory ./artifacts -UpdateFeedUrl ('https://github.com/'+$env:MACFLOW_REPOSITORY+'/releases/latest/download/MacFlow-update.json')
+        run: ./build.ps1 -RunTests -OutputDirectory ./artifacts -UpdateFeedUrl ('https://github.com/'+$env:MACFLOW_REPOSITORY+'/releases/latest/download/MacFlow-update.json')
       - name: Run isolated regression and interface checks
         shell: powershell
         run: |
-          foreach($check in @(@('--self-test','core','self-tests.txt'),@('--modern-smoke','modern','checks.txt'),@('--renewal-27-test','renewal','checks.txt'),@('--curtain-27-test','curtain','checks.txt'))){
+          foreach($check in @(@('--acceptance-28','shell','acceptance.txt'),@('--renewal-27-test','renewal','checks.txt'),@('--curtain-27-test','curtain','checks.txt'))){
             $out=Join-Path $PWD ('artifacts/verification/'+$check[1])
             $app=Start-Process -FilePath './artifacts/portable/MacFlow.exe' -ArgumentList @($check[0],('"'+$out+'"')) -PassThru -WindowStyle Hidden
             if(!$app.WaitForExit(180000)){Stop-Process -Id $app.Id;throw ('Timeout: '+$check[0])}
             if($app.ExitCode -ne 0){Get-Content (Join-Path $out $check[2]);throw ('Validation failed: '+$check[0])}
           }
-          Copy-Item 'docs/RELEASE-27.2.2.md' 'artifacts/RELEASE-NOTES.md'
+          Copy-Item 'RELEASE-28.md' 'artifacts/RELEASE-NOTES.md'
+          Compress-Archive -Path 'artifacts/portable/*' -DestinationPath 'artifacts/MacFlow-Portable-Windows-x64.zip'
       - name: Publish build artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -36,7 +37,7 @@ jobs:
           path: artifacts/
           if-no-files-found: error
   release:
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/v') || github.ref_name == github.event.repository.default_branch))
+    if: github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/v') || github.ref_name == github.event.repository.default_branch)
     needs: build
     runs-on: windows-2022
     permissions:
@@ -63,5 +64,5 @@ jobs:
           $exists=$LASTEXITCODE -eq 0
           $ErrorActionPreference=$oldPreference
           if ($exists) { Write-Output 'Esta versión ya está publicada; no se reemplazará.'; exit 0 }
-          gh release create $tag $installer ($installer+'.config') 'artifacts/MacFlow-update.json' --repo $env:GH_REPO --target $env:GITHUB_SHA --notes-file artifacts/RELEASE-NOTES.md --title ('MacFlow '+$package.Version)
+          gh release create $tag $installer ($installer+'.config') 'artifacts/MacFlow-update.json' 'artifacts/MacFlow-Portable-Windows-x64.zip' --repo $env:GH_REPO --target $env:GITHUB_SHA --notes-file artifacts/RELEASE-NOTES.md --title ('MacFlow '+$package.Version+' · Final Edition')
           if ($LASTEXITCODE -ne 0) { throw 'No se pudo publicar la versión.' }

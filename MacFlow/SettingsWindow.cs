@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -187,7 +187,7 @@ namespace MacFlow
         private void Bar()
         {
             Heading("Barra superior","Una barra de cristal con reloj y controles del sistema.");var section=Section("Elementos visibles");Toggle(section,"Barra superior","Sin contorno exterior, esquinas suaves y altura de 40 puntos.",draft.ShowTopBar,delegate(bool v){draft.ShowTopBar=v;});Toggle(section,"Wi-Fi y red","Estado de tu conexión",draft.ShowNetwork,delegate(bool v){draft.ShowNetwork=v;});Toggle(section,"Batería","Porcentaje o alimentación por corriente",draft.ShowBattery,delegate(bool v){draft.ShowBattery=v;});Toggle(section,"Volumen","Nivel del dispositivo de salida",draft.ShowVolume,delegate(bool v){draft.ShowVolume=v;});
-            Toggle(section,"Isla dinámica","Integrado al borde superior para música, actividades y Shelf.",draft.ShowActivityIsland!=false,delegate(bool v){draft.ShowActivityIsland=v;});var controlLayout=Section("Centro de control");var layoutChoice=new ComboBox{ItemsSource=new[]{"Mac"},SelectedIndex=0,Width=150};layoutChoice.SelectionChanged+=delegate{draft.ControlCenterLayout="Mac";};controlLayout.Children.Add(Row("Distribución","Automático sigue el modo del escritorio.",layoutChoice));var integration=Section("Integración con Windows");Toggle(integration,"Ocultar la barra de tareas original","Se oculta mientras MacFlow está activo; vuelve al salir.",draft.AutoHideTaskbar,delegate(bool v){draft.AutoHideTaskbar=v;});Toggle(integration,"Borde del Dock protegido","Acercá el cursor al borde para recuperar el Dock.",draft.ProtectDockEdge,delegate(bool v){draft.ProtectDockEdge=v;});var note=Design.Text("La barra superior incluye controles rojo, amarillo y verde para la ventana activa. Los botones originales de cada programa se conservan.",12,false);note.SetResourceReference(TextBlock.ForegroundProperty,"GlassMuted");note.TextWrapping=TextWrapping.Wrap;integration.Children.Add(note);
+            Toggle(section,"Isla dinámica","Integrado al borde superior para música, actividades y Shelf.",draft.ShowActivityIsland!=false,delegate(bool v){draft.ShowActivityIsland=v;});var controlLayout=Section("Centro de control");var layoutChoice=new ComboBox{ItemsSource=new[]{"Mac"},SelectedIndex=0,Width=150};layoutChoice.SelectionChanged+=delegate{draft.ControlCenterLayout="Mac";};controlLayout.Children.Add(Row("Distribución","Automático sigue el modo del escritorio.",layoutChoice));var integration=Section("Integración con Windows");Toggle(integration,"Ocultar la barra de tareas original","Se oculta mientras MacFlow está activo; vuelve al salir.",draft.AutoHideTaskbar,delegate(bool v){draft.AutoHideTaskbar=v;});Toggle(integration,"Borde del Dock protegido","Acercá el cursor al borde para recuperar el Dock.",draft.ProtectDockEdge,delegate(bool v){draft.ProtectDockEdge=v;});var note=Design.Text("Los semáforos se integran en las ventanas propias de MacFlow. Las aplicaciones externas conservan sus controles; no se inyectan DLL ni se modifica su barra de título.",12,false);note.SetResourceReference(TextBlock.ForegroundProperty,"GlassMuted");note.TextWrapping=TextWrapping.Wrap;integration.Children.Add(note);
         }
         private void Performance()
         {
@@ -241,17 +241,41 @@ namespace MacFlow
         }
         private void AccessPage(){Heading("Accesibilidad","Adaptá el movimiento y la lectura.");var section=Section("Movimiento y contraste");Toggle(section,"Reducir movimiento","Desactiva animaciones del escritorio.",!draft.Animations,v=>draft.Animations=!v);Toggle(section,"Transparencia con desenfoque","Desactivala para usar materiales de contraste estable.",draft.LiveGlass,v=>draft.LiveGlass=v);Toggle(section,"Bajo consumo","Menos sondeos y reflejos costosos.",draft.LowPower,v=>draft.LowPower=v);}
         private void SoundPage(){Heading("Sonido","Multimedia y voz con los proveedores de Windows.");var section=Section("Reproducción");Toggle(section,"Sonidos de interfaz","Señales originales, breves y opcionales.",draft.Sounds!=false,v=>draft.Sounds=v);section.Children.Add(Design.Button("Controles multimedia",desktop.OpenControl,false));section.Children.Add(Design.Button("Probar asistente",desktop.OpenAssistant,false));}
-        private void PrivacyPage(){Heading("Privacidad","Pantalla propia, sin sustituir el bloqueo seguro de Windows.");var section=Section("Personalización");Toggle(section,"Pantalla al volver de suspensión","Se muestra tras el desbloqueo de Windows; no reemplaza su seguridad.",draft.ShowPrivacyAfterResume,v=>draft.ShowPrivacyAfterResume=v);Toggle(section,"Tierra en el bloqueo","Planeta 3D y luz por hora local; no cambia el escritorio.",draft.PrivacyAstronomy,v=>draft.PrivacyAstronomy=v);section.Children.Add(Design.Button("Fondo, reloj y color…",delegate{PrivacyAppearance.Open(desktop,draft);},true));Toggle(section,"Activación por voz","Usa el micrófono sólo si lo elegís; indicador visible.",draft.VoiceWakeEnabled==true,v=>draft.VoiceWakeEnabled=v);}
+        private void PrivacyPage()
+        {
+            Heading("Privacidad","Pantalla visual y permisos del asistente.");
+            var assistant=Section("Proveedor de respuestas");
+            var provider=new ComboBox{ItemsSource=new[]{"Órdenes locales","Ollama en este equipo","Gemini en Chrome"},Margin=new Thickness(0,6,0,8)};
+            provider.SelectedIndex=draft.AssistantProvider=="Ollama"?1:draft.AllowExternalAssistant?2:0;
+            var model=ModuleUI.Input(draft.OllamaModel,100);
+            System.Windows.Automation.AutomationProperties.SetName(model,"Modelo instalado en Ollama");
+            var modelLabel=ModuleUI.Caption("Nombre del modelo instalado en Ollama");
+            var modelField=ModuleUI.Field(model);
+            Action showModel=delegate{modelLabel.Visibility=modelField.Visibility=provider.SelectedIndex==1?Visibility.Visible:Visibility.Collapsed;};
+            provider.SelectionChanged+=delegate{
+                draft.AssistantProvider=provider.SelectedIndex==1?"Ollama":provider.SelectedIndex==2?"Gemini":"Local";
+                draft.AllowExternalAssistant=provider.SelectedIndex==2;showModel();
+            };
+            model.TextChanged+=delegate{draft.OllamaModel=model.Text.Trim();};
+            assistant.Children.Add(provider);assistant.Children.Add(modelLabel);assistant.Children.Add(modelField);
+            assistant.Children.Add(ModuleUI.Caption("Gemini recibe las preguntas en tu sesión de Chrome. Resumir pestañas pide confirmación cada vez."));
+            showModel();
+            var section=Section("Pantalla y voz");
+            Toggle(section,"Pantalla al volver de suspensión","Se muestra tras el desbloqueo de Windows.",draft.ShowPrivacyAfterResume,v=>draft.ShowPrivacyAfterResume=v);
+            Toggle(section,"Tierra en el bloqueo","Planeta 3D y luz por hora local.",draft.PrivacyAstronomy,v=>draft.PrivacyAstronomy=v);
+            section.Children.Add(Design.Button("Fondo, reloj y color…",delegate{PrivacyAppearance.Open(desktop,draft);},true));
+            Toggle(section,"Activación por voz","Usa el micrófono si lo elegís y muestra un indicador.",draft.VoiceWakeEnabled==true,v=>draft.VoiceWakeEnabled=v);
+        }
         private void TransferPage()
         {
-            Heading("Preferencias","Copias portables de tus ajustes. El inicio automático no se importa.");var section=Section("Copias y restauración");
+            Heading("Preferencias","Copias portables de tus ajustes. El inicio automático no se importa.");var section=Section("Copias y restauración");section.Children.Add(Design.Button("Agregar carpeta a Spotlight…",delegate{using(var folder=new System.Windows.Forms.FolderBrowserDialog()){folder.Description="Autorizar indexación de nombres de archivo en esta carpeta";if(folder.ShowDialog()==System.Windows.Forms.DialogResult.OK){if(draft.SearchFolders==null)draft.SearchFolders=new List<string>();if(!draft.SearchFolders.Contains(folder.SelectedPath))draft.SearchFolders.Add(folder.SelectedPath);status.Text="Carpeta autorizada. Aplicá y reiniciá MacFlow para indexarla.";}}},false));section.Children.Add(Design.Button("Quitar carpetas de Spotlight",delegate{draft.SearchFolders=new List<string>();status.Text="Sólo se buscarán aplicaciones y ajustes después de aplicar y reiniciar.";},false));section.Children.Add(Design.Button("Perfiles de MacFlow…",delegate{new ProfileWindow{Owner=this,WindowStartupLocation=WindowStartupLocation.CenterOwner}.ShowDialog();},false));
             section.Children.Add(Design.Button("Exportar ajustes…",delegate{try{var file=new Microsoft.Win32.SaveFileDialog{Filter="Preferencias JSON|*.json",FileName="MacOS-preferencias.json"};if(file.ShowDialog()==true){PreferencesIO.Write(file.FileName,draft);status.Text="Preferencias exportadas.";}}catch(Exception ex){status.Text=ex.Message;}},false));
             section.Children.Add(Design.Button("Importar ajustes…",delegate{try{var file=new Microsoft.Win32.OpenFileDialog{Filter="Preferencias JSON|*.json"};if(file.ShowDialog()==true){draft=PreferencesIO.Read(file.FileName);status.Text="Preferencias cargadas. Revisalas y pulsá Aplicar.";}}catch(Exception ex){status.Text=ex.Message;}},false));
             section.Children.Add(Design.Button("Restaurar ajustes predeterminados",delegate{draft=new Preferences();draft.AutoHideTaskbar=false;draft.CheckUpdatesAutomatically=false;status.Text="Predeterminados cargados. Aplicar no cambia tu opción de inicio automático.";},false));
         }
         private void Apply()
         {
-            try {if(!String.IsNullOrWhiteSpace(draft.UpdateFeedUrl)&&!UpdateService.ValidFeed(draft.UpdateFeedUrl))throw new IOException("El enlace de actualizaciones debe usar HTTPS.");draft.Pins=desktop.Preferences.Pins;draft.LastWelcomedVersion=desktop.Preferences.LastWelcomedVersion;draft.WallpaperPath=desktop.Preferences.WallpaperPath;desktop.ApplyPreferences(draft,startupAvailable?(bool?)startupValue:null);Close();desktop.OpenSettings();}catch(Exception ex){status.Text=ex.Message;}
+            try {if(!String.IsNullOrWhiteSpace(draft.UpdateFeedUrl)&&!UpdateService.ValidFeed(draft.UpdateFeedUrl))throw new IOException("El enlace de actualizaciones debe usar HTTPS.");if(draft.AssistantProvider=="Ollama"&&!OllamaAssistant.ValidModel(draft.OllamaModel))throw new IOException("Ingresá el nombre de un modelo local válido de Ollama.");draft.Pins=desktop.Preferences.Pins;draft.LastWelcomedVersion=desktop.Preferences.LastWelcomedVersion;draft.WallpaperPath=desktop.Preferences.WallpaperPath;desktop.ApplyPreferences(draft,startupAvailable?(bool?)startupValue:null);Close();desktop.OpenSettings();}catch(Exception ex){status.Text=ex.Message;}
         }
         public void SelectPage(int pageIndex) {ShowPage(pageIndex);}
     }

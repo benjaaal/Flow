@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -17,7 +17,7 @@ namespace MacFlow
             host.Children.Add(incoming);
             var shift=new TranslateTransform(0,0);var scale=new ScaleTransform(1,1);var transforms=new TransformGroup();transforms.Children.Add(scale);transforms.Children.Add(shift);incoming.RenderTransform=transforms;incoming.RenderTransformOrigin=new Point(.5,.35);
             Motion.To(scale,ScaleTransform.ScaleXProperty,1,Motion.Content);Motion.To(scale,ScaleTransform.ScaleYProperty,1,Motion.Content);
-            var movement=new DoubleAnimation(direction*12,0,TimeSpan.FromMilliseconds(Motion.Content)){EasingFunction=Motion.Ease(),FillBehavior=FillBehavior.Stop};Timeline.SetDesiredFrameRate(movement,60);shift.BeginAnimation(TranslateTransform.XProperty,movement);
+            var movement=new DoubleAnimation(direction*12,0,TimeSpan.FromMilliseconds(Motion.Content)){EasingFunction=Motion.Ease(),FillBehavior=FillBehavior.Stop};Motion.Pace(movement);shift.BeginAnimation(TranslateTransform.XProperty,movement);
             Motion.Fade(incoming,.38,1,Motion.Content);
         }
     }

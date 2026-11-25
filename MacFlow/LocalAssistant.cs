@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 using System.Windows.Automation;
 namespace MacFlow
 {
-    internal enum LocalIntent {Unknown,Open,Search,Gemini,Write,Minimize,Close,Read,Control,Settings,Tasks,VolumeUp,VolumeDown,Summary,DockShow,DockHide}
+    internal enum LocalIntent {Unknown,Open,Search,Gemini,Write,Minimize,Close,Read,Control,Settings,Tasks,VolumeUp,VolumeDown,Summary,DockShow,DockHide,FindFiles,SystemInfo}
     internal sealed class LocalRequest {internal LocalIntent Intent;internal string Argument="";}
     internal static class LocalCommands
     {
@@ -19,6 +19,9 @@ namespace MacFlow
         internal static LocalRequest Parse(string text)
         {
             string raw=(text??"").Trim();string n=Normalize(raw);var r=new LocalRequest();
+            var file=Regex.Match(raw,@"^(buscá|busca|buscar|encontrá|encuentra)\s+(?:el\s+|los\s+)?archivos?\s+(.+)$",RegexOptions.IgnoreCase|RegexOptions.CultureInvariant);
+            if(file.Success)return new LocalRequest{Intent=LocalIntent.FindFiles,Argument=file.Groups[2].Value.Trim()};
+            if(Regex.IsMatch(n,@"^(?:mostra |dame |mostrar )?(?:informacion|estado|datos)(?: del)? sistema[.!?]*$"))return new LocalRequest{Intent=LocalIntent.SystemInfo};
             if(Regex.IsMatch(n,@"^(resumi|resumime|resume|resumir|resumen|haceme un resumen|haz un resumen)(\s|$)")){r.Intent=LocalIntent.Summary;return r;}
             if(Regex.IsMatch(n,@"^(no ocultar|no ocultes|no escondas|deja visible|dejar visible|muestra|mostra|mostrar)( el)? dock[.!?@]*$")){r.Intent=LocalIntent.DockShow;return r;}if(Regex.IsMatch(n,@"^(oculta|ocultar|esconde|esconder)( el)? dock[.!?]*$")){r.Intent=LocalIntent.DockHide;return r;}
             if(n=="centro de control"){r.Intent=LocalIntent.Control;return r;}if(n=="configuracion"||n=="ajustes"){r.Intent=LocalIntent.Settings;return r;}if(n=="administrador de tareas"){r.Intent=LocalIntent.Tasks;return r;}

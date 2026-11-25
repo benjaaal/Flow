@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
@@ -96,7 +96,7 @@ namespace MacFlow
                 DoubleAnimationBase animation;
                 if(preview){var keys=new DoubleAnimationUsingKeyFrames();keys.KeyFrames.Add(new EasingDoubleKeyFrame(0,KeyTime.FromTimeSpan(TimeSpan.Zero)));keys.KeyFrames.Add(new EasingDoubleKeyFrame(.86,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(420)),new CubicEase{EasingMode=EasingMode.EaseInOut}));keys.KeyFrames.Add(new EasingDoubleKeyFrame(0,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(920)),new CubicEase{EasingMode=EasingMode.EaseInOut}));animation=keys;}
                 else animation=new DoubleAnimation(opening?.92:0,opening?0:.92,TimeSpan.FromMilliseconds(opening?520:380)){EasingFunction=new CubicEase{EasingMode=EasingMode.EaseInOut}};
-                Timeline.SetDesiredFrameRate(animation,60);animation.Completed+=delegate{if(overlay==own)Cancel();};if(plane!=null)plane.BeginAnimation(LidPlane.ProgressProperty,animation);else fold.BeginAnimation(LidFold.ProgressProperty,animation);timeout.Start();
+                Motion.Pace(animation);animation.Completed+=delegate{if(overlay==own)Cancel();};if(plane!=null)plane.BeginAnimation(LidPlane.ProgressProperty,animation);else fold.BeginAnimation(LidFold.ProgressProperty,animation);timeout.Start();
             }
             catch(Exception ex){Cancel();failure="No se pudo dibujar el pliegue: "+ex.Message;Log.Write("Transición de tapa: "+ex);}
         }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -14,11 +14,11 @@ namespace MacFlow
     }
     public static class LocalFiles
     {
-        public static List<string> Scan()
+        public static List<string> Scan(){return Scan(new[]{Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),"Downloads")});}
+        public static List<string> Scan(IEnumerable<string> roots)
         {
             var result=new List<string>();var visited=new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var roots=new[]{Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),"Downloads")};
-            foreach(var root in roots)
+            foreach(var root in roots??new string[0])
             {
                 if(!Directory.Exists(root))continue;var queue=new Queue<string>();queue.Enqueue(root);
                 while(queue.Count>0 && result.Count<15000)

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media.Animation;
@@ -33,7 +33,7 @@ namespace MacFlow
             window.BeginAnimation(Window.TopProperty,null);window.BeginAnimation(UIElement.OpacityProperty,null);
             double previous=window.Top,alpha=window.Opacity;window.Top=top;window.Opacity=opacity;
             if(!Motion.Enabled){if(!show)window.Close();return;}
-            var slide=new DoubleAnimation(previous,top,TimeSpan.FromMilliseconds(300)){EasingFunction=show?(IEasingFunction)new SpringEase{EasingMode=EasingMode.EaseIn}:Motion.Ease(true),FillBehavior=FillBehavior.Stop};Timeline.SetDesiredFrameRate(slide,60);slide.Completed+=delegate{if(!show)WindowLife.Close(window);};window.BeginAnimation(Window.TopProperty,slide);Motion.Fade(window,alpha,opacity,260);
+            var slide=new DoubleAnimation(previous,top,TimeSpan.FromMilliseconds(300)){EasingFunction=show?(IEasingFunction)new SpringEase{EasingMode=EasingMode.EaseIn}:Motion.Ease(true),FillBehavior=FillBehavior.Stop};Motion.Pace(slide);slide.Completed+=delegate{if(!show)WindowLife.Close(window);};window.BeginAnimation(Window.TopProperty,slide);Motion.Fade(window,alpha,opacity,260);
         }
         public void Dispose(){dragging=armed=false;if(Mouse.Captured==bar)bar.ReleaseMouseCapture();if(WindowLife.Alive(panel))WindowLife.Close(panel);panel=null;bar.PreviewMouseDown-=Down;bar.PreviewMouseMove-=Move;bar.PreviewMouseUp-=Up;bar.LostMouseCapture-=Lost;}
     }

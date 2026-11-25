@@ -1,10 +1,10 @@
-param([string]$Bin,[string]$Output)
+param([string]$Bin,[string]$Output,[switch]$Offline)
 $ErrorActionPreference='Stop'
 New-Item -ItemType Directory -Force $Output | Out-Null
 $cache=Join-Path $PSScriptRoot '../build/model-tests'
 New-Item -ItemType Directory -Force $cache | Out-Null
 $checks=@(@('test-face.jpg','https://raw.githubusercontent.com/opencv/opencv/master/samples/data/lena.jpg','7DE7ED51A1594FFF247F4CAE2301ECEACF5313D6011E37B4A4C8733F7BB72C07'),@('image_T1.jpg','https://raw.githubusercontent.com/minivision-ai/Silent-Face-Anti-Spoofing/master/images/sample/image_T1.jpg','F4455149F488F76205FDEE5499EC5261D08EF6279A1CFF7B778EA85405331E94'),@('image_F1.jpg','https://raw.githubusercontent.com/minivision-ai/Silent-Face-Anti-Spoofing/master/images/sample/image_F1.jpg','4B11B5D7A8A8E4A88F5F16A5426A0A7692E39E5BB45BB03B4EBE5E1606336860'),@('image_F2.jpg','https://raw.githubusercontent.com/minivision-ai/Silent-Face-Anti-Spoofing/master/images/sample/image_F2.jpg','FBBEA73450AE9D9BB555C8CCAC77BF39D234261FE3BE4190E3ED2999690C485F'))
-foreach($check in $checks){$file=Join-Path $cache $check[0];if(!(Test-Path $file)){Invoke-WebRequest -UseBasicParsing $check[1] -OutFile $file};if((Get-FileHash $file -Algorithm SHA256).Hash -ne $check[2]){throw 'Imagen de prueba alterada'}}
+foreach($check in $checks){$file=Join-Path $cache $check[0];if(!(Test-Path $file)){if($Offline){throw ('Falta un archivo de prueba en caché: '+$file)};Invoke-WebRequest -UseBasicParsing $check[1] -OutFile $file};if((Get-FileHash $file -Algorithm SHA256).Hash -ne $check[2]){throw 'Imagen de prueba alterada'}}
 $report=@()
 $result=& (Join-Path $Bin 'MacFlow.Face.exe') --self-test (Join-Path $cache 'test-face.jpg')
 if($LASTEXITCODE -ne 0 -or $result -notmatch '^PASS'){throw ('Falló reconocimiento de modelo: '+$result)}

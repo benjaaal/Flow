@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
@@ -113,9 +113,27 @@ namespace MacFlow
             if(PanelMotion.IsClosing(window))return;
             SetGlassClip(window,1);
         }
+        private static readonly DependencyProperty IntegratedRegionSignature=DependencyProperty.RegisterAttached("IntegratedRegionSignature",typeof(string),typeof(Native),new PropertyMetadata(null));
+        internal static readonly DependencyProperty CustomShellRegion=DependencyProperty.RegisterAttached("CustomShellRegion",typeof(Action),typeof(Native),new PropertyMetadata(null));
+        internal static readonly DependencyProperty TransientAcrylic=DependencyProperty.RegisterAttached("TransientAcrylic",typeof(bool),typeof(Native),new PropertyMetadata(false));
+        [DllImport("user32.dll")]private static extern int GetWindowRgn(IntPtr window,IntPtr region);
+        [DllImport("gdi32.dll")]private static extern bool PtInRegion(IntPtr region,int x,int y);
+        internal static bool IntegratedHitTest(Window window,int x,int y)
+        {
+            var region=CreateRoundRectRgn(0,0,1,1,1,1);try{if(GetWindowRgn(new WindowInteropHelper(window).Handle,region)==0)return false;var source=PresentationSource.FromVisual(window);double scale=source==null?1:source.CompositionTarget.TransformToDevice.M11;return PtInRegion(region,(int)(x*scale),(int)(y*scale));}finally{DeleteObject(region);}
+        }
+        internal static void SetIntegratedBarRegion(Window window,double barHeight,Rect capsule)
+        {
+            var source=PresentationSource.FromVisual(window);var handle=new WindowInteropHelper(window).Handle;if(source==null||handle==IntPtr.Zero||window.ActualWidth<=0)return;
+            double scale=source.CompositionTarget.TransformToDevice.M11;
+            var region=CreateRoundRectRgn(0,0,(int)Math.Ceiling(window.ActualWidth*scale),(int)Math.Ceiling(barHeight*scale),12,12);
+            if(region==IntPtr.Zero)return;
+            if(!capsule.IsEmpty){var part=CreateRoundRectRgn((int)Math.Floor(capsule.Left*scale),(int)Math.Floor(capsule.Top*scale),(int)Math.Ceiling(capsule.Right*scale),(int)Math.Ceiling(capsule.Bottom*scale),(int)(24*scale),(int)(24*scale));if(part!=IntPtr.Zero){try{CombineRgn(region,region,part,2);}finally{DeleteObject(part);}}}
+            if(SetWindowRgn(handle,region,true)==0)DeleteObject(region);
+        }
         internal static void SetGlassClip(Window window,double fraction)
         {
-            CompositorGlass.Resize(window,fraction);
+            CompositorGlass.Resize(window,fraction);var custom=window.GetValue(CustomShellRegion) as Action;if(custom!=null&&fraction>.999){custom();return;}
             var source=PresentationSource.FromVisual(window);if(source==null||window.ActualWidth<=0)return;
             double scale=source.CompositionTarget.TransformToDevice.M11,remaining=Math.Max(0,Math.Min(1,fraction));
             double width=window.ActualWidth*scale,height=window.ActualHeight*scale,left=width*(1-remaining)/2,top=height*(1-remaining)/2;
@@ -238,6 +256,7 @@ namespace MacFlow
             value = unchecked((int)0xFFFFFFFE); DwmSetWindowAttribute(h,34,ref value,4);
             bool composition;DwmIsCompositionEnabled(out composition);
             if(!composition||SystemParameters.HighContrast){value=1;DwmSetWindowAttribute(h,38,ref value,4);window.Background=SystemParameters.HighContrast?SystemColors.WindowBrush:Design.Brush(dark?"#252C39":"#F0F2F6");window.Tag="Solid fallback";return;}
+            bool transient=(bool)window.GetValue(TransientAcrylic);
             // Public Windows 11 22H2 backdrop API; solid WPF background is the fallback.
             value = LiquidMaterial.LiveBackdrop?3:1;
             var source=HwndSource.FromHwnd(h);
@@ -247,6 +266,13 @@ namespace MacFlow
             {
                 window.SetCurrentValue(System.Windows.Controls.Control.BackgroundProperty,Brushes.Transparent);
                 if(source!=null&&source.CompositionTarget!=null)source.CompositionTarget.BackgroundColor=Colors.Transparent;
+                if(transient)
+                {
+                    if(!LiquidMaterial.LiveBackdrop)window.Background=Design.Brush(dark?"#22252C":"#F1F4F8");
+                    window.Tag=LiquidMaterial.LiveBackdrop?"Native Desktop Acrylic":"Solid fallback";
+                    RoundGlass(window);
+                    return;
+                }
                 window.Tag=LiquidMaterial.LiveBackdrop?"Native Desktop Acrylic":"Clear glass fallback";
                 int none=1,host=1;DwmSetWindowAttribute(h,38,ref none,4);
                 IntPtr clear=Marshal.AllocHGlobal(Marshal.SizeOf(typeof(ACCENT)));
@@ -256,7 +282,8 @@ namespace MacFlow
                 else window.Tag="Clear glass fallback · no rectangular backdrop";
             }
             else {value=1;DwmSetWindowAttribute(h,38,ref value,4);var empty=new MARGINS();DwmExtendFrameIntoClientArea(h,ref empty);window.Background=Design.Brush(dark?"#28282A":"#F5F5F7");window.Tag="Solid fallback";}
-            LiquidMaterial.Apply(window,dark);RoundGlass(window);
+            if(!transient)LiquidMaterial.Apply(window,dark);
+            RoundGlass(window);
         }
         internal static void WelcomeBackdrop(Window window)
         {

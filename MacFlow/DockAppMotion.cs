@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -23,7 +23,7 @@ namespace MacFlow
             scale.ScaleX=scale.ScaleY=1;shift.Y=0;host.Opacity=closing&&remove&&!Motion.Enabled?0:1;if(!Motion.Enabled)return;
             if(closing&&remove)
             {
-                var curve=Motion.Ease(true);var shrink=new DoubleAnimation(sx,.94,TimeSpan.FromMilliseconds(220)){EasingFunction=curve};Timeline.SetDesiredFrameRate(shrink,60);scale.BeginAnimation(ScaleTransform.ScaleXProperty,shrink);scale.BeginAnimation(ScaleTransform.ScaleYProperty,new DoubleAnimation(sy,.94,TimeSpan.FromMilliseconds(220)){EasingFunction=curve});shift.BeginAnimation(TranslateTransform.YProperty,new DoubleAnimation(y,3,TimeSpan.FromMilliseconds(220)){EasingFunction=curve});host.BeginAnimation(UIElement.OpacityProperty,new DoubleAnimation(opacity,0,TimeSpan.FromMilliseconds(220)){EasingFunction=curve});return;
+                var curve=Motion.Ease(true);var shrink=new DoubleAnimation(sx,.94,TimeSpan.FromMilliseconds(220)){EasingFunction=curve};Motion.Pace(shrink);scale.BeginAnimation(ScaleTransform.ScaleXProperty,shrink);scale.BeginAnimation(ScaleTransform.ScaleYProperty,new DoubleAnimation(sy,.94,TimeSpan.FromMilliseconds(220)){EasingFunction=curve});shift.BeginAnimation(TranslateTransform.YProperty,new DoubleAnimation(y,3,TimeSpan.FromMilliseconds(220)){EasingFunction=curve});host.BeginAnimation(UIElement.OpacityProperty,new DoubleAnimation(opacity,0,TimeSpan.FromMilliseconds(220)){EasingFunction=curve});return;
             }
             int length=closing?280:400,peak=closing?100:145;
             scale.BeginAnimation(ScaleTransform.ScaleXProperty,Curve(closing?1.008:1.018,peak,length,1,sx));
@@ -37,7 +37,7 @@ namespace MacFlow
             motion.KeyFrames.Add(new EasingDoubleKeyFrame(start,KeyTime.FromTimeSpan(TimeSpan.Zero)));
             motion.KeyFrames.Add(new EasingDoubleKeyFrame(peak,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(at)),Motion.Ease()));
             motion.KeyFrames.Add(new EasingDoubleKeyFrame(rest,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(length)),Motion.Ease()));
-            Timeline.SetDesiredFrameRate(motion,60);return motion;
+            Motion.Pace(motion);return motion;
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
@@ -57,7 +57,9 @@ namespace MacFlow
         {
             AppKey=appKey;var windows=desktop.Windows.Where(w=>appKey==null||w.Key==appKey).Take(60).ToList();
             Title="MacOS · Ventanas abiertas";Width=920;Height=610;WindowStyle=WindowStyle.None;AllowsTransparency=false;ResizeMode=ResizeMode.CanResizeWithGrip;MinWidth=620;MinHeight=430;Topmost=true;ShowInTaskbar=false;Background=Design.Brush(Design.Dark?"#242A36":"#EEF1F6");
-            var root=new DockPanel();var header=new DockPanel {Margin=new Thickness(4,0,4,22)};var close=new WindowControls(this,delegate{Design.Dismiss(this);});DockPanel.SetDock(close,System.Windows.Controls.Dock.Left);header.Children.Add(close);var title=Design.Text(String.IsNullOrEmpty(appName)?"Tus ventanas":appName,25,true);title.Margin=new Thickness(12,0,0,0);header.Children.Add(title);DockPanel.SetDock(header,System.Windows.Controls.Dock.Top);root.Children.Add(header);
+            var root=new DockPanel();var header=new DockPanel {Margin=new Thickness(4,0,4,22)};var close=new WindowControls(this,delegate{Design.Dismiss(this);});DockPanel.SetDock(close,System.Windows.Controls.Dock.Left);header.Children.Add(close);
+            if(appKey==null){var spaces=Design.Button("Escritorios de Windows",delegate{Design.Dismiss(this,desktop.OpenWindowsDesktops);},false);DockPanel.SetDock(spaces,System.Windows.Controls.Dock.Right);header.Children.Add(spaces);}
+            var title=Design.Text(String.IsNullOrEmpty(appName)?"Mission Control":appName,25,true);title.Margin=new Thickness(12,0,0,0);header.Children.Add(title);DockPanel.SetDock(header,System.Windows.Controls.Dock.Top);root.Children.Add(header);
             var grid=new WrapPanel {HorizontalAlignment=HorizontalAlignment.Center};
             foreach(var entry in windows)
             {
@@ -68,7 +70,7 @@ namespace MacFlow
                     if(!desktop.CloseWindow(captured))return;
                     var wait=new System.Windows.Threading.DispatcherTimer{Interval=TimeSpan.FromMilliseconds(150)};int ticks=0;bool done=false;
                     wait.Tick+=delegate{if(!Native.Matches(captured)){wait.Stop();if(done)return;done=true;card.IsHitTestVisible=false;preview.Dispose();
-                        if(Design.Animations){var fade=new System.Windows.Media.Animation.DoubleAnimation(0,TimeSpan.FromMilliseconds(180)){EasingFunction=new System.Windows.Media.Animation.CubicEase{EasingMode=System.Windows.Media.Animation.EasingMode.EaseIn}};System.Windows.Media.Animation.Timeline.SetDesiredFrameRate(fade,60);fade.Completed+=delegate{grid.Children.Remove((UIElement)card.Parent);};card.BeginAnimation(UIElement.OpacityProperty,fade);}else grid.Children.Remove((UIElement)card.Parent);
+                        if(Design.Animations){var fade=new System.Windows.Media.Animation.DoubleAnimation(0,TimeSpan.FromMilliseconds(180)){EasingFunction=new System.Windows.Media.Animation.CubicEase{EasingMode=System.Windows.Media.Animation.EasingMode.EaseIn}};Motion.Pace(fade);fade.Completed+=delegate{grid.Children.Remove((UIElement)card.Parent);};card.BeginAnimation(UIElement.OpacityProperty,fade);}else grid.Children.Remove((UIElement)card.Parent);
                     }else if(++ticks>=30)wait.Stop();};Closed+=delegate{wait.Stop();};wait.Start();
                 },delegate{desktop.MinimizeWindow(captured);},delegate{desktop.ZoomWindow(captured);});
                 System.Windows.Automation.AutomationProperties.SetName(lights.CloseButton,"Cerrar "+entry.Title);System.Windows.Automation.AutomationProperties.SetName(lights.MinimizeButton,"Minimizar "+entry.Title);System.Windows.Automation.AutomationProperties.SetName(lights.ZoomButton,"Ampliar o restaurar "+entry.Title);DockPanel.SetDock(lights,System.Windows.Controls.Dock.Top);bar.Children.Add(lights);bar.Children.Add(Design.Text(entry.Title,11,true));card.Children.Add(bar);

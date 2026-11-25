@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -29,7 +29,7 @@ namespace MacFlow
             string answer="https://learn.microsoft.com/a https://developer.apple.com/b https://example.org/c https://example.org/d";check(AssistantResearch.Domains(answer)==3&&AssistantResearch.Sources(answer).Count==4,"cuenta dominios distintos y conserva enlaces recibidos");
             check(AssistantResearch.Sources("https://127.0.0.1/a https://user:pass@example.org https://pc.local/a http://example.org").Count==0,"no ofrece enlaces locales, con credenciales o sin HTTPS");
             check(AssistantResearch.Result("No tengo fuentes.").Contains("no queda verificada"),"no afirma investigar varias páginas sin enlaces suficientes");
-            check(typeof(Desktop).Assembly.GetType("MacFlow.TabletController")==null,"el modo iPad exclusivo no forma parte del ejecutable");var t=Design.Text("Mac"+"Flow · Configuración",13,false);check(t.Text=="MacOS · Configuración","marca visible nueva conserva identidad técnica para actualizaciones");
+            check(typeof(Desktop).Assembly.GetType("MacFlow.TabletController")==null,"el modo iPad exclusivo no forma parte del ejecutable");var t=Design.Text("Mac"+"Flow · Configuración",13,false);check(t.Text=="MacFlow · Configuración","la marca visible conserva el nombre MacFlow sin suplantar macOS");
         }
     }
 }

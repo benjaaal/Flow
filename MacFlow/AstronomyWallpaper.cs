@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -68,7 +68,7 @@ namespace MacFlow
             // Keep the visible pose as the base value until WPF starts its clock.
             // Setting the destination first exposes one frame of the endpoint.
             double current=(double)target.GetValue(property);target.BeginAnimation(property,null);target.SetValue(property,current);if(!Motion.Enabled){target.SetValue(property,value);return;}
-            var animation=new DoubleAnimation(current,value,TimeSpan.FromMilliseconds(ms)){EasingFunction=Motion.Ease(),FillBehavior=FillBehavior.Stop};Timeline.SetDesiredFrameRate(animation,60);animation.Completed+=delegate{target.SetValue(property,value);};target.BeginAnimation(property,animation);
+            var animation=new DoubleAnimation(current,value,TimeSpan.FromMilliseconds(ms)){EasingFunction=Motion.Ease(),FillBehavior=FillBehavior.Stop};Motion.Pace(animation);animation.Completed+=delegate{target.SetValue(property,value);};target.BeginAnimation(property,animation);
         }
         internal void Stop(){double scale=zoom.ScaleX,y=drift.Y;zoom.BeginAnimation(ScaleTransform.ScaleXProperty,null);zoom.BeginAnimation(ScaleTransform.ScaleYProperty,null);drift.BeginAnimation(TranslateTransform.YProperty,null);zoom.ScaleX=zoom.ScaleY=scale;drift.Y=y;}
     }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Windows;
 using System.Windows.Media;
@@ -36,7 +36,7 @@ namespace MacFlow
             if(requested&&window.IsVisible)return;settle.Stop();requested=true;generation++;bool wasHidden=!window.IsVisible;window.IsHitTestVisible=true;
             var content=window.Content as FrameworkElement;
             if(content!=null){var shift=Shift(content);if(wasHidden){content.BeginAnimation(UIElement.OpacityProperty,null);content.Opacity=0;shift.BeginAnimation(TranslateTransform.YProperty,null);shift.Y=22;}
-                if(Design.Animations){content.BeginAnimation(UIElement.OpacityProperty,new DoubleAnimation(1,TimeSpan.FromMilliseconds(240)){EasingFunction=new CubicEase{EasingMode=EasingMode.EaseOut}});var motion=new DoubleAnimationUsingKeyFrames();motion.KeyFrames.Add(new EasingDoubleKeyFrame(-3.5,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(180)),new CubicEase{EasingMode=EasingMode.EaseOut}));motion.KeyFrames.Add(new EasingDoubleKeyFrame(0,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(300)),new QuadraticEase{EasingMode=EasingMode.EaseInOut}));Timeline.SetDesiredFrameRate(motion,60);shift.BeginAnimation(TranslateTransform.YProperty,motion);}
+                if(Design.Animations){content.BeginAnimation(UIElement.OpacityProperty,new DoubleAnimation(1,TimeSpan.FromMilliseconds(240)){EasingFunction=new CubicEase{EasingMode=EasingMode.EaseOut}});var motion=new DoubleAnimationUsingKeyFrames();motion.KeyFrames.Add(new EasingDoubleKeyFrame(-3.5,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(180)),new CubicEase{EasingMode=EasingMode.EaseOut}));motion.KeyFrames.Add(new EasingDoubleKeyFrame(0,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(300)),new QuadraticEase{EasingMode=EasingMode.EaseInOut}));Motion.Pace(motion);shift.BeginAnimation(TranslateTransform.YProperty,motion);}
                 else{content.BeginAnimation(UIElement.OpacityProperty,null);content.Opacity=1;shift.BeginAnimation(TranslateTransform.YProperty,null);shift.Y=0;}}
             if(wasHidden)window.Show();
         }
@@ -46,7 +46,7 @@ namespace MacFlow
             if(!requested||!window.IsVisible)return;requested=false;int request=++generation;window.IsHitTestVisible=false;var content=window.Content as FrameworkElement;
             if(!Design.Animations||content==null){window.Hide();return;}
             var shift=Shift(content);var fade=new DoubleAnimation(0,TimeSpan.FromMilliseconds(280)){EasingFunction=new CubicEase{EasingMode=EasingMode.EaseInOut}};
-            var motion=new DoubleAnimationUsingKeyFrames();motion.KeyFrames.Add(new EasingDoubleKeyFrame(-2,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(70)),new QuadraticEase{EasingMode=EasingMode.EaseOut}));motion.KeyFrames.Add(new EasingDoubleKeyFrame(22,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(280)),new CubicEase{EasingMode=EasingMode.EaseIn}));Timeline.SetDesiredFrameRate(motion,60);
+            var motion=new DoubleAnimationUsingKeyFrames();motion.KeyFrames.Add(new EasingDoubleKeyFrame(-2,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(70)),new QuadraticEase{EasingMode=EasingMode.EaseOut}));motion.KeyFrames.Add(new EasingDoubleKeyFrame(22,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(280)),new CubicEase{EasingMode=EasingMode.EaseIn}));Motion.Pace(motion);
             fade.Completed+=delegate{if(request==generation&&!requested){settle.Stop();window.Hide();}};settle.Start();content.BeginAnimation(UIElement.OpacityProperty,fade);shift.BeginAnimation(TranslateTransform.YProperty,motion);
         }
         public void ShowImmediately()
